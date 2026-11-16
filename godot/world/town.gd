@@ -6,6 +6,7 @@ const CAMERA_OFFSET := Vector3(0.0, 13.0, 17.0)
 const TownData = preload("res://world/town_data.gd")
 const Texgen = preload("res://world/texgen.gd")
 const CharacterSprite = preload("res://world/character_sprite.gd")
+const PlayerMotion = preload("res://world/player_motion.gd")
 
 const VIGNETTE_SHADER := """
 shader_type canvas_item;
@@ -27,7 +28,11 @@ var camera: Camera3D = null
 var follow_target: Node3D = null
 var sun: DirectionalLight3D = null
 var world_env: WorldEnvironment = null
+var player: Node3D = null
+var player_pos: Vector2 = Vector2.ZERO
+var bounds_rect: Rect2 = Rect2()
 
+var _input_override: Variant = null
 var _built: bool = false
 var _textures: Dictionary = {}
 var _water_material: StandardMaterial3D = null
@@ -38,7 +43,31 @@ var _focus: Vector3 = Vector3.ZERO
 
 
 func _ready() -> void:
+	_register_input_actions()
 	build()
+
+
+func _register_input_actions() -> void:
+	_add_action("move_left", KEY_A, KEY_LEFT)
+	_add_action("move_right", KEY_D, KEY_RIGHT)
+	_add_action("move_up", KEY_W, KEY_UP)
+	_add_action("move_down", KEY_S, KEY_DOWN)
+	_add_action("interact", KEY_E, KEY_NONE)
+
+
+func _add_action(action: StringName, primary: int, secondary: int) -> void:
+	if InputMap.has_action(action):
+		return
+	InputMap.add_action(action)
+	_add_key_event(action, primary)
+	if secondary != KEY_NONE:
+		_add_key_event(action, secondary)
+
+
+func _add_key_event(action: StringName, key: int) -> void:
+	var event := InputEventKey.new()
+	event.physical_keycode = key
+	InputMap.action_add_event(action, event)
 
 
 func build() -> void:
@@ -51,6 +80,7 @@ func build() -> void:
 	for error_text in errors:
 		push_warning("town: %s" % str(error_text))
 	blockers = TownData.footprints(data)
+	bounds_rect = _read_bounds()
 	_build_ground()
 	_build_buildings()
 	_build_props()
@@ -59,10 +89,12 @@ func build() -> void:
 	_build_lighting()
 	_build_camera()
 	_build_npcs()
+	_build_player()
 	snap_camera()
 
 
 func _process(delta: float) -> void:
+	tick_player(delta)
 	_time += delta
 	if _water_material != null:
 		_water_material.uv1_offset.x += 0.05 * delta
@@ -1058,3 +1090,72 @@ func _build_npcs() -> void:
 		character.set_facing(str(npc.get("facing", "down")))
 		root.add_child(character)
 		npc_nodes[id] = character
+
+
+# ---------------------------------------------------------------- player
+
+func _build_player() -> void:
+	var spawn := _spawn_data()
+	var px := float(spawn.get("x", 0.0))
+	var pz := float(spawn.get("z", 0.0))
+	var start_y: float = TownData.ground_height(data, px, pz)
+	var character := CharacterSprite.new()
+	character.name = "Player"
+	character.setup("ren_xiaoyao")
+	character.position = Vector3(px, start_y, pz)
+	character.set_facing(str(spawn.get("facing", "down")))
+	add_child(character)
+	player = character
+	player_pos = Vector2(px, pz)
+	blockers.append_array(TownData.extra_blockers(data))
+	follow_target = player
+
+
+func _spawn_data() -> Dictionary:
+	var spawn_value: Variant = data.get("spawn", null)
+	if typeof(spawn_value) == TYPE_DICTIONARY:
+		var spawn: Dictionary = spawn_value
+		return spawn
+	return {}
+
+
+func _read_bounds() -> Rect2:
+	var bounds_value: Variant = data.get("bounds", null)
+	if typeof(bounds_value) != TYPE_DICTIONARY:
+		return Rect2()
+	var bounds: Dictionary = bounds_value
+	var x0 := float(bounds.get("x0", 0.0))
+	var x1 := float(bounds.get("x1", 0.0))
+	var z0 := float(bounds.get("z0", 0.0))
+	var z1 := float(bounds.get("z1", 0.0))
+	return Rect2(x0, z0, x1 - x0, z1 - z0)
+
+
+func set_input_override(v: Variant) -> void:
+	_input_override = v
+
+
+func get_move_input() -> Vector2:
+	if _input_override != null:
+		if typeof(_input_override) == TYPE_VECTOR2:
+			var override_value: Vector2 = _input_override
+			return override_value
+		return Vector2.ZERO
+	if not InputMap.has_action("move_left") or not InputMap.has_action("move_right") \
+			or not InputMap.has_action("move_up") or not InputMap.has_action("move_down"):
+		return Vector2.ZERO
+	return Input.get_vector("move_left", "move_right", "move_up", "move_down")
+
+
+func tick_player(delta: float) -> void:
+	if player == null:
+		return
+	var input := get_move_input()
+	player_pos = PlayerMotion.step(player_pos, input, delta, blockers, bounds_rect)
+	var target_y: float = TownData.ground_height(data, player_pos.x, player_pos.y)
+	var weight: float = 1.0 - exp(-14.0 * delta)
+	var next_y: float = lerpf(player.position.y, target_y, weight)
+	player.position = Vector3(player_pos.x, next_y, player_pos.y)
+	var facing: String = PlayerMotion.facing_from_input(input, str(player.get("facing")))
+	player.call("set_facing", facing)
+	player.call("set_moving", input.length() > 0.01)

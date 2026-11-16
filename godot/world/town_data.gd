@@ -225,6 +225,71 @@ static func _bounds_has_point(bounds: Rect2, point: Vector2) -> bool:
 		and point.y >= bounds.position.y and point.y <= bounds.end.y
 
 
+static func ground_height(data: Dictionary, x: float, z: float) -> float:
+	var platform_value: Variant = data.get("platform", null)
+	if typeof(platform_value) == TYPE_DICTIONARY:
+		var platform: Dictionary = platform_value
+		var rect_value: Variant = platform.get("rect", [])
+		if typeof(rect_value) == TYPE_ARRAY:
+			var rect: Array = rect_value
+			if rect.size() >= 4:
+				if x >= float(rect[0]) and x <= float(rect[2]) \
+						and z >= float(rect[1]) and z <= float(rect[3]):
+					return float(platform.get("y", 0.0))
+
+	var stairs_value: Variant = data.get("stairs", null)
+	if typeof(stairs_value) == TYPE_DICTIONARY:
+		var stairs: Dictionary = stairs_value
+		if _has_numbers(stairs, ["x0", "x1", "z_start", "z_end"]):
+			var sx0 := float(stairs["x0"])
+			var sx1 := float(stairs["x1"])
+			var z_start := float(stairs["z_start"])
+			var z_end := float(stairs["z_end"])
+			if x >= sx0 and x <= sx1 and z <= z_start and z >= z_end:
+				var step_index := floori(z_start - z)
+				var y_top := float(stairs.get("y_top", 0.0))
+				return minf(0.5 * float(step_index + 1), y_top)
+
+	var bridges: Array = data.get("bridges", [])
+	for bridge_value in bridges:
+		if typeof(bridge_value) != TYPE_DICTIONARY:
+			continue
+		var bridge: Dictionary = bridge_value
+		if not _has_numbers(bridge, ["x0", "x1", "z0", "z1"]):
+			continue
+		if x >= float(bridge["x0"]) and x <= float(bridge["x1"]) \
+				and z >= float(bridge["z0"]) and z <= float(bridge["z1"]):
+			return 0.25
+
+	return 0.0
+
+
+static func extra_blockers(data: Dictionary) -> Array:
+	var result: Array = []
+	var platform_value: Variant = data.get("platform", null)
+	var stairs_value: Variant = data.get("stairs", null)
+	if typeof(platform_value) != TYPE_DICTIONARY or typeof(stairs_value) != TYPE_DICTIONARY:
+		return result
+	var platform: Dictionary = platform_value
+	var stairs: Dictionary = stairs_value
+	var rect_value: Variant = platform.get("rect", [])
+	if typeof(rect_value) != TYPE_ARRAY:
+		return result
+	var rect: Array = rect_value
+	if rect.size() < 4:
+		return result
+	if not _has_numbers(stairs, ["x0"]):
+		return result
+	var px0 := float(rect[0])
+	var pz0 := float(rect[1])
+	var pz1 := float(rect[3])
+	var cliff_width := float(stairs["x0"]) - px0
+	if cliff_width <= 0.0:
+		return result
+	result.append(Rect2(px0, pz0, cliff_width, pz1 - pz0))
+	return result
+
+
 static func _has_numbers(entry: Dictionary, keys: Array) -> bool:
 	for key in keys:
 		var value: Variant = entry.get(key, null)
