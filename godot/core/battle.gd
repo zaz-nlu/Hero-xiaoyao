@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Balance = preload("res://core/balance.gd")
+const Counter = preload("res://core/counter.gd")
 const Damage = preload("res://core/damage.gd")
 const Jianyi = preload("res://core/jianyi.gd")
 const EnemyAi = preload("res://core/enemy_ai.gd")
@@ -19,6 +20,7 @@ var log: Array[String] = []
 
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _stunned_at_start: Array[bool] = []
+var _current_action: Dictionary = {}
 
 
 func _init(p_player, p_enemies: Array, p_loadout: Array, p_mastery, p_martials: Dictionary, p_seed: int, p_first_strike: bool) -> void:
@@ -72,6 +74,28 @@ func state() -> int:
 	return State.ONGOING
 
 
+func preview(martial_id: String, target: int) -> int:
+	if not martials.has(martial_id):
+		return Counter.Verdict.IMPOSSIBLE
+	if target < 0 or target >= enemies.size():
+		return Counter.Verdict.IMPOSSIBLE
+	var enemy: Variant = enemies[target]
+	if enemy.is_dead():
+		return Counter.Verdict.IMPOSSIBLE
+	if target >= intents.size():
+		return Counter.Verdict.IMPOSSIBLE
+	var intent: Dictionary = intents[target]
+	if intent.is_empty():
+		return Counter.Verdict.IMPOSSIBLE
+	return Counter.evaluate(
+		martials[martial_id],
+		player.stats,
+		int(enemy.stats["speed"]),
+		intent,
+		first_strike and round == 1
+	)
+
+
 func _validate(action: Dictionary) -> Dictionary:
 	if state() != State.ONGOING:
 		return {"ok": false, "error": "battle is over"}
@@ -99,6 +123,7 @@ func _validate(action: Dictionary) -> Dictionary:
 
 
 func _settle(action: Dictionary) -> void:
+	_current_action = action.duplicate()
 	var order: Array = _actor_order()
 	var finished := false
 	for actor in order:
@@ -113,6 +138,7 @@ func _settle(action: Dictionary) -> void:
 		var enemy: Variant = enemies[i]
 		if i < _stunned_at_start.size() and _stunned_at_start[i] and not enemy.is_dead():
 			enemy.tick_stun()
+	_current_action = {}
 
 
 func _actor_order() -> Array:
@@ -152,6 +178,7 @@ func _player_step(action: Dictionary) -> void:
 		var id: String = str(action.get("id", ""))
 		var martial: Variant = martials[id]
 		var dealt: int = Damage.hit(martial.power, mastery.damage_multiplier(id), player.stats, target)
+		mastery.add_exp(id, 1)
 		_log("R%d act:player martial %s -> e%d dmg %d" % [round, id, target_index, dealt])
 	elif kind == "jianyi":
 		var dealt: int = Jianyi.strike(player, target)
@@ -173,9 +200,76 @@ func _enemy_step(index: int) -> void:
 	if index < intents.size():
 		intent = intents[index]
 	var power: int = int(intent.get("power", 0))
-	var damage: int = maxi(1, power - int(player.stats["defense"]))
+	var base_damage: int = maxi(1, power - int(player.stats["defense"]))
+
+	var counter_id: String = ""
+	var counter_martial: Variant = null
+	if str(_current_action.get("kind", "")) == "martial" \
+			and int(_current_action.get("target", -1)) == index:
+		var id: String = str(_current_action.get("id", ""))
+		if martials.has(id):
+			counter_id = id
+			counter_martial = martials[id]
+
+	var verdict: int = Counter.Verdict.IMPOSSIBLE
+	var perfect: bool = false
+	if counter_martial != null:
+		verdict = Counter.evaluate(
+			counter_martial,
+			player.stats,
+			int(enemy.stats["speed"]),
+			intent,
+			first_strike and round == 1
+		)
+		perfect = Counter.is_perfect(
+			verdict,
+			counter_martial,
+			player.stats,
+			enemy.weak_moves,
+			str(intent["id"])
+		)
+
+	var damage: int = base_damage
+	if verdict == Counter.Verdict.ADVANTAGE:
+		damage = 0
+	elif verdict == Counter.Verdict.BARELY:
+		damage = maxi(1, floori(float(base_damage) / 2.0))
 	player.take_damage(damage)
-	_log("R%d act:e%d heal %d dmg %d" % [round, index, healed, damage])
+
+	var stunned_now: bool = false
+	if counter_martial != null and verdict != Counter.Verdict.IMPOSSIBLE:
+		var cost: float = Counter.toughness_cost(verdict, perfect)
+		stunned_now = enemy.apply_toughness(cost)
+		if verdict == Counter.Verdict.ADVANTAGE:
+			Jianyi.restore(player)
+		mastery.add_exp(counter_id, 2)
+		if perfect:
+			Damage.hit(counter_martial.power, mastery.damage_multiplier(counter_id), player.stats, enemy)
+		if verdict == Counter.Verdict.ADVANTAGE:
+			for raw_effect in counter_martial.effects:
+				var effect: Dictionary = raw_effect
+				if str(effect.get("kind", "")) == "reflect":
+					enemy.take_damage(floori(base_damage * float(effect.get("value", 0.0))))
+
+	var extra: String = "verdict=NONE"
+	if counter_martial != null:
+		extra = "verdict=%s perfect=%s toughness_left=%.1f stunned=%s" % [
+			_verdict_name(verdict),
+			str(perfect),
+			enemy.toughness_left,
+			str(stunned_now),
+		]
+	_log("R%d act:e%d heal %d dmg %d %s" % [round, index, healed, damage, extra])
+
+
+func _verdict_name(verdict: int) -> String:
+	match verdict:
+		Counter.Verdict.ADVANTAGE:
+			return "ADVANTAGE"
+		Counter.Verdict.BARELY:
+			return "BARELY"
+		_:
+			return "IMPOSSIBLE"
 
 
 func _log(line: String) -> void:
