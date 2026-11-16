@@ -1,0 +1,66 @@
+{
+  "bounds": {"x0": -32, "x1": 32, "z0": -24, "z1": 22},
+  "spawn": {"x": -6.0, "z": 1.0, "facing": "right"},
+  "ground": [
+    {"type": "grass", "rect": [-32, -24, 32, 22]},
+    {"type": "stone", "rect": [-32, -3, 32, 4]},
+    {"type": "stone", "rect": [-14, 4, -10, 9]},
+    {"type": "stone", "rect": [-14, 12, -10, 16]},
+    {"type": "water", "rect": [-32, 9, 32, 12]}
+  ],
+  "bridges": [
+    {"x0": -14, "x1": -10, "z0": 9, "z1": 12}
+  ],
+  "buildings": [
+    {"id": "house_w", "kind": "house", "x0": -28, "x1": -21, "z_front": -3, "depth": 7, "wall_h": 4.5, "roof_h": 2.5, "door_x": -24.5, "door_w": 1.6, "sign": "", "awning": false, "lantern": false},
+    {"id": "smith", "kind": "smith", "x0": -19, "x1": -12, "z_front": -3, "depth": 8, "wall_h": 5.0, "roof_h": 2.5, "door_x": -15.5, "door_w": 2.2, "sign": "铁", "awning": false, "lantern": false},
+    {"id": "shop", "kind": "shop", "x0": -10, "x1": -4, "z_front": -3, "depth": 7, "wall_h": 4.5, "roof_h": 2.5, "door_x": -7.0, "door_w": 1.8, "sign": "杂", "awning": true, "lantern": false},
+    {"id": "tavern", "kind": "tavern", "x0": 0, "x1": 12, "z_front": -3, "depth": 10, "wall_h": 6.5, "roof_h": 3.0, "door_x": 6.0, "door_w": 3.0, "sign": "酒", "awning": false, "lantern": true},
+    {"id": "house_e1", "kind": "house", "x0": 15, "x1": 21, "z_front": -3, "depth": 7, "wall_h": 4.5, "roof_h": 2.5, "door_x": 18.0, "door_w": 1.6, "sign": "", "awning": false, "lantern": false},
+    {"id": "house_e2", "kind": "house", "x0": 22.5, "x1": 28, "z_front": -3, "depth": 7, "wall_h": 4.5, "roof_h": 2.5, "door_x": 25.2, "door_w": 1.6, "sign": "", "awning": false, "lantern": false}
+  ],
+  "stairs": {"x0": 29, "x1": 32, "z_start": -3, "z_end": -17, "y_top": 7.0},
+  "platform": {"rect": [26, -24, 32, -17], "y": 7.0},
+  "gate": {"x": 29.0, "z": -22.0, "y": 7.0, "label": "紫霞派"},
+  "props": [
+    {"kind": "barrel", "x": -21.5, "z": -2.2},
+    {"kind": "barrel", "x": -11.2, "z": -2.2},
+    {"kind": "barrel", "x": -3.6, "z": -2.2},
+    {"kind": "barrel", "x": 13.0, "z": -2.2},
+    {"kind": "crate", "x": -11.8, "z": -1.9},
+    {"kind": "crate", "x": -3.2, "z": -2.0},
+    {"kind": "crate", "x": 13.8, "z": -2.0},
+    {"kind": "bench", "x": 17.0, "z": -2.0},
+    {"kind": "lamp_post", "x": -26.0, "z": 3.5},
+    {"kind": "lamp_post", "x": -14.0, "z": 3.5},
+    {"kind": "lamp_post", "x": -2.0, "z": 3.5},
+    {"kind": "lamp_post", "x": 14.0, "z": 3.5},
+    {"kind": "lamp_post", "x": 26.0, "z": 3.5},
+    {"kind": "banner", "x": 1.5, "z": -1.5, "text": "酒"},
+    {"kind": "banner", "x": 10.5, "z": -1.5, "text": "酒"},
+    {"kind": "cart", "x": -7.5, "z": 2.5, "rot": 0.3},
+    {"kind": "stall", "x": 18.0, "z": 2.0, "w": 4.0, "d": 2.0, "text": "包"},
+    {"kind": "tree", "x": -30.0, "z": -16.0},
+    {"kind": "tree", "x": -24.0, "z": -17.0},
+    {"kind": "tree", "x": -16.0, "z": -16.0},
+    {"kind": "tree", "x": -8.0, "z": -15.0},
+    {"kind": "tree", "x": 0.0, "z": -17.0},
+    {"kind": "tree", "x": 8.0, "z": -16.0},
+    {"kind": "tree", "x": 16.0, "z": -17.0},
+    {"kind": "tree", "x": 22.0, "z": -15.0},
+    {"kind": "tree", "x": -28.0, "z": 15.0},
+    {"kind": "tree", "x": -20.0, "z": 17.0},
+    {"kind": "tree", "x": -6.0, "z": 16.0},
+    {"kind": "tree", "x": 2.0, "z": 15.0},
+    {"kind": "tree", "x": 10.0, "z": 17.0},
+    {"kind": "tree", "x": 20.0, "z": 15.0},
+    {"kind": "tree", "x": 28.0, "z": 17.0}
+  ],
+  "npcs": [
+    {"id": "bun_vendor", "sprite": "vendor", "name": "包子摊老板", "x": 18.0, "z": 0.6, "facing": "down"},
+    {"id": "disciple", "sprite": "zixia_disciple", "name": "紫霞派弟子", "x": 22.5, "z": 1.0, "facing": "left"},
+    {"id": "bandit_1", "sprite": "bandit", "name": "马匪", "x": 4.5, "z": 0.5, "facing": "right"},
+    {"id": "bandit_2", "sprite": "bandit", "name": "马匪", "x": 6.5, "z": 2.0, "facing": "down"},
+    {"id": "ma_youwei", "sprite": "ma_youwei", "name": "马友为", "x": 8.5, "z": 0.8, "facing": "left"}
+  ]
+}

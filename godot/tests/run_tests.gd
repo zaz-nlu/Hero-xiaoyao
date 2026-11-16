@@ -25,8 +25,8 @@ func _init() -> void:
 	var failed := 0
 	for f in files:
 		var script = load("res://tests/" + f)
-		if script == null:
-			printerr("cannot load " + f)
+		if script == null or not script.can_instantiate():
+			print("FAIL %s (cannot load: parse error?)" % f)
 			failed += 1
 			continue
 		var instance = script.new()
