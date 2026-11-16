@@ -1,0 +1,16 @@
+{
+  "id": "ren_xiaoyao",
+  "palette": {
+    "outline": "#2a2028", "skin": "#e8b794", "skin_shade": "#c98f6e",
+    "hair": "#2b2220", "hair_shade": "#17110f",
+    "top": "#6b7396", "top_shade": "#4d5478",
+    "shirt": "#d9d2c3", "shirt_shade": "#b3aa98",
+    "sash": "#7a5a9a", "ribbon": "#8a63a8",
+    "pants": "#cfc8b8", "pants_shade": "#a8a090",
+    "boots": "#5c4a3c", "boots_shade": "#3e3027",
+    "band": "#5a4030", "eye": "#2a1a1a", "mouth": "#a4584a",
+    "scabbard": "#3b2a20", "gold": "#b99a4b"
+  },
+  "hair_style": "ponytail_ribbon",
+  "props": ["sword_hip"]
+}
