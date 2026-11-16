@@ -1,0 +1,38 @@
+[
+	{
+		"id": "ren_xiaoyao",
+		"name": "任逍遥",
+		"portrait": "res://assets/portraits/ren_xiaoyao.png",
+		"side": "left"
+	},
+	{
+		"id": "zixia",
+		"name": "紫霞",
+		"portrait": "res://assets/portraits/zixia.png",
+		"side": "right"
+	},
+	{
+		"id": "zixia_disciple",
+		"name": "紫霞弟子",
+		"portrait": "res://assets/portraits/zixia_disciple.png",
+		"side": "right"
+	},
+	{
+		"id": "vendor",
+		"name": "酒家小贩",
+		"portrait": "res://assets/portraits/vendor.png",
+		"side": "right"
+	},
+	{
+		"id": "ma_youwei",
+		"name": "马友为",
+		"portrait": "res://assets/portraits/ma_youwei.png",
+		"side": "right"
+	},
+	{
+		"id": "bandit",
+		"name": "马匪",
+		"portrait": "res://assets/portraits/bandit.png",
+		"side": "right"
+	}
+]
