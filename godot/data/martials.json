@@ -1,0 +1,102 @@
+[
+	{
+		"id": "basic_sword",
+		"name": "基础剑术",
+		"power": 10,
+		"counters": ["thrust"],
+		"initiative": 0,
+		"counter_level": 2,
+		"advantage_stat": "skill",
+		"effects": []
+	},
+	{
+		"id": "parry",
+		"name": "格挡",
+		"power": 4,
+		"counters": ["sweep", "combo"],
+		"initiative": 0,
+		"counter_level": 3,
+		"advantage_stat": "defense",
+		"effects": []
+	},
+	{
+		"id": "sidestep",
+		"name": "闪身",
+		"power": 3,
+		"counters": ["charge", "ranged"],
+		"initiative": 5,
+		"counter_level": 3,
+		"advantage_stat": "speed",
+		"effects": []
+	},
+	{
+		"id": "taiji",
+		"name": "太极缠劲",
+		"power": 5,
+		"counters": ["heavy"],
+		"initiative": 0,
+		"counter_level": 4,
+		"advantage_stat": "recovery",
+		"effects": [{"kind": "reflect", "value": 0.3}]
+	},
+	{
+		"id": "qingyun",
+		"name": "青云剑法",
+		"power": 12,
+		"counters": ["thrust"],
+		"initiative": 2,
+		"counter_level": 4,
+		"advantage_stat": "skill",
+		"effects": []
+	},
+	{
+		"id": "huifeng",
+		"name": "回风剑",
+		"power": 9,
+		"counters": ["sweep"],
+		"initiative": 2,
+		"counter_level": 4,
+		"advantage_stat": "speed",
+		"effects": []
+	},
+	{
+		"id": "lianhuan",
+		"name": "连环快剑",
+		"power": 8,
+		"counters": ["combo"],
+		"initiative": 6,
+		"counter_level": 3,
+		"advantage_stat": "speed",
+		"effects": []
+	},
+	{
+		"id": "duanshi",
+		"name": "断势一击",
+		"power": 14,
+		"counters": ["charge"],
+		"initiative": 0,
+		"counter_level": 4,
+		"advantage_stat": "power",
+		"effects": []
+	},
+	{
+		"id": "liuxing",
+		"name": "流星诀",
+		"power": 8,
+		"counters": ["ranged"],
+		"initiative": 4,
+		"counter_level": 4,
+		"advantage_stat": "skill",
+		"effects": []
+	},
+	{
+		"id": "jueshi",
+		"name": "绝世剑术",
+		"power": 18,
+		"counters": ["thrust", "combo"],
+		"initiative": 3,
+		"counter_level": 7,
+		"advantage_stat": "skill",
+		"effects": []
+	}
+]

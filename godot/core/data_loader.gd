@@ -64,6 +64,30 @@ static func parse_enemies(json_text: String) -> Dictionary:
 	return {"defs": defs, "errors": errors}
 
 
+static func load_martials(path: String) -> Dictionary:
+	var text := FileAccess.get_file_as_string(path)
+	if text == "":
+		return {"defs": {}, "errors": ["cannot read %s" % path]}
+	return parse_martials(text)
+
+
+static func load_enemies(path: String) -> Dictionary:
+	var text := FileAccess.get_file_as_string(path)
+	if text == "":
+		return {"defs": {}, "errors": ["cannot read %s" % path]}
+	return parse_enemies(text)
+
+
+static func load_player(path: String) -> Dictionary:
+	var text := FileAccess.get_file_as_string(path)
+	if text == "":
+		return {}
+	var parsed = JSON.parse_string(text)
+	if not (parsed is Dictionary):
+		return {}
+	return parsed
+
+
 static func _validate_martial(def) -> Array[String]:
 	var errors: Array[String] = []
 	var def_id: String = def.id

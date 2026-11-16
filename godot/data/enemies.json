@@ -1,0 +1,45 @@
+[
+	{
+		"id": "bandit",
+		"name": "马匪",
+		"tier": "minion",
+		"stats": {
+			"power": 6,
+			"speed": 8,
+			"defense": 3,
+			"recovery": 1,
+			"skill": 3,
+			"mechanism": 1
+		},
+		"max_hp": 40,
+		"toughness": 2,
+		"stun_turns": 1,
+		"moves": [
+			{"id": "bandit_sweep", "name": "乱砍", "type": "sweep", "threat": 12, "power": 8},
+			{"id": "bandit_heavy", "name": "力劈", "type": "heavy", "threat": 14, "power": 10}
+		],
+		"weak_moves": []
+	},
+	{
+		"id": "ma_youwei",
+		"name": "马友为",
+		"tier": "boss",
+		"stats": {
+			"power": 12,
+			"speed": 12,
+			"defense": 8,
+			"recovery": 6,
+			"skill": 10,
+			"mechanism": 4
+		},
+		"max_hp": 300,
+		"toughness": 8,
+		"stun_turns": 2,
+		"moves": [
+			{"id": "kaishan", "name": "开山", "type": "heavy", "threat": 18, "power": 18},
+			{"id": "luandao", "name": "乱刀横扫", "type": "sweep", "threat": 14, "power": 12},
+			{"id": "cihou", "name": "刺喉", "type": "thrust", "threat": 16, "power": 14}
+		],
+		"weak_moves": ["kaishan"]
+	}
+]
