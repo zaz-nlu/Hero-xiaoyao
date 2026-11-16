@@ -1120,6 +1120,11 @@ func _build_player() -> void:
 	var spawn := _spawn_data()
 	var px := float(spawn.get("x", 0.0))
 	var pz := float(spawn.get("z", 0.0))
+	var return_value: Variant = GameState.town_return_pos
+	if return_value is Vector2:
+		var return_pos: Vector2 = return_value
+		px = return_pos.x
+		pz = return_pos.y
 	var start_y: float = TownData.ground_height(data, px, pz)
 	var character := CharacterSprite.new()
 	character.name = "Player"

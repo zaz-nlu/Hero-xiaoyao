@@ -1,5 +1,7 @@
 extends Control
 
+signal battle_finished(result: String)
+
 const Battle = preload("res://core/battle.gd")
 const Counter = preload("res://core/counter.gd")
 const DataLoader = preload("res://core/data_loader.gd")
@@ -56,6 +58,7 @@ var martial_buttons: Array = []
 var jianyi_button: Button = null
 var probe_button: Button = null
 var result_label: Label = null
+var return_button: Button = null
 var log_label: RichTextLabel = null
 
 
@@ -152,6 +155,13 @@ func build_ui() -> void:
 	result_label.name = "ResultLabel"
 	column.add_child(result_label)
 
+	return_button = Button.new()
+	return_button.name = "ReturnButton"
+	return_button.text = "返回小镇"
+	return_button.visible = false
+	return_button.pressed.connect(press_return)
+	column.add_child(return_button)
+
 	log_label = RichTextLabel.new()
 	log_label.name = "LogLabel"
 	log_label.bbcode_enabled = false
@@ -172,7 +182,9 @@ func build_ui() -> void:
 	add_child(dialogue_view)
 
 
-func start(enemy_id: String, enemy_count: int, first_strike: bool) -> void:
+func start(
+	enemy_id: String, enemy_count: int, first_strike: bool, play_intro: bool = true
+) -> void:
 	var player_data: Dictionary = DataLoader.load_player(PLAYER_PATH)
 	var loaded_martials: Dictionary = DataLoader.load_martials(MARTIALS_PATH)
 	var martials: Dictionary = loaded_martials.get("defs", {})
@@ -219,7 +231,8 @@ func start(enemy_id: String, enemy_count: int, first_strike: bool) -> void:
 	_reset_stage_state()
 	_rebuild_enemy_groups()
 	_rebuild_martial_buttons()
-	_play_intro_dialogue()
+	if play_intro:
+		_play_intro_dialogue()
 	refresh()
 
 
@@ -238,6 +251,31 @@ func press_action(action: Dictionary) -> void:
 	refresh()
 
 
+func press_return() -> void:
+	if battle == null:
+		return
+	var current_state: int = battle.state()
+	if current_state == Battle.State.ONGOING:
+		return
+	var result := ""
+	match current_state:
+		Battle.State.WON:
+			result = "won"
+		Battle.State.LOST:
+			result = "lost"
+		Battle.State.TIMEOUT:
+			result = "timeout"
+	if result == "":
+		return
+	emit_signal("battle_finished", result)
+
+
+func _refresh_return_button() -> void:
+	if return_button == null or battle == null:
+		return
+	return_button.visible = battle.state() != Battle.State.ONGOING and not _dialogue_active()
+
+
 func refresh() -> void:
 	if battle == null:
 		return
@@ -250,6 +288,7 @@ func refresh() -> void:
 	log_label.text = _log_text()
 	_update_stage()
 	_maybe_play_win_dialogue()
+	_refresh_return_button()
 
 
 func _process(delta: float) -> void:
