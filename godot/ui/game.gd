@@ -44,7 +44,8 @@ func show_battle(
 	add_child(view)
 	if not view.is_inside_tree():
 		view.build_ui()
-	view.set_anchors_preset(Control.PRESET_FULL_RECT)
+	# Must also reset the offsets: set_anchors_preset() alone keeps the current (0x0) rect.
+	view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	view.start(enemy_id, count, first_strike, play_intro)
 	view.connect("battle_finished", Callable(self, "_on_battle_finished"))
 	current = view

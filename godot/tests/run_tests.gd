@@ -2,6 +2,9 @@ extends SceneTree
 
 
 func _init() -> void:
+	# Engine.get_main_loop() is still null during _init(); let tests that need a real
+	# scene tree (e.g. Control layout) fetch it via Engine.get_meta("test_tree").
+	Engine.set_meta("test_tree", self)
 	var dir := DirAccess.open("res://tests")
 	if dir == null:
 		printerr("cannot open res://tests")

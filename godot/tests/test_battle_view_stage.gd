@@ -2,9 +2,6 @@ extends "res://tests/test_case.gd"
 
 const Battle = preload("res://core/battle.gd")
 
-const PLAYER_FRAME_RIGHT := Rect2(0, 96, 32, 48)
-const ENEMY_FRAME_LEFT := Rect2(0, 144, 32, 48)
-
 
 func _make_view() -> Variant:
 	var view: Variant = load("res://ui/battle_view.gd").new()
@@ -19,32 +16,39 @@ func _finish_dialogue(view: Variant) -> void:
 		view.dialogue_view.advance()
 
 
+func _sprite(actor: Variant) -> Sprite3D:
+	return actor.get_node("Sprite") as Sprite3D
+
+
 func test_sprites_built() -> void:
 	var view: Variant = _make_view()
 	view.start("bandit", 2, false)
-	assert_eq(view.enemy_sprites.size(), 2, "one sprite per enemy")
-	assert_true(view.player_sprite.texture is AtlasTexture, "the player sprite uses an atlas frame")
-	assert_eq(view.player_sprite.texture.region, PLAYER_FRAME_RIGHT, "the player faces right, standing frame")
-	for sprite in view.enemy_sprites:
-		assert_true(sprite.texture is AtlasTexture, "each enemy sprite uses an atlas frame")
-		assert_eq(sprite.texture.region, ENEMY_FRAME_LEFT, "enemies face left, standing frame")
+	assert_true(view.stage != null, "the battle stage is built")
+	assert_eq(view.stage.enemy_actors.size(), 2, "one actor per enemy")
+	assert_eq(str(view.stage.player_actor.facing), "right", "the player faces right")
+	assert_true(_sprite(view.stage.player_actor) != null, "the player actor has a sprite")
+	for actor in view.stage.enemy_actors:
+		assert_eq(str(actor.facing), "left", "enemies face left")
+		assert_true(_sprite(actor) != null, "each enemy actor has a sprite")
 	view.free()
 
 
-func test_enemy_sprites_have_independent_textures() -> void:
+func test_enemy_actors_have_independent_sprites() -> void:
 	var view: Variant = _make_view()
 	view.start("bandit", 2, false)
-	assert_true(view.enemy_sprites[0].texture != view.enemy_sprites[1].texture, "each enemy has its own atlas texture")
+	assert_true(_sprite(view.stage.enemy_actors[0]) != _sprite(view.stage.enemy_actors[1]), "each enemy has its own sprite node")
+	var first: Sprite3D = _sprite(view.stage.enemy_actors[0])
+	var second: Sprite3D = _sprite(view.stage.enemy_actors[1])
+	assert_true(first.texture != null and second.texture != null, "both enemy sprites have a texture")
 	view.free()
 
 
-func test_idle_animation_toggles() -> void:
+func test_idle_actors_stand_still() -> void:
 	var view: Variant = _make_view()
 	view.start("bandit", 1, false)
 	view.tick(0.6)
-	assert_near(view.player_sprite.texture.region.position.x, 64.0, 0.001, "the idle animation switches to the transition column")
-	view.tick(0.5)
-	assert_near(view.player_sprite.texture.region.position.x, 0.0, 0.001, "the idle animation switches back to the standing column")
+	assert_eq(view.stage.player_actor.current_frame_index(), 10, "the player stands in the right-facing idle frame")
+	assert_eq(view.stage.enemy_actors[0].current_frame_index(), 15, "the enemy stands in the left-facing idle frame")
 	view.free()
 
 
@@ -52,9 +56,10 @@ func test_hit_flash_then_recovers() -> void:
 	var view: Variant = _make_view()
 	view.start("bandit", 1, false)
 	view.press_action({"kind": "martial", "id": "basic_sword", "target": 0})
-	assert_true(view.enemy_sprites[0].modulate.g < 0.8, "a damaged enemy flashes red")
+	var sprite: Sprite3D = _sprite(view.stage.enemy_actors[0])
+	assert_true(sprite.modulate.g < 0.8, "a damaged enemy flashes red")
 	view.tick(0.3)
-	assert_true(view.enemy_sprites[0].modulate.g > 0.95, "the flash recovers to the base tint")
+	assert_true(sprite.modulate.g > 0.95, "the flash recovers to the base tint")
 	view.free()
 
 
@@ -63,7 +68,8 @@ func test_stunned_enemy_tinted_blue() -> void:
 	view.start("bandit", 1, false)
 	view.battle.enemies[0].stun_left = 1
 	view.refresh()
-	assert_true(view.enemy_sprites[0].modulate.b > view.enemy_sprites[0].modulate.r, "a stunned enemy is tinted blue")
+	var sprite: Sprite3D = _sprite(view.stage.enemy_actors[0])
+	assert_true(sprite.modulate.b > sprite.modulate.r, "a stunned enemy is tinted blue")
 	view.free()
 
 
@@ -72,7 +78,8 @@ func test_dead_enemy_faded() -> void:
 	view.start("bandit", 1, false)
 	view.battle.enemies[0].hp = 0
 	view.refresh()
-	assert_true(view.enemy_sprites[0].modulate.a < 0.5, "a fallen enemy fades out")
+	var sprite: Sprite3D = _sprite(view.stage.enemy_actors[0])
+	assert_true(sprite.modulate.a < 0.5, "a fallen enemy fades out")
 	view.free()
 
 
@@ -118,6 +125,6 @@ func test_missing_encounter_file_entry_is_fine() -> void:
 	var view: Variant = _make_view()
 	view.start("bandit", 1, true)
 	view.start("bandit", 2, false)
-	assert_eq(view.enemy_sprites.size(), 2, "restarting without an encounter entry keeps the stage working")
+	assert_eq(view.stage.enemy_actors.size(), 2, "restarting without an encounter entry keeps the stage working")
 	assert_true(not view.dialogue_view.is_active(), "no dialogue is started for a bandit encounter")
 	view.free()

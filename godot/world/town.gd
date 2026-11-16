@@ -44,6 +44,7 @@ var dialogue_view: Control = null
 var prompt_label: Label = null
 var pending_encounter: Dictionary = {}
 var current_npc_id: String = ""
+var skip_actors: bool = false
 
 var _input_override: Variant = null
 var _built: bool = false
@@ -104,9 +105,10 @@ func build() -> void:
 	_build_lighting()
 	_build_camera()
 	npc_dialogues = Interaction.load_npc_dialogues(NPC_DIALOGUES_PATH)
-	_build_npcs()
-	_build_player()
-	snap_camera()
+	if not skip_actors:
+		_build_npcs()
+		_build_player()
+		snap_camera()
 
 
 func _process(delta: float) -> void:
