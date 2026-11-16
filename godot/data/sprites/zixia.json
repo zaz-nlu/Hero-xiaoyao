@@ -1,0 +1,18 @@
+{
+  "id": "zixia",
+  "palette": {
+    "outline": "#2a2030", "skin": "#efc9a8", "skin_shade": "#d0a07f",
+    "hair": "#2a2128", "hair_shade": "#17121a",
+    "top": "#6b4a8e", "top_shade": "#4a3366",
+    "shirt": "#d8d0e0", "shirt_shade": "#b4a9c4",
+    "sash": "#4b3566", "ribbon": "#9a72c0",
+    "pants": "#cfc8d8", "pants_shade": "#a8a0b8",
+    "boots": "#3a2f3a", "boots_shade": "#261e27",
+    "band": "#4a3a50", "eye": "#2a1a22", "mouth": "#b05a58",
+    "scabbard": "#3b2a2a", "gold": "#b8a074",
+    "armor": "#6b6670", "armor_shade": "#4a464f"
+  },
+  "hair_style": "long_ponytail",
+  "features": ["robe_long", "shoulder_armor"],
+  "props": ["sword_hip"]
+}

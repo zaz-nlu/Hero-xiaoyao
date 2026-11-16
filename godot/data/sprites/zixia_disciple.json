@@ -1,0 +1,16 @@
+{
+  "id": "zixia_disciple",
+  "palette": {
+    "outline": "#2a2030", "skin": "#e6b490", "skin_shade": "#c68e6c",
+    "hair": "#3a2c26", "hair_shade": "#211915",
+    "top": "#7a5a9a", "top_shade": "#58407a",
+    "shirt": "#d6cfd8", "shirt_shade": "#b2a9b8",
+    "sash": "#b08ad0", "ribbon": "#9a72c0",
+    "pants": "#b8aec0", "pants_shade": "#968c9e",
+    "boots": "#3f3646", "boots_shade": "#2a232f",
+    "band": "#5a4468", "eye": "#2a1a1a", "mouth": "#a4584a",
+    "scabbard": "#5a3f2e", "gold": "#b99a4b"
+  },
+  "hair_style": "ponytail_ribbon",
+  "props": ["sword_hip"]
+}

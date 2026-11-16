@@ -1,0 +1,20 @@
+{
+  "id": "vendor",
+  "palette": {
+    "outline": "#2a2224", "skin": "#d9a47c", "skin_shade": "#b98059",
+    "hair": "#2e2420", "hair_shade": "#1a1412",
+    "top": "#4b5068", "top_shade": "#343850",
+    "shirt": "#cfc3ad", "shirt_shade": "#a89c86",
+    "sash": "#6a4f43", "ribbon": "#6a4f43",
+    "pants": "#3b3a44", "pants_shade": "#28272f",
+    "boots": "#4a3a30", "boots_shade": "#32261f",
+    "band": "#8b7a66", "eye": "#2a1a1a", "mouth": "#8a4a42",
+    "scabbard": "#3b2a20", "gold": "#b99a4b",
+    "headband": "#8b8078", "beard": "#3a2e28",
+    "apron": "#d8ccb5", "apron_shade": "#b5a88f",
+    "towel": "#e6dfd0", "towel_line": "#b8564a"
+  },
+  "hair_style": "topknot",
+  "features": ["headband", "beard", "apron", "towel"],
+  "props": []
+}

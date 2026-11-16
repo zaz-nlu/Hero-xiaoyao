@@ -1,0 +1,20 @@
+{
+  "id": "ma_youwei",
+  "palette": {
+    "outline": "#241c1c", "skin": "#d9a07a", "skin_shade": "#b57d5c",
+    "hair": "#2a2220", "hair_shade": "#161110",
+    "top": "#5a5068", "top_shade": "#3e3649",
+    "shirt": "#cfc7b6", "shirt_shade": "#a89f8e",
+    "sash": "#b04a3a", "ribbon": "#b04a3a",
+    "pants": "#4a4458", "pants_shade": "#332f40",
+    "boots": "#3a2e28", "boots_shade": "#251d19",
+    "band": "#5a4030", "eye": "#241616", "mouth": "#8a4a42",
+    "scabbard": "#3a2a24", "gold": "#b99a4b",
+    "beard": "#2a2220", "fur": "#6b5a4a", "fur_light": "#8a7762",
+    "gourd": "#b88a58", "gourd_shade": "#8a6538", "rope": "#b04a3a"
+  },
+  "build": "stocky",
+  "hair_style": "topknot",
+  "features": ["beard", "fur_collar"],
+  "props": ["blade_hip", "gourd_hip"]
+}

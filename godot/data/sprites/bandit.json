@@ -1,0 +1,21 @@
+{
+  "id": "bandit",
+  "palette": {
+    "outline": "#241c1c", "skin": "#d0956f", "skin_shade": "#ac7452",
+    "hair": "#2a2220", "hair_shade": "#161110",
+    "top": "#5a4a52", "top_shade": "#3f333a",
+    "shirt": "#b8a88e", "shirt_shade": "#968770",
+    "sash": "#a34a45", "ribbon": "#a34a45",
+    "pants": "#4a3f4a", "pants_shade": "#342c34",
+    "boots": "#6b5a45", "boots_shade": "#4a3e30",
+    "band": "#5a4030", "eye": "#241616", "mouth": "#8a4a42",
+    "scabbard": "#3a2a24", "gold": "#b99a4b",
+    "headband": "#b0453a", "beard": "#2a2220",
+    "gourd": "#b88a58", "gourd_shade": "#8a6538", "rope": "#5a4030",
+    "blade": "#aeb4bc", "blade_light": "#dfe3e8"
+  },
+  "build": "stocky",
+  "hair_style": "topknot",
+  "features": ["headband", "beard"],
+  "props": ["blade_shoulder", "gourd_hip"]
+}
