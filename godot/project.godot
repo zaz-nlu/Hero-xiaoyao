@@ -7,3 +7,4 @@ config_version=5
 [application]
 
 config/name="任逍遥"
+run/main_scene="res://ui/battle_view.tscn"
