@@ -3,18 +3,47 @@ extends Control
 const Battle = preload("res://core/battle.gd")
 const Counter = preload("res://core/counter.gd")
 const DataLoader = preload("res://core/data_loader.gd")
+const Dialogue = preload("res://core/dialogue.gd")
 const Jianyi = preload("res://core/jianyi.gd")
 const Mastery = preload("res://core/mastery.gd")
 const MoveTypes = preload("res://core/move_types.gd")
+const SpriteSheet = preload("res://ui/sprite_sheet.gd")
 const Unit = preload("res://core/unit.gd")
 
 const PLAYER_PATH := "res://data/player.json"
 const MARTIALS_PATH := "res://data/martials.json"
 const ENEMIES_PATH := "res://data/enemies.json"
+const ENCOUNTERS_PATH := "res://data/encounters.json"
+const SPEAKERS_PATH := "res://data/speakers.json"
+
+const PLAYER_SPRITE_ID := "ren_xiaoyao"
+const SPRITE_SIZE := Vector2(128, 192)
+const IDLE_INTERVAL := 0.5
+const IDLE_COLUMN_A := 0
+const IDLE_COLUMN_B := 2
+const FLASH_TIME := 0.25
+const BASE_COLOR := Color(1.0, 1.0, 1.0, 1.0)
+const HIT_COLOR := Color(1.0, 0.35, 0.35, 1.0)
+const STUN_COLOR := Color(0.6, 0.7, 1.0, 1.0)
+const DEAD_COLOR := Color(1.0, 1.0, 1.0, 0.3)
 
 var battle: Variant = null
 var selected_target: int = 0
 var last_error: String = ""
+
+var player_sprite: TextureRect = null
+var enemies_stage: HBoxContainer = null
+var enemy_sprites: Array = []
+var dialogue_view: Variant = null
+
+var _current_enemy_id: String = ""
+var _win_dialogue_played: bool = false
+var _idle_time: float = 0.0
+var _idle_column: int = IDLE_COLUMN_A
+var _player_flash: float = 0.0
+var _enemy_flash: Array = []
+var _last_hp_player: int = 0
+var _last_hp_enemies: Array = []
 
 var player_label: Label = null
 var enemies_container: VBoxContainer = null
@@ -70,6 +99,21 @@ func build_ui() -> void:
 	boss_button.pressed.connect(_on_scenario_pressed.bind("ma_youwei", 1, false))
 	scenario_row.add_child(boss_button)
 
+	var stage_row := HBoxContainer.new()
+	stage_row.name = "StageRow"
+	stage_row.add_theme_constant_override("separation", 16)
+	column.add_child(stage_row)
+
+	player_sprite = _make_sprite(PLAYER_SPRITE_ID, SpriteSheet.DIR_RIGHT)
+	player_sprite.name = "PlayerSprite"
+	stage_row.add_child(player_sprite)
+
+	enemies_stage = HBoxContainer.new()
+	enemies_stage.name = "EnemiesStage"
+	enemies_stage.add_theme_constant_override("separation", 16)
+	enemies_stage.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	stage_row.add_child(enemies_stage)
+
 	player_label = Label.new()
 	player_label.name = "PlayerLabel"
 	column.add_child(player_label)
@@ -118,6 +162,15 @@ func build_ui() -> void:
 	log_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(log_label)
 
+	dialogue_view = load("res://ui/dialogue_view.gd").new()
+	dialogue_view.name = "DialogueView"
+	dialogue_view.build_ui()
+	dialogue_view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dialogue_view.visible = false
+	dialogue_view.z_index = 100
+	dialogue_view.connect("finished", Callable(self, "_on_dialogue_finished"))
+	add_child(dialogue_view)
+
 
 func start(enemy_id: String, enemy_count: int, first_strike: bool) -> void:
 	var player_data: Dictionary = DataLoader.load_player(PLAYER_PATH)
@@ -161,13 +214,21 @@ func start(enemy_id: String, enemy_count: int, first_strike: bool) -> void:
 
 	selected_target = 0
 	last_error = ""
+	_current_enemy_id = enemy_id
+	_win_dialogue_played = false
+	_reset_stage_state()
 	_rebuild_enemy_groups()
 	_rebuild_martial_buttons()
+	_play_intro_dialogue()
 	refresh()
 
 
 func press_action(action: Dictionary) -> void:
 	if battle == null:
+		return
+	# The intro/win dialogue blocks every action until it is finished.
+	if _dialogue_active():
+		last_error = "dialogue active"
 		return
 	var result: Dictionary = battle.submit(action)
 	if bool(result.get("ok", false)):
@@ -187,6 +248,23 @@ func refresh() -> void:
 	_refresh_special_buttons()
 	result_label.text = _result_text()
 	log_label.text = _log_text()
+	_update_stage()
+	_maybe_play_win_dialogue()
+
+
+func _process(delta: float) -> void:
+	tick(delta)
+
+
+func tick(delta: float) -> void:
+	if battle == null:
+		return
+	_idle_time += delta
+	while _idle_time >= IDLE_INTERVAL:
+		_idle_time -= IDLE_INTERVAL
+		_idle_column = IDLE_COLUMN_B if _idle_column == IDLE_COLUMN_A else IDLE_COLUMN_A
+		_apply_idle_column()
+	_tick_flash_timers(delta)
 
 
 func _on_scenario_pressed(enemy_id: String, enemy_count: int, first_strike: bool) -> void:
@@ -215,14 +293,24 @@ func _on_target_pressed(index: int) -> void:
 func _rebuild_enemy_groups() -> void:
 	for child in enemies_container.get_children():
 		child.free()
+	if enemies_stage != null:
+		for child in enemies_stage.get_children():
+			child.free()
 	intent_labels.clear()
 	weak_labels.clear()
 	enemy_info_labels.clear()
 	target_buttons.clear()
+	enemy_sprites.clear()
 	for i in range(battle.enemies.size()):
 		var row := HBoxContainer.new()
 		row.name = "Enemy%d" % i
 		row.add_theme_constant_override("separation", 8)
+
+		if enemies_stage != null:
+			var sprite: TextureRect = _make_sprite(str(battle.enemies[i].id), SpriteSheet.DIR_LEFT)
+			sprite.name = "EnemySprite%d" % i
+			enemies_stage.add_child(sprite)
+			enemy_sprites.append(sprite)
 
 		var info_label := Label.new()
 		info_label.custom_minimum_size = Vector2(260, 0)
@@ -279,6 +367,7 @@ func _refresh_enemy_group(index: int) -> void:
 func _refresh_martial_buttons() -> void:
 	var over: bool = battle.state() != Battle.State.ONGOING
 	var target_alive: bool = _target_alive()
+	var locked: bool = over or _dialogue_active()
 	for i in range(martial_buttons.size()):
 		var button: Button = martial_buttons[i]
 		var id: String = str(battle.loadout[i])
@@ -287,18 +376,19 @@ func _refresh_martial_buttons() -> void:
 			name_text = str(battle.martials[id].name)
 		var verdict: int = battle.preview(id, selected_target)
 		button.text = "%s %s" % [name_text, _verdict_mark(verdict)]
-		button.disabled = over or not target_alive
+		button.disabled = locked or not target_alive
 
 
 func _refresh_special_buttons() -> void:
 	var over: bool = battle.state() != Battle.State.ONGOING
 	var target_alive: bool = _target_alive()
+	var locked: bool = over or _dialogue_active()
 	var points: int = int(battle.player.jianyi_points)
 	jianyi_button.text = "剑意(%d)" % points
-	jianyi_button.disabled = over or not target_alive \
+	jianyi_button.disabled = locked or not target_alive \
 			or not Jianyi.can_strike(battle.player, battle.enemies[selected_target])
 	probe_button.text = "试探"
-	probe_button.disabled = over or not target_alive
+	probe_button.disabled = locked or not target_alive
 
 
 func _target_alive() -> bool:
@@ -306,6 +396,177 @@ func _target_alive() -> bool:
 		return false
 	var target: Variant = battle.enemies[selected_target]
 	return not target.is_dead()
+
+
+func _reset_stage_state() -> void:
+	_idle_time = 0.0
+	_idle_column = IDLE_COLUMN_A
+	_player_flash = 0.0
+	_enemy_flash.clear()
+	_last_hp_enemies.clear()
+	_last_hp_player = int(battle.player.hp)
+	for enemy in battle.enemies:
+		_enemy_flash.append(0.0)
+		_last_hp_enemies.append(int(enemy.hp))
+	_set_sprite_column(player_sprite, IDLE_COLUMN_A)
+
+
+func _make_sprite(sprite_id: String, direction: int) -> TextureRect:
+	var sprite := TextureRect.new()
+	sprite.texture = SpriteSheet.frame(sprite_id, direction, 0)
+	sprite.set_meta("direction", direction)
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	sprite.custom_minimum_size = SPRITE_SIZE
+	sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	sprite.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	sprite.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return sprite
+
+
+func _set_sprite_column(sprite: TextureRect, column: int) -> void:
+	if sprite == null:
+		return
+	var current: Texture2D = sprite.texture
+	if not (current is AtlasTexture):
+		return
+	var current_atlas: AtlasTexture = current as AtlasTexture
+	var direction: int = int(sprite.get_meta("direction", SpriteSheet.DIR_DOWN))
+	var atlas := AtlasTexture.new()
+	atlas.atlas = current_atlas.atlas
+	atlas.region = Rect2(
+		column * SpriteSheet.FRAME_W,
+		direction * SpriteSheet.FRAME_H,
+		SpriteSheet.FRAME_W,
+		SpriteSheet.FRAME_H
+	)
+	sprite.texture = atlas
+
+
+func _apply_idle_column() -> void:
+	_set_sprite_column(player_sprite, _idle_column)
+	for i in range(enemy_sprites.size()):
+		if battle == null or i >= battle.enemies.size():
+			break
+		var enemy: Variant = battle.enemies[i]
+		if enemy.is_dead() or enemy.is_stunned():
+			continue
+		var sprite: TextureRect = enemy_sprites[i]
+		_set_sprite_column(sprite, _idle_column)
+
+
+func _update_stage() -> void:
+	if battle == null:
+		return
+	if player_sprite != null:
+		if int(battle.player.hp) < _last_hp_player:
+			_player_flash = FLASH_TIME
+		_last_hp_player = int(battle.player.hp)
+		if _player_flash > 0.0:
+			player_sprite.modulate = HIT_COLOR
+		else:
+			player_sprite.modulate = BASE_COLOR
+	for i in range(enemy_sprites.size()):
+		if i >= battle.enemies.size():
+			break
+		var enemy: Variant = battle.enemies[i]
+		var sprite: TextureRect = enemy_sprites[i]
+		if i < _last_hp_enemies.size() and int(enemy.hp) < int(_last_hp_enemies[i]):
+			if enemy.is_dead():
+				_enemy_flash[i] = 0.0
+			else:
+				_enemy_flash[i] = FLASH_TIME
+		if i < _last_hp_enemies.size():
+			_last_hp_enemies[i] = int(enemy.hp)
+		if i < _enemy_flash.size() and float(_enemy_flash[i]) > 0.0 and not enemy.is_dead():
+			sprite.modulate = HIT_COLOR
+		else:
+			sprite.modulate = _enemy_base_color(enemy)
+
+
+func _tick_flash_timers(delta: float) -> void:
+	if _player_flash > 0.0:
+		_player_flash = maxf(0.0, _player_flash - delta)
+		if _player_flash <= 0.0 and player_sprite != null:
+			player_sprite.modulate = BASE_COLOR
+	for i in range(_enemy_flash.size()):
+		if float(_enemy_flash[i]) <= 0.0:
+			continue
+		_enemy_flash[i] = maxf(0.0, float(_enemy_flash[i]) - delta)
+		if float(_enemy_flash[i]) > 0.0:
+			continue
+		if battle == null or i >= battle.enemies.size() or i >= enemy_sprites.size():
+			continue
+		var sprite: TextureRect = enemy_sprites[i]
+		sprite.modulate = _enemy_base_color(battle.enemies[i])
+
+
+func _enemy_base_color(enemy: Variant) -> Color:
+	if enemy.is_dead():
+		return DEAD_COLOR
+	if enemy.is_stunned():
+		return STUN_COLOR
+	return BASE_COLOR
+
+
+func _dialogue_active() -> bool:
+	return dialogue_view != null and bool(dialogue_view.is_active())
+
+
+func _on_dialogue_finished() -> void:
+	refresh()
+
+
+func _play_intro_dialogue() -> void:
+	var entry: Variant = _encounter_entry(_current_enemy_id)
+	if not (entry is Dictionary):
+		return
+	var intro_path: String = str(entry.get("intro", ""))
+	if intro_path == "":
+		return
+	_play_dialogue(intro_path)
+
+
+func _maybe_play_win_dialogue() -> void:
+	if _win_dialogue_played or battle == null:
+		return
+	if battle.state() != Battle.State.WON:
+		return
+	_win_dialogue_played = true
+	var entry: Variant = _encounter_entry(_current_enemy_id)
+	if not (entry is Dictionary):
+		return
+	var win_path: String = str(entry.get("win", ""))
+	if win_path == "":
+		return
+	_play_dialogue(win_path)
+
+
+func _encounter_entry(enemy_id: String) -> Variant:
+	if enemy_id == "" or not FileAccess.file_exists(ENCOUNTERS_PATH):
+		return null
+	var text: String = FileAccess.get_file_as_string(ENCOUNTERS_PATH)
+	if text == "":
+		return null
+	var parsed: Variant = JSON.parse_string(text)
+	if not (parsed is Dictionary):
+		return null
+	var data: Dictionary = parsed
+	return data.get(enemy_id, null)
+
+
+func _play_dialogue(path: String) -> void:
+	if dialogue_view == null:
+		return
+	var speakers: Dictionary = Dialogue.load_speakers(SPEAKERS_PATH).get("defs", {})
+	var loaded: Dictionary = Dialogue.load_file(path, speakers)
+	var errors: Array = loaded.get("errors", [])
+	if not errors.is_empty():
+		push_warning("dialogue skipped: %s (%s)" % [path, str(errors)])
+		return
+	var lines: Array = loaded.get("lines", [])
+	if lines.is_empty():
+		return
+	dialogue_view.start(lines)
 
 
 func _player_text() -> String:

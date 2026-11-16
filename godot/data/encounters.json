@@ -1,0 +1,6 @@
+{
+	"ma_youwei": {
+		"intro": "res://data/dialogues/boss_intro.json",
+		"win": "res://data/dialogues/boss_win.json"
+	}
+}

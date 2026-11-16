@@ -65,6 +65,10 @@ func test_probe_reveals_weak_in_ui() -> void:
 	var view: Variant = _make_view()
 	view.start("ma_youwei", 1, false)
 	assert_true(view.weak_labels[0].text.contains("未知"), "weakness is hidden before probing")
+	var guard := 0
+	while view.dialogue_view.is_active() and guard < 40:
+		view.dialogue_view.advance()
+		guard += 1
 	view.press_action({"kind": "probe", "target": 0})
 	assert_true(view.weak_labels[0].text.contains("开山"), "weakness is revealed after probing")
 	view.free()
