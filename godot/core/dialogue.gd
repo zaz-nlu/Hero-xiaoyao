@@ -103,6 +103,14 @@ static func parse(json_text: String, speakers: Dictionary) -> Dictionary:
 				continue
 			side_override = str(raw_side)
 
+		var name_override: String = ""
+		if entry.has("name"):
+			var raw_line_name: Variant = entry["name"]
+			if not (raw_line_name is String):
+				errors.append("dialogue[%d]: speaker '%s' name must be a string" % [i, speaker])
+				continue
+			name_override = str(raw_line_name)
+
 		var line_name: String = ""
 		var line_portrait: String = ""
 		var line_side: String = "center"
@@ -117,6 +125,8 @@ static func parse(json_text: String, speakers: Dictionary) -> Dictionary:
 				line_name = speaker
 			if side_override != "":
 				line_side = side_override
+			if name_override != "":
+				line_name = name_override
 
 		lines.append({
 			"speaker": speaker,

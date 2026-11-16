@@ -1,0 +1,10 @@
+{
+  "bun_vendor": {"file": "res://data/dialogues/npc_bun_vendor.json"},
+  "disciple": {"file": "res://data/dialogues/npc_disciple.json"},
+  "bandit_1": {"file": "res://data/dialogues/npc_bandit_1.json"},
+  "bandit_2": {"file": "res://data/dialogues/npc_bandit_2.json"},
+  "ma_youwei": {
+    "file": "res://data/dialogues/boss_intro.json",
+    "encounter": {"enemy": "ma_youwei", "count": 1, "first_strike": false}
+  }
+}

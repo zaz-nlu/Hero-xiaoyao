@@ -1,12 +1,20 @@
 extends Node3D
 
+signal encounter_requested(enemy_id: String, count: int, first_strike: bool)
+
 const TOWN_PATH := "res://data/town.json"
+const NPC_DIALOGUES_PATH := "res://data/npc_dialogues.json"
+const SPEAKERS_PATH := "res://data/speakers.json"
 const CAMERA_OFFSET := Vector3(0.0, 13.0, 17.0)
+const DEFEATED_NPC_IDS: Array[String] = ["ma_youwei", "bandit_1", "bandit_2"]
 
 const TownData = preload("res://world/town_data.gd")
 const Texgen = preload("res://world/texgen.gd")
 const CharacterSprite = preload("res://world/character_sprite.gd")
 const PlayerMotion = preload("res://world/player_motion.gd")
+const Dialogue = preload("res://core/dialogue.gd")
+const GameState = preload("res://core/game_state.gd")
+const Interaction = preload("res://world/interaction.gd")
 
 const VIGNETTE_SHADER := """
 shader_type canvas_item;
@@ -24,6 +32,7 @@ void fragment() {
 var data: Dictionary = {}
 var blockers: Array = []
 var npc_nodes: Dictionary = {}
+var npc_dialogues: Dictionary = {}
 var camera: Camera3D = null
 var follow_target: Node3D = null
 var sun: DirectionalLight3D = null
@@ -31,6 +40,10 @@ var world_env: WorldEnvironment = null
 var player: Node3D = null
 var player_pos: Vector2 = Vector2.ZERO
 var bounds_rect: Rect2 = Rect2()
+var dialogue_view: Control = null
+var prompt_label: Label = null
+var pending_encounter: Dictionary = {}
+var current_npc_id: String = ""
 
 var _input_override: Variant = null
 var _built: bool = false
@@ -40,11 +53,13 @@ var _banners: Array[Node3D] = []
 var _banner_phases: Array[float] = []
 var _time: float = 0.0
 var _focus: Vector3 = Vector3.ZERO
+var _hud_layer: CanvasLayer = null
 
 
 func _ready() -> void:
 	_register_input_actions()
 	build()
+	build_hud()
 
 
 func _register_input_actions() -> void:
@@ -88,6 +103,7 @@ func build() -> void:
 	_build_backdrop()
 	_build_lighting()
 	_build_camera()
+	npc_dialogues = Interaction.load_npc_dialogues(NPC_DIALOGUES_PATH)
 	_build_npcs()
 	_build_player()
 	snap_camera()
@@ -95,6 +111,10 @@ func build() -> void:
 
 func _process(delta: float) -> void:
 	tick_player(delta)
+	update_prompt()
+	if not is_dialogue_active() and InputMap.has_action("interact") \
+			and Input.is_action_just_pressed("interact"):
+		try_interact()
 	_time += delta
 	if _water_material != null:
 		_water_material.uv1_offset.x += 0.05 * delta
@@ -1081,6 +1101,8 @@ func _build_npcs() -> void:
 			continue
 		var npc: Dictionary = npc_value
 		var id := str(npc.get("id", "npc_%d" % i))
+		if GameState.has_flag("boss_defeated") and DEFEATED_NPC_IDS.has(id):
+			continue
 		var character: Variant = CharacterSprite.new()
 		character.name = id
 		character.setup(str(npc.get("sprite", "")))
@@ -1151,6 +1173,8 @@ func tick_player(delta: float) -> void:
 	if player == null:
 		return
 	var input := get_move_input()
+	if is_dialogue_active():
+		input = Vector2.ZERO
 	player_pos = PlayerMotion.step(player_pos, input, delta, blockers, bounds_rect)
 	var target_y: float = TownData.ground_height(data, player_pos.x, player_pos.y)
 	var weight: float = 1.0 - exp(-14.0 * delta)
@@ -1159,3 +1183,155 @@ func tick_player(delta: float) -> void:
 	var facing: String = PlayerMotion.facing_from_input(input, str(player.get("facing")))
 	player.call("set_facing", facing)
 	player.call("set_moving", input.length() > 0.01)
+
+
+# ---------------------------------------------------------------- interaction
+
+func build_hud() -> void:
+	if _hud_layer != null:
+		return
+	_hud_layer = CanvasLayer.new()
+	_hud_layer.name = "Hud"
+	_hud_layer.layer = 10
+	add_child(_hud_layer)
+
+	var view: Variant = load("res://ui/dialogue_view.gd").new()
+	view.name = "DialogueView"
+	_hud_layer.add_child(view)
+	view.build_ui()
+	view.visible = false
+	view.connect("finished", Callable(self, "_on_dialogue_finished"))
+	dialogue_view = view
+
+	prompt_label = Label.new()
+	prompt_label.name = "PromptLabel"
+	prompt_label.text = ""
+	prompt_label.visible = false
+	prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	prompt_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	prompt_label.anchor_left = 0.0
+	prompt_label.anchor_right = 1.0
+	prompt_label.anchor_top = 1.0
+	prompt_label.anchor_bottom = 1.0
+	prompt_label.offset_left = 0.0
+	prompt_label.offset_right = 0.0
+	prompt_label.offset_top = -160.0
+	prompt_label.offset_bottom = -110.0
+	prompt_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hud_layer.add_child(prompt_label)
+
+
+func nearby_npc() -> String:
+	var positions: Dictionary = {}
+	for id in npc_nodes.keys():
+		var node_value: Variant = npc_nodes[id]
+		if not (node_value is Node3D):
+			continue
+		var node: Node3D = node_value
+		positions[str(id)] = Vector2(node.position.x, node.position.z)
+	return Interaction.nearest_npc(player_pos, positions)
+
+
+func try_interact() -> bool:
+	if is_dialogue_active():
+		return false
+	var npc_id: String = nearby_npc()
+	if npc_id == "" or not npc_dialogues.has(npc_id):
+		return false
+	var entry_value: Variant = npc_dialogues[npc_id]
+	if not (entry_value is Dictionary):
+		return false
+	var entry: Dictionary = entry_value
+	var path := str(entry.get("file", ""))
+	if path == "":
+		return false
+
+	current_npc_id = npc_id
+	_face_player(npc_id)
+
+	var speakers: Dictionary = Dialogue.load_speakers(SPEAKERS_PATH).get("defs", {})
+	var loaded: Dictionary = Dialogue.load_file(path, speakers)
+	var errors: Array = loaded.get("errors", [])
+	if not errors.is_empty():
+		for error_text in errors:
+			push_warning("town dialogue: %s" % str(error_text))
+		current_npc_id = ""
+		return false
+
+	pending_encounter = {}
+	if entry.has("encounter"):
+		var encounter_value: Variant = entry["encounter"]
+		if encounter_value is Dictionary:
+			var encounter: Dictionary = encounter_value
+			pending_encounter = {
+				"enemy": str(encounter.get("enemy", npc_id)),
+				"count": int(encounter.get("count", 1)),
+				"first_strike": bool(encounter.get("first_strike", false)),
+			}
+
+	if dialogue_view == null:
+		build_hud()
+	if dialogue_view == null:
+		return false
+	var lines: Array = loaded.get("lines", [])
+	dialogue_view.call("start", lines)
+	if prompt_label != null:
+		prompt_label.visible = false
+	return true
+
+
+func is_dialogue_active() -> bool:
+	return dialogue_view != null and bool(dialogue_view.call("is_active"))
+
+
+func update_prompt() -> void:
+	if prompt_label == null:
+		return
+	if is_dialogue_active():
+		prompt_label.visible = false
+		return
+	var npc_id: String = nearby_npc()
+	if npc_id == "":
+		prompt_label.visible = false
+		return
+	prompt_label.text = "按 E 与 %s 交谈" % _npc_display_name(npc_id)
+	prompt_label.visible = true
+
+
+func _npc_display_name(npc_id: String) -> String:
+	var npcs: Array = data.get("npcs", [])
+	for npc_value in npcs:
+		if typeof(npc_value) != TYPE_DICTIONARY:
+			continue
+		var npc: Dictionary = npc_value
+		if str(npc.get("id", "")) == npc_id:
+			return str(npc.get("name", npc_id))
+	return npc_id
+
+
+func _face_player(npc_id: String) -> void:
+	var npc_value: Variant = npc_nodes.get(npc_id, null)
+	if not (npc_value is Node3D):
+		return
+	var npc: Node3D = npc_value
+	var dx: float = player_pos.x - npc.position.x
+	var dz: float = player_pos.y - npc.position.z
+	var facing := "down"
+	if absf(dx) >= absf(dz):
+		facing = "right" if dx > 0.0 else "left"
+	else:
+		facing = "down" if dz > 0.0 else "up"
+	npc.call("set_facing", facing)
+
+
+func _on_dialogue_finished() -> void:
+	if not pending_encounter.is_empty():
+		var encounter: Dictionary = pending_encounter
+		pending_encounter = {}
+		emit_signal(
+			"encounter_requested",
+			str(encounter.get("enemy", "")),
+			int(encounter.get("count", 1)),
+			bool(encounter.get("first_strike", false))
+		)
+	current_npc_id = ""
