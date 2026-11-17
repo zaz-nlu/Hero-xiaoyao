@@ -72,6 +72,7 @@ var prompt_label: Label = null
 var pending_encounter: Dictionary = {}
 var current_npc_id: String = ""
 var skip_actors: bool = false
+var input_blocked: bool = false
 
 var _input_override: Variant = null
 var _built: bool = false
@@ -1541,6 +1542,8 @@ func set_input_override(v: Variant) -> void:
 
 
 func get_move_input() -> Vector2:
+	if input_blocked:
+		return Vector2.ZERO
 	if _input_override != null:
 		if typeof(_input_override) == TYPE_VECTOR2:
 			var override_value: Vector2 = _input_override
@@ -1616,6 +1619,8 @@ func nearby_npc() -> String:
 
 
 func try_interact() -> bool:
+	if input_blocked:
+		return false
 	if is_dialogue_active():
 		return false
 	var npc_id: String = nearby_npc()

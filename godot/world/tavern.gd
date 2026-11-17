@@ -50,6 +50,7 @@ var pending_encounter: Dictionary = {}
 var current_npc_id: String = ""
 var state: String = "normal"
 var skip_actors: bool = false
+var input_blocked: bool = false
 var exit_rect: Rect2 = Rect2()
 var exit_prompt: String = "按 E 走出酒馆"
 
@@ -1394,6 +1395,8 @@ func set_input_override(v: Variant) -> void:
 
 
 func get_move_input() -> Vector2:
+	if input_blocked:
+		return Vector2.ZERO
 	if _input_override != null:
 		if typeof(_input_override) == TYPE_VECTOR2:
 			var override_value: Vector2 = _input_override
@@ -1677,6 +1680,8 @@ func is_in_exit() -> bool:
 
 
 func try_interact() -> bool:
+	if input_blocked:
+		return false
 	if is_dialogue_active():
 		return false
 	var npc_id: String = nearby_npc()

@@ -6,20 +6,39 @@ const Quests = preload("res://core/quests.gd")
 const TOWN_SCENE := "res://world/town.gd"
 const TAVERN_SCENE := "res://world/tavern.gd"
 const BATTLE_SCENE := "res://ui/battle_view.gd"
+const STATUS_OVERLAY_SCENE := "res://ui/status_overlay.gd"
 const BOSS_ENEMY_ID := "ma_youwei"
 
 var current: Node = null
 var current_kind: String = ""
+var overlay: Variant = null
 
 var _battle_enemy: String = ""
 var _battle_count: int = 0
 
 
 func _ready() -> void:
+	_ensure_overlay()
 	show_town()
 
 
+func _process(_delta: float) -> void:
+	if overlay == null or current == null:
+		return
+	if current_kind == "town" or current_kind == "tavern":
+		current.set("input_blocked", overlay.is_panel_open())
+
+
+func _ensure_overlay() -> void:
+	if overlay != null:
+		return
+	overlay = load(STATUS_OVERLAY_SCENE).new()
+	overlay.name = "StatusOverlay"
+	add_child(overlay)
+
+
 func show_town() -> void:
+	_ensure_overlay()
 	_release_current()
 	var town: Variant = load(TOWN_SCENE).new()
 	add_child(town)
@@ -31,9 +50,11 @@ func show_town() -> void:
 	current = town
 	current_kind = "town"
 	GameState.town_return_pos = null
+	overlay.enabled = true
 
 
 func show_tavern() -> void:
+	_ensure_overlay()
 	_release_current()
 	var tavern: Variant = load(TAVERN_SCENE).new()
 	add_child(tavern)
@@ -44,6 +65,7 @@ func show_tavern() -> void:
 	tavern.connect("encounter_requested", Callable(self, "_on_encounter_requested"))
 	current = tavern
 	current_kind = "tavern"
+	overlay.enabled = true
 
 
 func _on_enter_requested(place: String) -> void:
@@ -68,6 +90,9 @@ func _on_encounter_requested(enemy_id: String, count: int, first_strike: bool) -
 func show_battle(
 	enemy_id: String, count: int, first_strike: bool, play_intro: bool
 ) -> void:
+	_ensure_overlay()
+	overlay.enabled = false
+	overlay.close_all()
 	_release_current()
 	var view: Variant = load(BATTLE_SCENE).new()
 	add_child(view)
