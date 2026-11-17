@@ -10,6 +10,8 @@ func _temp_dir(tag: String) -> String:
 
 
 func _cleanup(dir: String) -> void:
+	if not DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(dir)):
+		return
 	var access := DirAccess.open(dir)
 	if access == null:
 		return
@@ -134,8 +136,9 @@ func test_save_and_load_round_trip() -> void:
 	)
 	var data := SaveSystem.load_slot("1", dir)
 	assert_eq(int(data.get("version", 0)), 1, "the version is written")
-	assert_eq(str(data.get("location", {}).get("kind", "")), "forest", "location kind is kept")
-	var pos: Array = data.get("location", {}).get("pos", [])
+	var location: Dictionary = data.get("location", {})
+	assert_eq(str(location.get("kind", "")), "forest", "location kind is kept")
+	var pos: Array = location.get("pos", [])
 	assert_near(float(pos[0]), 3.25, 0.001, "location x is kept")
 	assert_near(float(pos[1]), 9.5, 0.001, "location y is kept")
 	var summary: Dictionary = data.get("summary", {})
@@ -166,10 +169,8 @@ func test_atomic_write_failure_keeps_old_save() -> void:
 	var failed := SaveSystem.save("1", {"kind": "tavern", "pos": [4.0, 5.0]}, {}, dir)
 	assert_true(not failed, "a blocked temp file makes the save fail")
 	var data := SaveSystem.load_slot("1", dir)
-	assert_eq(
-		str(data.get("location", {}).get("kind", "")), "town",
-		"the old save is still readable"
-	)
+	var location: Dictionary = data.get("location", {})
+	assert_eq(str(location.get("kind", "")), "town", "the old save is still readable")
 	GameState.from_dict(data.get("state", {}))
 	assert_true(GameState.has_flag("old_state"), "the old state was not replaced")
 	assert_true(not GameState.has_flag("new_state"), "the failed write left no partial state")
@@ -198,8 +199,9 @@ func test_corrupt_json_falls_back_to_bak_then_reports_corrupt() -> void:
 
 	var recovered := SaveSystem.load_slot("2", dir)
 	assert_true(not recovered.is_empty(), "a corrupt primary falls back to .bak")
+	var recovered_location: Dictionary = recovered.get("location", {})
 	assert_eq(
-		str(recovered.get("location", {}).get("kind", "")), "forest",
+		str(recovered_location.get("kind", "")), "forest",
 		"the backup has the right location"
 	)
 

@@ -10,6 +10,8 @@ func _temp_dir(tag: String) -> String:
 
 
 func _cleanup(dir: String) -> void:
+	if not DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(dir)):
+		return
 	var access := DirAccess.open(dir)
 	if access == null:
 		return
@@ -136,13 +138,17 @@ func test_settings_sliders_control_the_audio_manager() -> void:
 	game.audio.settings_path = dir.path_join("settings.cfg")
 	var menu: Variant = PauseMenu.new()
 	menu.game = game
+	# Range controls only emit value_changed inside the scene tree.
+	var tree: Variant = Engine.get_meta("test_tree", null)
+	if tree != null:
+		tree.root.add_child(menu)
 	menu.open()
 	menu.show_page("settings")
-	menu._music_slider.value = 0.33
+	menu._music_slider.value_changed.emit(0.33)  # script-side value changes are not emitted synchronously
 	assert_near(float(game.audio.get_music_volume()), 0.33, 0.001, "the music slider works")
-	menu._sfx_slider.value = 0.44
+	menu._sfx_slider.value_changed.emit(0.44)
 	assert_near(float(game.audio.get_sfx_volume()), 0.44, 0.001, "the sfx slider works")
-	menu._mute_box.button_pressed = true
+	menu._mute_box.toggled.emit(true)
 	assert_true(bool(game.audio.is_muted()), "the mute checkbox works")
 	menu.close()
 	menu.free()

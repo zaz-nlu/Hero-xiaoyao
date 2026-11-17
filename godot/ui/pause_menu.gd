@@ -366,8 +366,8 @@ func _build_slot_page(panel: Control) -> void:
 		var slot: String = SaveSystem.SLOTS[i]
 		var button := Button.new()
 		button.name = "Slot_%s" % slot
-		button.position = Vector2(80.0, 94.0 + 88.0 * float(i))
-		button.size = Vector2(480.0, 74.0)
+		button.position = Vector2(80.0, 92.0 + 100.0 * float(i))
+		button.size = Vector2(480.0, 90.0)
 		button.focus_mode = Control.FOCUS_NONE
 		button.add_theme_stylebox_override("normal", Hud.card_style(0.82))
 		button.add_theme_stylebox_override("hover", Hud.card_hover_style())
@@ -382,12 +382,12 @@ func _build_slot_page(panel: Control) -> void:
 		)
 		var info := _make_label(
 			button, "SlotInfo_%s" % slot, "", Vector2(16.0, 34.0),
-			Vector2(448.0, 36.0), 14, Hud.MUTED
+			Vector2(448.0, 52.0), 14, Hud.MUTED
 		)
 		slot_cards[slot] = {"button": button, "title": title, "info": info}
 
 	_slot_back = _make_menu_button(
-		_slot_page, "SlotBack", "返回", Vector2(270.0, 512.0), Vector2(100.0, 38.0)
+		_slot_page, "SlotBack", "返回", Vector2(270.0, 520.0), Vector2(100.0, 38.0)
 	)
 	_slot_back.pressed.connect(_on_slot_back_pressed)
 

@@ -9,6 +9,8 @@ func _temp_dir(tag: String) -> String:
 
 
 func _cleanup(dir: String) -> void:
+	if not DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(dir)):
+		return
 	var access := DirAccess.open(dir)
 	if access == null:
 		return
@@ -119,8 +121,9 @@ func test_autosave_creates_auto_slot_on_scene_entry() -> void:
 		"entering the forest writes an auto save"
 	)
 	var data := SaveSystem.load_slot("auto", dir)
+	var location: Dictionary = data.get("location", {})
 	assert_eq(
-		str(data.get("location", {}).get("kind", "")), "forest",
+		str(location.get("kind", "")), "forest",
 		"the auto save records the forest"
 	)
 	game.free()
