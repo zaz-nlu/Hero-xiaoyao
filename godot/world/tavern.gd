@@ -7,7 +7,7 @@ signal state_changed(new_state: String)
 const TAVERN_PATH := "res://data/tavern.json"
 const SPEAKERS_PATH := "res://data/speakers.json"
 const CAMERA_OFFSET := Vector3(0.0, 13.0, 30.0)
-const LOOK_AHEAD := Vector3(0.0, 1.0, -3.0)
+const LOOK_AHEAD := Vector3(0.0, 1.5, -7.5)
 const ANIM_DURATION := 1.2
 const STATES: Array[String] = ["normal", "brawl", "aftermath"]
 
