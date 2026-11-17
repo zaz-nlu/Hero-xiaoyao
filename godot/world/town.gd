@@ -66,6 +66,7 @@ void fragment() {
 var data: Dictionary = {}
 var blockers: Array = []
 var npc_nodes: Dictionary = {}
+var npc_wander: Dictionary = {}
 var npc_dialogues: Dictionary = {}
 var camera: Camera3D = null
 var follow_target: Node3D = null
@@ -159,6 +160,7 @@ func build() -> void:
 
 func _process(delta: float) -> void:
 	tick_player(delta)
+	advance_npcs(delta)
 	update_prompt()
 	if not is_dialogue_active() and InputMap.has_action("interact") \
 			and Input.is_action_just_pressed("interact"):
@@ -945,6 +947,10 @@ func _build_props() -> void:
 				_build_stone_lantern(root, x, z, i)
 			"boat":
 				_build_boat(root, x, z, i)
+			"well":
+				_build_well(root, x, z)
+			"notice_board":
+				_build_notice_board(root, x, z)
 			"shrub", "grass_tuft", "peony", "chrysanthemum", "bamboo", "rocks":
 				_build_decor(root, kind, x, z, i)
 
@@ -1197,6 +1203,58 @@ func _build_boat(parent: Node3D, x: float, z: float, index: int) -> void:
 	)
 	if sprite != null:
 		parent.add_child(sprite)
+
+
+func _build_well(parent: Node3D, x: float, z: float) -> void:
+	var root := Node3D.new()
+	root.name = "Well"
+	root.position = Vector3(x, 0.0, z)
+	parent.add_child(root)
+	var stone_mat: StandardMaterial3D = _make_step_stone_material(Vector2(1.0, 1.0))
+	var ring := CylinderMesh.new()
+	ring.top_radius = 0.7
+	ring.bottom_radius = 0.7
+	ring.height = 1.0
+	_add_mesh(root, ring, stone_mat, Vector3(0.0, 0.5, 0.0), "StoneRing")
+	var water_mat: StandardMaterial3D = _solid_material(Color("#1d3a44"))
+	water_mat.roughness = 0.35
+	var water := CylinderMesh.new()
+	water.top_radius = 0.5
+	water.bottom_radius = 0.5
+	water.height = 0.04
+	_add_mesh(root, water, water_mat, Vector3(0.0, 1.01, 0.0), "WellWater")
+	var wood_mat: StandardMaterial3D = Texgen.make_material(
+		_get_tex("wood_planks"), Vector2(0.5, 2.0)
+	)
+	_add_box(root, Vector3(0.14, 1.6, 0.14), wood_mat, Vector3(-0.62, 0.8, 0.0), "PostLeft")
+	_add_box(root, Vector3(0.14, 1.6, 0.14), wood_mat, Vector3(0.62, 0.8, 0.0), "PostRight")
+	_add_box(root, Vector3(1.5, 0.14, 0.16), wood_mat, Vector3(0.0, 1.68, 0.0), "Beam")
+
+
+func _build_notice_board(parent: Node3D, x: float, z: float) -> void:
+	var root := Node3D.new()
+	root.name = "NoticeBoard"
+	root.position = Vector3(x, 0.0, z)
+	parent.add_child(root)
+	var post_mat: StandardMaterial3D = Texgen.make_material(
+		_get_tex("wood_planks"), Vector2(0.5, 2.0)
+	)
+	_add_box(root, Vector3(0.12, 1.7, 0.12), post_mat, Vector3(-0.65, 0.85, 0.0), "PostLeft")
+	_add_box(root, Vector3(0.12, 1.7, 0.12), post_mat, Vector3(0.65, 0.85, 0.0), "PostRight")
+	var board_mat: StandardMaterial3D = Texgen.make_material(
+		_get_tex("wood_planks"), Vector2(2.0, 1.0)
+	)
+	_add_box(root, Vector3(1.6, 0.9, 0.12), board_mat, Vector3(0.0, 1.25, 0.0), "Board")
+	var paper_mat: StandardMaterial3D = _solid_material(Color("#efe4c4"))
+	var paper_xs: Array[float] = [-0.45, 0.0, 0.45]
+	for index in range(paper_xs.size()):
+		_add_quad(
+			root,
+			Vector2(0.34, 0.44),
+			paper_mat,
+			Vector3(paper_xs[index], 1.25, 0.07),
+			"Paper%d" % index
+		)
 
 
 # A small wooden sign pointing down the southern path to the forest.
@@ -1490,7 +1548,105 @@ func _build_npcs() -> void:
 		character.set_facing(str(npc.get("facing", "down")))
 		root.add_child(character)
 		npc_nodes[id] = character
+		_register_wander(id, character, npc)
 		_add_quest_marker(id, character, i)
+
+
+func _register_wander(npc_id: String, node: Node3D, npc: Dictionary) -> void:
+	var wander_value: Variant = npc.get("wander", null)
+	if not (wander_value is Dictionary):
+		return
+	var wander: Dictionary = wander_value
+	var route: Array[Vector2] = []
+	var route_value: Variant = wander.get("route", [])
+	if route_value is Array:
+		for point_value in route_value:
+			if not (point_value is Array):
+				continue
+			var point: Array = point_value
+			if point.size() < 2:
+				continue
+			route.append(Vector2(float(point[0]), float(point[1])))
+	if route.size() < 2:
+		return
+	npc_wander[npc_id] = {
+		"node": node,
+		"route": route,
+		"speed": float(wander.get("speed", 0.9)),
+		"pause": float(wander.get("pause", 2.5)),
+		"target": 1,
+		"dir": 1,
+		"wait": 0.0,
+	}
+
+
+# Moves every wandering NPC along its route, pinging back and forth between the
+# end points and waiting `pause` seconds at each stop. An NPC stops and turns
+# toward the player while the player is close or talking to it.
+func advance_npcs(delta: float) -> void:
+	for raw_id in npc_wander.keys():
+		var npc_id := str(raw_id)
+		var state_value: Variant = npc_wander[raw_id]
+		if not (state_value is Dictionary):
+			continue
+		var state: Dictionary = state_value
+		var node_value: Variant = state.get("node", null)
+		if not (node_value is Node3D) or not is_instance_valid(node_value):
+			continue
+		var node: Node3D = node_value
+		var pos := Vector2(node.position.x, node.position.z)
+		var talking: bool = current_npc_id == npc_id and is_dialogue_active()
+		var player_close := player_pos.distance_to(pos) <= Interaction.RANGE
+		if player_close or talking:
+			state["wait"] = float(state.get("pause", 2.5))
+			_face_node_toward(node, player_pos)
+			node.call("set_moving", false)
+			continue
+		var wait := float(state.get("wait", 0.0))
+		if wait > 0.0:
+			state["wait"] = maxf(0.0, wait - delta)
+			node.call("set_moving", false)
+			continue
+		var route: Array = state.get("route", [])
+		if route.size() < 2:
+			continue
+		var target_index := clampi(int(state.get("target", 1)), 0, route.size() - 1)
+		var target: Vector2 = route[target_index]
+		var to_target := target - pos
+		var dist := to_target.length()
+		var speed := float(state.get("speed", 0.9))
+		var step := speed * delta
+		var moving := false
+		if dist <= step:
+			pos = target
+			var dir := int(state.get("dir", 1))
+			var next_index := target_index + dir
+			if next_index < 0 or next_index >= route.size():
+				dir = -dir
+				next_index = target_index + dir
+			state["dir"] = dir
+			state["target"] = clampi(next_index, 0, route.size() - 1)
+			state["wait"] = float(state.get("pause", 2.5))
+		elif dist > 0.0001:
+			pos += to_target / dist * step
+			moving = true
+		node.position = Vector3(pos.x, node.position.y, pos.y)
+		if moving:
+			_face_node_toward(node, pos + to_target)
+		node.call("set_moving", moving)
+
+
+func _face_node_toward(node: Node3D, point: Vector2) -> void:
+	var dx: float = point.x - node.position.x
+	var dz: float = point.y - node.position.z
+	if absf(dx) < 0.0001 and absf(dz) < 0.0001:
+		return
+	var facing := "down"
+	if absf(dx) >= absf(dz):
+		facing = "right" if dx > 0.0 else "left"
+	else:
+		facing = "down" if dz > 0.0 else "up"
+	node.call("set_facing", facing)
 
 
 func _add_quest_marker(npc_id: String, parent: Node3D, index: int) -> void:
@@ -1718,6 +1874,8 @@ func try_interact() -> bool:
 	var entry: Dictionary = entry_value
 	var path := str(entry.get("file", ""))
 	if path == "":
+		path = _pick_pool_dialogue(npc_id, entry)
+	if path == "":
 		return false
 
 	current_npc_id = npc_id
@@ -1759,6 +1917,18 @@ func try_interact() -> bool:
 	if prompt_label != null:
 		prompt_label.visible = false
 	return true
+
+
+func _pick_pool_dialogue(npc_id: String, entry: Dictionary) -> String:
+	var pool_value: Variant = entry.get("pool", null)
+	if not (pool_value is Array):
+		return ""
+	var pool: Array = pool_value
+	if pool.is_empty():
+		return ""
+	var count := int(GameState.dialogue_counters.get(npc_id, 0))
+	GameState.dialogue_counters[npc_id] = count + 1
+	return str(pool[count % pool.size()])
 
 
 func _try_enter_tavern() -> bool:

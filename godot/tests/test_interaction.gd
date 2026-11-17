@@ -73,7 +73,7 @@ func test_nearest_npc() -> void:
 func test_town_has_all_npcs_initially() -> void:
 	GameState.reset()
 	var town: Variant = _new_town()
-	assert_eq(town.npc_nodes.size(), 5, "all five npcs are built")
+	assert_eq(town.npc_nodes.size(), 24, "all twenty-four npcs are built")
 	town.free()
 
 
@@ -81,7 +81,7 @@ func test_defeated_npcs_are_removed() -> void:
 	GameState.reset()
 	GameState.set_flag("boss_defeated")
 	var town: Variant = _new_town()
-	assert_eq(town.npc_nodes.size(), 2, "only the two ordinary npcs remain")
+	assert_eq(town.npc_nodes.size(), 21, "the boss and the two bandits are gone")
 	assert_true(town.npc_nodes.has("bun_vendor"), "the bun vendor remains")
 	assert_true(town.npc_nodes.has("disciple"), "the disciple remains")
 	assert_true(not town.npc_nodes.has("ma_youwei"), "the boss is gone")

@@ -155,6 +155,12 @@ func show_line() -> void:
 			elif side == "right":
 				right_portrait.texture = portrait_texture
 				right_portrait.visible = true
+	elif speaker != "narrator":
+		# Speakers such as background villagers have no portrait: show only the
+		# name plate and the text, like the narrator, without leaving an old
+		# portrait on screen.
+		left_portrait.visible = false
+		right_portrait.visible = false
 
 	_refresh_portrait_emphasis(side)
 

@@ -131,7 +131,7 @@ func test_town_builds_facades_and_boats() -> void:
 	var town = load("res://world/town.gd").new()
 	town.build()
 	var facades: Array = town.find_children("Facade_*", "MeshInstance3D", true, false)
-	assert_eq(facades.size(), 6, "six building facades")
+	assert_eq(facades.size(), 10, "ten building facades")
 	var boats: Array = town.find_children("Boat*", "Sprite3D", true, false)
 	assert_eq(boats.size(), 3, "three boats on the river")
 	for boat_value in boats:
@@ -178,7 +178,7 @@ func test_town_builds_building_volumes() -> void:
 	var town = load("res://world/town.gd").new()
 	town.build()
 	var volumes: Array = town.find_children("Volume_*", "Node3D", true, false)
-	assert_eq(volumes.size(), 6, "six building volumes")
+	assert_eq(volumes.size(), 10, "ten building volumes")
 	var loaded: Dictionary = TownData.load_town(TOWN_PATH)
 	var buildings: Array = loaded["data"].get("buildings", [])
 	for building_value in buildings:

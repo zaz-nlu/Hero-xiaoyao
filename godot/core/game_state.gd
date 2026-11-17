@@ -16,6 +16,7 @@ static var mastery_exp: Dictionary = {}
 static var mastery_total: Dictionary = {}
 static var unspent_points: int = INITIAL_POINTS
 static var toasts: Array = []
+static var dialogue_counters: Dictionary = {}
 
 
 static func set_flag(key: String, value: bool = true) -> void:
@@ -41,3 +42,4 @@ static func reset() -> void:
 	mastery_total.clear()
 	unspent_points = INITIAL_POINTS
 	toasts.clear()
+	dialogue_counters.clear()

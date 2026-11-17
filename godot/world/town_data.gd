@@ -3,7 +3,7 @@ extends RefCounted
 const BUILDING_KINDS: Array[String] = ["house", "smith", "shop", "tavern"]
 const PROP_KINDS: Array[String] = [
 	"barrel", "crate", "bench", "lamp_post", "banner", "cart", "stall", "tree",
-	"jars", "baskets", "stone_lantern", "boat",
+	"jars", "baskets", "stone_lantern", "boat", "well", "notice_board",
 	"shrub", "grass_tuft", "peony", "chrysanthemum", "bamboo", "rocks"
 ]
 
@@ -84,6 +84,7 @@ static func validate(data: Dictionary) -> Array[String]:
 					break
 
 	var npcs: Array = data.get("npcs", [])
+	var blocker_rects: Array = footprints(data)
 	for i in range(npcs.size()):
 		var npc_value: Variant = npcs[i]
 		if typeof(npc_value) != TYPE_DICTIONARY:
@@ -99,10 +100,35 @@ static func validate(data: Dictionary) -> Array[String]:
 			var npc_pos := Vector2(float(npc["x"]), float(npc["z"]))
 			if not _bounds_has_point(bounds, npc_pos):
 				errors.append("npc %s is outside bounds" % id)
-			for rect in building_footprints:
-				if rect.has_point(npc_pos):
-					errors.append("npc %s is inside a building" % id)
-					break
+			if _point_in_rects(npc_pos, blocker_rects):
+				errors.append("npc %s is inside a blocker" % id)
+		var wander_value: Variant = npc.get("wander", null)
+		if typeof(wander_value) == TYPE_DICTIONARY:
+			var wander: Dictionary = wander_value
+			var route_value: Variant = wander.get("route", [])
+			if typeof(route_value) == TYPE_ARRAY:
+				var route: Array = route_value
+				for point_index in range(route.size()):
+					var point_value: Variant = route[point_index]
+					if typeof(point_value) != TYPE_ARRAY:
+						errors.append(
+							"npc %s wander point %d is not an array" % [id, point_index]
+						)
+						continue
+					var point: Array = point_value
+					if point.size() < 2 or not _is_number(point[0]) \
+							or not _is_number(point[1]):
+						errors.append("npc %s wander point %d is invalid" % [id, point_index])
+						continue
+					var route_pos := Vector2(float(point[0]), float(point[1]))
+					if not _bounds_has_point(bounds, route_pos):
+						errors.append(
+							"npc %s wander point %d is outside bounds" % [id, point_index]
+						)
+					if _point_in_rects(route_pos, blocker_rects):
+						errors.append(
+							"npc %s wander point %d is inside a blocker" % [id, point_index]
+						)
 
 	return errors
 
@@ -139,6 +165,10 @@ static func footprints(data: Dictionary) -> Array:
 				var w := float(prop.get("w", 4.0))
 				var d := float(prop.get("d", 2.0))
 				result.append(Rect2(x - w * 0.5, z - d * 0.5, w, d))
+			"well":
+				result.append(Rect2(x - 0.7, z - 0.7, 1.4, 1.4))
+			"notice_board":
+				result.append(Rect2(x - 0.8, z - 0.2, 1.6, 0.4))
 
 	var bridges: Array = data.get("bridges", [])
 	var ground: Array = data.get("ground", [])
@@ -158,6 +188,8 @@ static func footprints(data: Dictionary) -> Array:
 		var wz0 := float(rect[1])
 		var wx1 := float(rect[2])
 		var wz1 := float(rect[3])
+		# Cut the water into the stretches between the bridges (any number of bridges).
+		var gaps: Array = []
 		for bridge_value in bridges:
 			if typeof(bridge_value) != TYPE_DICTIONARY:
 				continue
@@ -168,10 +200,16 @@ static func footprints(data: Dictionary) -> Array:
 			var bx1 := float(bridge["x1"])
 			if bx1 <= wx0 or bx0 >= wx1:
 				continue
-			if bx0 > wx0:
-				result.append(Rect2(wx0, wz0, bx0 - wx0, wz1 - wz0))
-			if bx1 < wx1:
-				result.append(Rect2(bx1, wz0, wx1 - bx1, wz1 - wz0))
+			gaps.append([maxf(bx0, wx0), minf(bx1, wx1)])
+		gaps.sort_custom(func(a: Array, b: Array) -> bool: return float(a[0]) < float(b[0]))
+		var cursor := wx0
+		for gap in gaps:
+			var gap_arr: Array = gap
+			if float(gap_arr[0]) > cursor:
+				result.append(Rect2(cursor, wz0, float(gap_arr[0]) - cursor, wz1 - wz0))
+			cursor = maxf(cursor, float(gap_arr[1]))
+		if cursor < wx1:
+			result.append(Rect2(cursor, wz0, wx1 - cursor, wz1 - wz0))
 
 	var platform_value: Variant = data.get("platform", null)
 	if typeof(platform_value) == TYPE_DICTIONARY:
@@ -295,9 +333,22 @@ static func extra_blockers(data: Dictionary) -> Array:
 static func _has_numbers(entry: Dictionary, keys: Array) -> bool:
 	for key in keys:
 		var value: Variant = entry.get(key, null)
-		match typeof(value):
-			TYPE_INT, TYPE_FLOAT:
-				pass
-			_:
-				return false
+		if not _is_number(value):
+			return false
 	return true
+
+
+static func _is_number(value: Variant) -> bool:
+	match typeof(value):
+		TYPE_INT, TYPE_FLOAT:
+			return true
+	return false
+
+
+static func _point_in_rects(point: Vector2, rects: Array) -> bool:
+	for rect_value in rects:
+		if rect_value is Rect2:
+			var rect: Rect2 = rect_value
+			if rect.has_point(point):
+				return true
+	return false

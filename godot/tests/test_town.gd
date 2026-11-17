@@ -127,8 +127,8 @@ func test_town_data_loads_clean() -> void:
 	var town_data: Dictionary = loaded["data"]
 	var buildings: Array = town_data.get("buildings", [])
 	var npcs: Array = town_data.get("npcs", [])
-	assert_eq(buildings.size(), 6, "six buildings")
-	assert_eq(npcs.size(), 5, "five npcs")
+	assert_eq(buildings.size(), 10, "ten buildings")
+	assert_eq(npcs.size(), 24, "twenty-four npcs")
 
 
 func test_town_data_detects_overlap() -> void:
@@ -228,7 +228,7 @@ func test_footprints_cover_buildings() -> void:
 func test_town_builds() -> void:
 	var town = _new_town()
 	town.build()
-	assert_eq(town.npc_nodes.size(), 5, "five npc nodes")
+	assert_eq(town.npc_nodes.size(), 24, "twenty-four npc nodes")
 	assert_true(town.camera != null, "camera exists")
 	if town.camera != null:
 		assert_near(town.camera.fov, 28.0, 0.01, "camera fov is 28")

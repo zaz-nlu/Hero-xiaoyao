@@ -6,5 +6,44 @@
   "ma_youwei": {
     "file": "res://data/dialogues/boss_intro.json",
     "encounter": {"enemy": "ma_youwei", "count": 1, "first_strike": false}
+  },
+  "smith": {"file": "res://data/dialogues/npc_smith.json"},
+  "shopkeeper_f": {"file": "res://data/dialogues/npc_shopkeeper_f.json"},
+  "waiter": {"file": "res://data/dialogues/npc_waiter.json"},
+  "grandmother": {"file": "res://data/dialogues/npc_grandmother.json"},
+  "guard": {"file": "res://data/dialogues/npc_guard.json"},
+  "scholar": {"file": "res://data/dialogues/npc_scholar.json"},
+  "hunter": {"file": "res://data/dialogues/npc_hunter.json"},
+  "fisherman": {"file": "res://data/dialogues/npc_fisherman.json"},
+  "girl": {"file": "res://data/dialogues/npc_girl.json"},
+  "townswoman": {"file": "res://data/dialogues/npc_townswoman.json"},
+  "elder": {"file": "res://data/dialogues/npc_elder.json"},
+  "peddler": {"file": "res://data/dialogues/npc_peddler.json"},
+  "shopkeeper_m": {"file": "res://data/dialogues/npc_shopkeeper_m.json"},
+  "herbalist": {"file": "res://data/dialogues/npc_herbalist.json"},
+  "tailor": {"file": "res://data/dialogues/npc_tailor.json"},
+  "villager_1": {
+    "pool": [
+      "res://data/dialogues/npc_villager_a.json",
+      "res://data/dialogues/npc_villager_b.json"
+    ]
+  },
+  "villager_2": {
+    "pool": [
+      "res://data/dialogues/npc_villager_c.json",
+      "res://data/dialogues/npc_villager_d.json"
+    ]
+  },
+  "villager_3": {
+    "pool": [
+      "res://data/dialogues/npc_villager_e.json",
+      "res://data/dialogues/npc_villager_a.json"
+    ]
+  },
+  "villager_4": {
+    "pool": [
+      "res://data/dialogues/npc_villager_f.json",
+      "res://data/dialogues/npc_villager_b.json"
+    ]
   }
 }

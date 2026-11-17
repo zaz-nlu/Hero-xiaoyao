@@ -32,7 +32,7 @@ func test_show_town_creates_town() -> void:
 	var game: Variant = _new_game()
 	assert_eq(str(game.current_kind), "town", "the game starts in the town")
 	var town: Variant = game.current
-	assert_eq(int(town.npc_nodes.size()), 5, "all five npcs are built")
+	assert_eq(int(town.npc_nodes.size()), 24, "all twenty-four npcs are built")
 	game.free()
 
 
@@ -78,7 +78,7 @@ func test_battle_won_returns_to_town_and_removes_bandits() -> void:
 	assert_eq(str(game.current_kind), "town", "returning goes back to the town")
 	assert_true(GameState.has_flag("boss_defeated"), "winning sets the boss_defeated flag")
 	var back: Variant = game.current
-	assert_eq(int(back.npc_nodes.size()), 2, "the boss and the two bandits are gone")
+	assert_eq(int(back.npc_nodes.size()), 21, "the boss and the two bandits are gone")
 	assert_eq(back.player_pos, Vector2(7.0, 2.5), "the player returns to the saved position")
 	game.free()
 
@@ -95,7 +95,7 @@ func test_battle_lost_returns_to_town_without_flag() -> void:
 	assert_eq(str(game.current_kind), "town", "a loss returns to the town")
 	assert_true(not GameState.has_flag("boss_defeated"), "a loss does not set the boss flag")
 	var back: Variant = game.current
-	assert_eq(int(back.npc_nodes.size()), 5, "every npc is still in the town")
+	assert_eq(int(back.npc_nodes.size()), 24, "every npc is still in the town")
 	game.free()
 
 
