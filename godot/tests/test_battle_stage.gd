@@ -1,7 +1,7 @@
 extends "res://tests/test_case.gd"
 
 const PLAYER_POS := Vector3(4.2, 0.0, 1.6)
-const CAM_POS := Vector3(6.2, 4.8, 11.5)
+const CAM_POS := Vector3(6.4, 14.0, 36.0)
 const ENEMY_POSITIONS_2: Array = [
 	Vector3(8.0, 0.0, 0.2),
 	Vector3(9.2, 0.0, 2.4),

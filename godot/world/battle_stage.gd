@@ -9,9 +9,9 @@ const ENEMY_POSITIONS: Array = [
 	[Vector3(8.0, 0.0, 0.2), Vector3(9.2, 0.0, 2.4)],
 	[Vector3(8.0, 0.0, -0.2), Vector3(9.4, 0.0, 1.2), Vector3(8.0, 0.0, 2.6)],
 ]
-const CAM_POS := Vector3(6.2, 4.8, 11.5)
-const CAM_TARGET := Vector3(6.4, 1.6, 0.5)
-const CAM_FOV := 30.0
+const CAM_POS := Vector3(6.4, 14.0, 36.0)
+const CAM_TARGET := Vector3(6.4, 0.0, 0.0)
+const CAM_FOV := 26.0
 
 const HIT_COLOR := Color(1.0, 0.35, 0.35, 1.0)
 const POPUP_LIFE := 0.9
@@ -84,6 +84,7 @@ func _setup_camera() -> void:
 		return
 	camera.fov = CAM_FOV
 	camera.position = CAM_POS
+	_setup_dof()
 	if camera.is_inside_tree():
 		camera.look_at(CAM_TARGET, Vector3.UP)
 		camera.current = true
@@ -91,6 +92,18 @@ func _setup_camera() -> void:
 		camera.transform = Transform3D(
 			Basis.looking_at(CAM_TARGET - CAM_POS, Vector3.UP), CAM_POS
 		)
+
+
+# The town's depth of field is tuned for the close walking camera; re-centre it on the stage.
+func _setup_dof() -> void:
+	var attributes: Variant = camera.attributes
+	if attributes == null:
+		return
+	var dist: float = CAM_POS.distance_to(CAM_TARGET)
+	attributes.dof_blur_far_distance = dist + 14.0
+	attributes.dof_blur_far_transition = 20.0
+	attributes.dof_blur_near_distance = dist - 12.0
+	attributes.dof_blur_near_transition = 8.0
 
 
 func _build_player_actor() -> void:
@@ -186,7 +199,7 @@ func popup(text: String, world_pos: Vector3, color: Color, size: float = 1.0) ->
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.no_depth_test = true
 	label.fixed_size = false
-	label.pixel_size = 0.012 * size
+	label.pixel_size = 0.02 * size
 	label.font_size = 64
 	label.outline_size = 12
 	label.outline_modulate = Color(0.0, 0.0, 0.0, 1.0)
