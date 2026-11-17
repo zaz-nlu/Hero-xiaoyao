@@ -196,3 +196,67 @@ func test_town_tavern_door_emits_enter_requested() -> void:
 	if not enter_places.is_empty():
 		assert_eq(str(enter_places[0]), "tavern", "the requested place is the tavern")
 	town.free()
+
+
+func _decor_node_count(tavern: Variant) -> int:
+	var names: Array[String] = [
+		"Beams",
+		"Rug",
+		"Lantern_1",
+		"Lantern_2",
+		"Lantern_3",
+		"Lantern_4",
+		"LightShaft_1",
+		"LightShaft_2",
+		"LightShaft_3",
+		"Dust",
+		"WallSign",
+	]
+	var count := 0
+	for node_name in names:
+		if tavern.find_child(node_name, true, false) != null:
+			count += 1
+	return count
+
+
+func test_tavern_decor_and_rug_states() -> void:
+	GameState.reset()
+	var tavern: Variant = _new_tavern()
+	var beams: Node = tavern.find_child("Beams", true, false)
+	assert_true(beams != null, "the tavern has a Beams node")
+	if beams != null:
+		assert_true(beams.get_child_count() >= 8, "five main beams and three cross beams")
+	var rug_value: Variant = tavern.furniture_nodes.get("Rug", null)
+	assert_true(rug_value is Node3D, "the rug is a furniture node")
+	for i in range(1, 5):
+		var lantern: Node = tavern.find_child("Lantern_%d" % i, true, false)
+		assert_true(lantern != null, "Lantern_%d exists" % i)
+		var has_light := false
+		if lantern != null:
+			for child in lantern.get_children():
+				if child is OmniLight3D:
+					has_light = true
+		assert_true(has_light, "Lantern_%d carries an omni light" % i)
+	for i in range(1, 4):
+		assert_true(
+			tavern.find_child("LightShaft_%d" % i, true, false) != null,
+			"LightShaft_%d exists" % i
+		)
+	assert_true(tavern.find_child("Dust", true, false) != null, "dust particles exist")
+	if FileAccess.file_exists("res://assets/ai/game/prop_tavern_sign.png"):
+		assert_true(tavern.find_child("WallSign", true, false) != null, "the wall sign exists")
+	var decor_count: int = _decor_node_count(tavern)
+	tavern.set_state("brawl", false)
+	if rug_value is Node3D:
+		var rug: Node3D = rug_value
+		assert_near(rug.position.x - 11.0, 0.6, 0.1, "the brawl kicks the rug sideways")
+		assert_near(rug.position.z + 2.5, 0.4, 0.1, "the brawl pushes the rug forward")
+	tavern.set_state("aftermath", true)
+	tavern.advance(1.5)
+	tavern.set_state("normal", true)
+	tavern.advance(1.5)
+	assert_eq(
+		_decor_node_count(tavern), decor_count, "state changes do not duplicate decor"
+	)
+	tavern.free()
+	GameState.reset()

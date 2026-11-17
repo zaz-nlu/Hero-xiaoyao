@@ -5,8 +5,8 @@ signal encounter_requested(enemy_id: String, count: int, first_strike: bool)
 
 const TAVERN_PATH := "res://data/tavern.json"
 const SPEAKERS_PATH := "res://data/speakers.json"
-const CAMERA_OFFSET := Vector3(0.0, 16.7, 37.5)
-const LOOK_AHEAD := Vector3(0.0, 1.0, -4.0)
+const CAMERA_OFFSET := Vector3(0.0, 13.0, 30.0)
+const LOOK_AHEAD := Vector3(0.0, 1.0, -3.0)
 const ANIM_DURATION := 1.2
 const STATES: Array[String] = ["normal", "brawl", "aftermath"]
 
@@ -21,7 +21,7 @@ const Interaction = preload("res://world/interaction.gd")
 const VIGNETTE_SHADER := """
 shader_type canvas_item;
 
-uniform float vignette_strength = 0.45;
+uniform float vignette_strength = 0.55;
 
 void fragment() {
 	vec2 uv = SCREEN_UV - vec2(0.5);
@@ -105,9 +105,13 @@ func build() -> void:
 	_load_data()
 	state = _initial_state()
 	_build_room()
+	_build_beams()
+	_build_wall_decor()
 	_build_furniture()
 	_build_stairs()
 	_build_windows()
+	_build_light_shafts()
+	_build_dust()
 	_build_lanterns()
 	_build_lighting()
 	_build_camera()
@@ -259,6 +263,15 @@ func _room_float(key: String, fallback: float) -> float:
 			return fallback
 
 
+func _entry_float(entry: Dictionary, key: String, fallback: float) -> float:
+	var value: Variant = entry.get(key, fallback)
+	match typeof(value):
+		TYPE_INT, TYPE_FLOAT:
+			return float(value)
+		_:
+			return fallback
+
+
 func _get_tex(key: String) -> ImageTexture:
 	if _textures.has(key):
 		var cached: ImageTexture = _textures[key]
@@ -330,6 +343,17 @@ func _solid_material(color: Color) -> StandardMaterial3D:
 	return mat
 
 
+# Crisp pixel-art material for the generated rug and scroll images.
+func _image_material(img: Image) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_texture = ImageTexture.create_from_image(img)
+	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	mat.roughness = 1.0
+	mat.metallic = 0.0
+	mat.metallic_specular = 0.0
+	return mat
+
+
 func _emissive_material(color: Color, energy: float) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = color
@@ -382,12 +406,12 @@ func _build_room() -> void:
 	var cx := (x0 + x1) * 0.5
 	var cz := (z_back + z_front) * 0.5
 
-	# Floor: the AI wood tile repeats every 3 units. The plane is rotated a quarter
+	# Floor: the AI wood tile repeats every 4 units. The plane is rotated a quarter
 	# turn so the planks run across the room.
 	var floor_mesh := PlaneMesh.new()
 	floor_mesh.size = Vector2(depth, width)
-	var floor_mat: StandardMaterial3D = _wood_material(Vector2(depth / 3.0, width / 3.0))
-	floor_mat.albedo_color = Color(0.55, 0.48, 0.44)
+	var floor_mat: StandardMaterial3D = _wood_material(Vector2(depth / 4.0, width / 4.0))
+	floor_mat.albedo_color = Color(0.5, 0.44, 0.4)
 	var floor_instance := _add_mesh(
 		root, floor_mesh, floor_mat, Vector3(cx, 0.0, cz), "Floor"
 	)
@@ -481,6 +505,47 @@ func _build_room() -> void:
 		"TopBeam"
 	)
 
+	# A very large dark board behind the building stops the sky from showing above
+	# the walls and keeps the outside of the room from reading as pure black.
+	var backdrop_mat: StandardMaterial3D = _solid_material(Color("#0f0a08"))
+	backdrop_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	var backdrop := _add_quad(
+		root, Vector2(120.0, 60.0), backdrop_mat, Vector3(cx, 15.0, -30.0), "Backdrop"
+	)
+	backdrop.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
+func _build_beams() -> void:
+	var root := Node3D.new()
+	root.name = "Beams"
+	add_child(root)
+	var x0 := _room_float("x0", 0.0)
+	var x1 := _room_float("x1", 22.0)
+	var z_back := _room_float("z_back", -12.0)
+	var z_front := _room_float("z_front", 6.0)
+	var width := x1 - x0
+	var depth := z_front - z_back
+	var cx := (x0 + x1) * 0.5
+	var cz := (z_back + z_front) * 0.5
+	var beam_mat: StandardMaterial3D = _wood_material(Vector2(3.0, 1.0))
+	beam_mat.albedo_color = Color(0.35, 0.3, 0.27)
+
+	# Main beams run across the room; the three cross beams tie them together.
+	for beam_z in [-10.5, -7.0, -3.5, 0.0, 3.5]:
+		_add_box(
+			root,
+			Vector3(width, 0.4, 0.4),
+			beam_mat,
+			Vector3(cx, 6.2, float(beam_z))
+		)
+	for beam_x in [4.0, 11.0, 18.0]:
+		_add_box(
+			root,
+			Vector3(0.3, 0.3, depth),
+			beam_mat,
+			Vector3(float(beam_x), 5.9, cz)
+		)
+
 
 func _build_windows() -> void:
 	var root := Node3D.new()
@@ -513,27 +578,308 @@ func _build_windows() -> void:
 			mullion_mat,
 			Vector3(wx, window_y, z_back + 0.06)
 		)
+		# Cold daylight spilling in from just inside the window.
+		_add_omni_light(
+			root,
+			Vector3(wx, window_y, z_back + 0.6),
+			Color(0.62, 0.72, 0.9),
+			9.0,
+			0.9
+		)
+
+
+func _build_wall_decor() -> void:
+	var root := Node3D.new()
+	root.name = "WallDecor"
+	add_child(root)
+	var x0 := _room_float("x0", 0.0)
+	var x1 := _room_float("x1", 22.0)
+	var z_back := _room_float("z_back", -12.0)
+	var z_front := _room_float("z_front", 6.0)
+	var wall_h := _room_float("wall_height", 6.5)
+	var cx := (x0 + x1) * 0.5
+	var cz := (z_back + z_front) * 0.5
+	var post_mat: StandardMaterial3D = _solid_material(Color("#3e2a1a"))
+
+	# Two extra timber posts on each side wall, matching the back wall rhythm.
+	for side in range(2):
+		var post_x := x0 + 0.08
+		if side == 1:
+			post_x = x1 - 0.08
+		for post_z in [-8.0, 2.0]:
+			_add_box(
+				root,
+				Vector3(0.12, wall_h, 0.32),
+				post_mat,
+				Vector3(post_x, wall_h * 0.5, float(post_z))
+			)
+
+	# A small glowing wall lamp and its warm pool in the middle of each side wall.
+	var lamp_mat: StandardMaterial3D = _emissive_material(Color(1.0, 0.55, 0.28), 1.4)
+	for side in range(2):
+		var lamp_x := x0 + 0.15
+		var light_x := x0 + 0.8
+		if side == 1:
+			lamp_x = x1 - 0.15
+			light_x = x1 - 0.8
+		_add_box(
+			root,
+			Vector3(0.18, 0.28, 0.18),
+			lamp_mat,
+			Vector3(lamp_x, 3.3, cz),
+			"WallLampWest" if side == 0 else "WallLampEast"
+		)
+		_add_omni_light(
+			root,
+			Vector3(light_x, 3.3, cz),
+			Color(1.0, 0.62, 0.32),
+			4.0,
+			0.7
+		)
+
+	# Two hanging scrolls flank the sign above the bar.
+	var scroll_mat: StandardMaterial3D = _image_material(_scroll_image())
+	var roller_mat: StandardMaterial3D = _solid_material(Color("#3e2a1a"))
+	var scroll_xs: Array[float] = [3.3, 18.7]
+	for i in range(scroll_xs.size()):
+		var sx: float = scroll_xs[i]
+		_add_quad(
+			root,
+			Vector2(0.9, 2.4),
+			scroll_mat,
+			Vector3(sx, 3.6, z_back + 0.15),
+			"Scroll_%d" % (i + 1)
+		)
+		_add_box(
+			root,
+			Vector3(0.98, 0.07, 0.07),
+			roller_mat,
+			Vector3(sx, 4.83, z_back + 0.17)
+		)
+		_add_box(
+			root,
+			Vector3(0.98, 0.07, 0.07),
+			roller_mat,
+			Vector3(sx, 2.37, z_back + 0.17)
+		)
+
+	# The tavern sign, only when the painted prop is available.
+	var sign := AiAssets.make_sprite(
+		"prop_tavern_sign.png",
+		1.7,
+		Vector3(cx, 3.3, z_back + 0.2),
+		"WallSign"
+	)
+	if sign != null:
+		root.add_child(sign)
+
+
+func _build_light_shafts() -> void:
+	var root := Node3D.new()
+	root.name = "LightShafts"
+	add_child(root)
+	var z_back := _room_float("z_back", -12.0)
+	var gradient: ImageTexture = _shaft_gradient()
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(1.0, 0.92, 0.75, 0.12)
+	mat.albedo_texture = gradient
+	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.disable_receive_shadows = true
+	var mesh: ArrayMesh = _shaft_mesh(1.6, 1.8, 3.05, 4.0)
+	var window_xs: Array[float] = [3.5, 11.0, 18.5]
+	for i in range(window_xs.size()):
+		var shaft := _add_mesh(
+			root,
+			mesh,
+			mat,
+			Vector3(window_xs[i], 3.1, z_back + 0.1),
+			"LightShaft_%d" % (i + 1)
+		)
+		shaft.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
+func _build_dust() -> void:
+	var dust := CPUParticles3D.new()
+	dust.name = "Dust"
+	dust.position = Vector3(11.0, 1.6, -9.9)
+	dust.amount = 60
+	dust.lifetime = 6.0
+	dust.preprocess = 6.0
+	dust.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	dust.emission_box_extents = Vector3(8.4, 1.5, 2.0)
+	dust.direction = Vector3(0.0, 1.0, 0.0)
+	dust.spread = 20.0
+	dust.gravity = Vector3.ZERO
+	dust.initial_velocity_min = 0.05
+	dust.initial_velocity_max = 0.12
+	dust.scale_amount_min = 0.8
+	dust.scale_amount_max = 1.2
+	dust.color = Color(1.0, 0.95, 0.85, 0.55)
+	dust.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(1.0, 0.95, 0.85, 0.55)
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.vertex_color_use_as_albedo = true
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	mat.billboard_keep_scale = true
+	mat.disable_receive_shadows = true
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.04, 0.04)
+	quad.material = mat
+	dust.mesh = quad
+	add_child(dust)
+
+
+func _shaft_gradient() -> ImageTexture:
+	var img: Image = Image.create_empty(4, 64, false, Image.FORMAT_RGBA8)
+	for y in range(64):
+		var alpha: float = lerpf(0.18, 0.0, float(y) / 63.0)
+		for x in range(4):
+			img.set_pixel(x, y, Color(1.0, 0.95, 0.85, alpha))
+	return ImageTexture.create_from_image(img)
+
+
+func _shaft_mesh(top_width: float, bottom_width: float, drop: float, forward: float) -> ArrayMesh:
+	var verts := PackedVector3Array([
+		Vector3(-top_width * 0.5, 0.0, 0.0),
+		Vector3(top_width * 0.5, 0.0, 0.0),
+		Vector3(bottom_width * 0.5, -drop, forward),
+		Vector3(-bottom_width * 0.5, -drop, forward),
+	])
+	var uvs := PackedVector2Array([
+		Vector2(0.0, 0.0),
+		Vector2(1.0, 0.0),
+		Vector2(1.0, 1.0),
+		Vector2(0.0, 1.0),
+	])
+	var normals := PackedVector3Array([
+		Vector3(0.0, 0.6, 0.8),
+		Vector3(0.0, 0.6, 0.8),
+		Vector3(0.0, 0.6, 0.8),
+		Vector3(0.0, 0.6, 0.8),
+	])
+	var indices := PackedInt32Array([0, 1, 2, 0, 2, 3])
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	arrays[Mesh.ARRAY_INDEX] = indices
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return mesh
+
+
+func _rug_image() -> Image:
+	var img: Image = Image.create_empty(64, 36, false, Image.FORMAT_RGBA8)
+	var base := Color("#7a2a2a")
+	img.fill(base)
+	var gold := Color("#a88438")
+	var line := Color("#4a1414")
+	for y in range(36):
+		for x in range(64):
+			if x < 2 or x >= 62 or y < 2 or y >= 34:
+				img.set_pixel(x, y, gold)
+			elif x == 2 or x == 61 or y == 2 or y == 33:
+				img.set_pixel(x, y, line)
+	var motif := Color("#c9a24a")
+	for center_x in [20, 28, 36, 44]:
+		for dy in range(-4, 5):
+			var half_width: int = 4 - abs(dy)
+			for dx in range(-half_width, half_width + 1):
+				var px: int = int(center_x) + dx
+				var py: int = 18 + dy
+				if px >= 4 and px < 60 and py >= 4 and py < 32:
+					img.set_pixel(px, py, motif)
+	return img
+
+
+func _scroll_image() -> Image:
+	var img: Image = Image.create_empty(32, 84, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0.88, 0.82, 0.68))
+	var far := Color("#6a6a64")
+	var near := Color("#3a3a38")
+	for x in range(2, 30):
+		var t := float(x - 2) / 27.0
+		var top := int(57.0 - 8.0 * sin(t * PI))
+		for y in range(top, 73):
+			img.set_pixel(x, y, far)
+	for x in range(3, 29):
+		var t := float(x - 3) / 25.0
+		var top := int(64.0 - 13.0 * sin(t * PI))
+		for y in range(top, 79):
+			img.set_pixel(x, y, near)
+	var seal := Color("#a8322a")
+	for y in range(7, 12):
+		for x in range(23, 28):
+			img.set_pixel(x, y, seal)
+	img.set_pixel(25, 9, Color(0.88, 0.82, 0.68))
+	return img
 
 
 func _build_lanterns() -> void:
 	var root := Node3D.new()
 	root.name = "Lanterns"
 	add_child(root)
-	_build_lantern(root, Vector3(5.5, 4.9, -8.8))
-	_build_lantern(root, Vector3(16.5, 4.9, -4.4))
+	var positions: Array[Vector3] = [
+		Vector3(4.5, 4.6, -2.0),
+		Vector3(17.5, 4.6, -2.0),
+		Vector3(11.0, 4.4, -6.5),
+		Vector3(11.0, 4.4, 1.5),
+	]
+	for i in range(positions.size()):
+		_build_lantern(root, positions[i], i + 1)
 
 
-func _build_lantern(parent: Node3D, pos: Vector3) -> void:
-	var lamp_mat: StandardMaterial3D = _emissive_material(Color("#d9582b"), 2.2)
+func _build_lantern(parent: Node3D, pos: Vector3, index: int) -> void:
+	var node := Node3D.new()
+	node.name = "Lantern_%d" % index
+	node.position = pos
+	parent.add_child(node)
+
+	var lamp_mat: StandardMaterial3D = _emissive_material(Color(1.0, 0.45, 0.2), 2.0)
 	var mesh := SphereMesh.new()
-	mesh.radius = 0.34
+	mesh.radius = 0.275
 	mesh.height = 0.7
-	_add_mesh(parent, mesh, lamp_mat, pos)
-	var hanger_mat: StandardMaterial3D = _solid_material(Color("#3e2a1a"))
+	var lamp := _add_mesh(node, mesh, lamp_mat, Vector3.ZERO)
+	lamp.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+	var dark_mat: StandardMaterial3D = _solid_material(Color("#2e1e12"))
+	var rope_height: float = 5.95 - (pos.y + 0.35)
 	_add_box(
-		parent, Vector3(0.06, 0.7, 0.06), hanger_mat, pos + Vector3(0.0, 0.65, 0.0)
+		node,
+		Vector3(0.03, rope_height, 0.03),
+		dark_mat,
+		Vector3(0.0, 0.35 + rope_height * 0.5, 0.0),
+		"Rope"
 	)
-	_add_omni_light(parent, pos, Color("#ffb066"), 8.0, 1.3)
+	_add_mesh(node, _lantern_disc(0.12, 0.04), dark_mat, Vector3(0.0, 0.37, 0.0))
+	_add_mesh(node, _lantern_disc(0.12, 0.04), dark_mat, Vector3(0.0, -0.37, 0.0))
+	_add_box(
+		node,
+		Vector3(0.05, 0.14, 0.05),
+		_solid_material(Color("#b03028")),
+		Vector3(0.0, -0.46, 0.0),
+		"Tassel"
+	)
+
+	var light := _add_omni_light(
+		node, Vector3.ZERO, Color(1.0, 0.62, 0.32), 7.5, 1.6
+	)
+	light.shadow_enabled = true
+
+
+func _lantern_disc(radius: float, height: float) -> CylinderMesh:
+	var disc := CylinderMesh.new()
+	disc.top_radius = radius
+	disc.bottom_radius = radius
+	disc.height = height
+	return disc
 
 
 # ---------------------------------------------------------------- furniture
@@ -552,7 +898,7 @@ func _build_furniture() -> void:
 		furniture_nodes[str(id)] = node
 
 
-func _fill_furniture(node: Node3D, kind: String, _entry: Dictionary) -> void:
+func _fill_furniture(node: Node3D, kind: String, entry: Dictionary) -> void:
 	var wood: StandardMaterial3D = _wood_material(Vector2(1.0, 1.0))
 	var dark: StandardMaterial3D = _solid_material(Color("#3e2a1a"))
 	match kind:
@@ -570,6 +916,7 @@ func _fill_furniture(node: Node3D, kind: String, _entry: Dictionary) -> void:
 			_add_box(node, Vector3(8.0, 3.2, 0.2), wood, Vector3(0.0, 1.6, -0.05), "ShelfBack")
 			_add_box(node, Vector3(8.0, 0.12, 0.5), wood, Vector3(0.0, 1.0, 0.1), "ShelfLow")
 			_add_box(node, Vector3(8.0, 0.12, 0.5), wood, Vector3(0.0, 2.1, 0.1), "ShelfHigh")
+			_add_box(node, Vector3(8.0, 0.12, 0.5), wood, Vector3(0.0, 2.7, 0.1), "ShelfTop")
 			var jar_xs: Array[float] = [-3.0, -1.8, -0.6, 0.6, 1.8, 3.0]
 			var jar_fallback: StandardMaterial3D = _solid_material(Color("#8a6a3a"))
 			for jar_x in jar_xs:
@@ -584,33 +931,66 @@ func _fill_furniture(node: Node3D, kind: String, _entry: Dictionary) -> void:
 					jar.bottom_radius = 0.24
 					jar.height = 0.45
 					_add_mesh(node, jar, jar_fallback, Vector3(jar_x, 1.29, 0.15))
+			for jar_x in [-2.4, 0.0, 2.4]:
+				var mid_jar := AiAssets.make_sprite(
+					"prop_jars.png", 0.42, Vector3(float(jar_x), 2.16, 0.15), "JarMid"
+				)
+				if mid_jar != null:
+					node.add_child(mid_jar)
+			for basket_x in [-2.6, 0.0, 2.6]:
+				var basket := AiAssets.make_sprite(
+					"prop_baskets.png", 0.44, Vector3(float(basket_x), 2.76, 0.15), "Basket"
+				)
+				if basket != null:
+					node.add_child(basket)
+				else:
+					_add_box(
+						node,
+						Vector3(0.45, 0.3, 0.45),
+						jar_fallback,
+						Vector3(float(basket_x), 2.91, 0.15)
+					)
 		"barrel":
 			_sprite_prop(
 				node, "prop_barrel.png", 1.2, Vector3(0.9, 0.9, 0.9), wood
 			)
 		"table":
 			_add_box(node, Vector3(1.8, 0.12, 1.8), wood, Vector3(0.0, 0.89, 0.0), "TableTop")
+			_add_box(node, Vector3(1.86, 0.04, 1.86), dark, Vector3(0.0, 0.9, 0.0), "TableRim")
 			var leg_xs: Array[float] = [-0.75, 0.75]
 			for leg_x in leg_xs:
 				for leg_z in leg_xs:
 					_add_box(
 						node,
-						Vector3(0.1, 0.83, 0.1),
+						Vector3(0.12, 0.83, 0.12),
 						dark,
 						Vector3(leg_x, 0.415, leg_z)
 					)
+			var stool := CylinderMesh.new()
+			stool.top_radius = 0.34
+			stool.bottom_radius = 0.36
+			stool.height = 0.16
+			_add_mesh(node, stool, dark, Vector3(0.0, 0.08, 0.0), "FootStool")
 		"bench":
 			_sprite_prop(
 				node, "prop_bench.png", 0.9, Vector3(2.0, 0.45, 0.6), wood
 			)
 		"crates":
+			var crate_h: float = _entry_float(entry, "height", 1.3)
 			_sprite_prop(
-				node, "prop_crates.png", 1.3, Vector3(0.9, 0.9, 0.9), wood
+				node, "prop_crates.png", crate_h, Vector3(0.9, crate_h, 0.9), wood
 			)
 		"baskets":
+			var basket_h: float = _entry_float(entry, "height", 0.8)
 			_sprite_prop(
-				node, "prop_baskets.png", 0.8, Vector3(0.7, 0.6, 0.7), dark
+				node, "prop_baskets.png", basket_h, Vector3(0.7, basket_h, 0.7), dark
 			)
+		"crate_lid":
+			var lid_mat: StandardMaterial3D = _wood_material(Vector2(0.7, 0.7))
+			var crate_lid_mesh := _add_box(
+				node, Vector3(0.8, 0.07, 0.75), lid_mat, Vector3(0.0, 0.06, 0.0), "CrateLid"
+			)
+			crate_lid_mesh.rotation.x = deg_to_rad(-58.0)
 		"jars":
 			_sprite_prop(
 				node, "prop_jars.png", 1.0, Vector3(0.5, 0.6, 0.5), dark
@@ -622,6 +1002,45 @@ func _fill_furniture(node: Node3D, kind: String, _entry: Dictionary) -> void:
 			bowl.bottom_radius = 0.13
 			bowl.height = 0.12
 			_add_mesh(node, bowl, porcelain, Vector3(0.0, 0.06, 0.0), "Bowl")
+			var soup_mat: StandardMaterial3D = _solid_material(Color("#5e1c1a"))
+			var soup := CylinderMesh.new()
+			soup.top_radius = 0.185
+			soup.bottom_radius = 0.185
+			soup.height = 0.02
+			_add_mesh(node, soup, soup_mat, Vector3(0.0, 0.115, 0.0), "Soup")
+			var topping_mat: StandardMaterial3D = _solid_material(Color("#e0b070"))
+			var topping := CylinderMesh.new()
+			topping.top_radius = 0.055
+			topping.bottom_radius = 0.055
+			topping.height = 0.012
+			_add_mesh(node, topping, topping_mat, Vector3(0.03, 0.126, -0.02), "Topping")
+		"cup":
+			var cup_porcelain: StandardMaterial3D = _solid_material(Color("#efe9da"))
+			var cup := CylinderMesh.new()
+			cup.top_radius = 0.06
+			cup.bottom_radius = 0.045
+			cup.height = 0.1
+			_add_mesh(node, cup, cup_porcelain, Vector3(0.0, 0.05, 0.0), "Cup")
+		"abacus":
+			var abacus_mat: StandardMaterial3D = _solid_material(Color("#4a3020"))
+			var rod_mat: StandardMaterial3D = _solid_material(Color("#2e1e12"))
+			_add_box(
+				node, Vector3(0.55, 0.06, 0.4), abacus_mat, Vector3(0.0, 0.03, 0.0), "AbacusBody"
+			)
+			for rod_z in [-0.1, 0.1]:
+				_add_box(
+					node,
+					Vector3(0.5, 0.02, 0.02),
+					rod_mat,
+					Vector3(0.0, 0.075, float(rod_z))
+				)
+		"rug":
+			var rug_mat: StandardMaterial3D = _image_material(_rug_image())
+			var rug := _add_quad(
+				node, Vector2(9.0, 5.0), rug_mat, Vector3(0.0, 0.006, 0.0), "RugMesh"
+			)
+			rug.rotation.x = -PI / 2.0
+			rug.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		"teapot":
 			var pot_mat: StandardMaterial3D = _solid_material(Color("#8a5a3a"))
 			var body := CylinderMesh.new()
@@ -1060,7 +1479,7 @@ func _build_lighting() -> void:
 	sun.name = "FillLight"
 	sun.rotation_degrees = Vector3(-52.0, -25.0, 0.0)
 	sun.light_color = Color("#ffd2a0")
-	sun.light_energy = 0.45
+	sun.light_energy = 0.35
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 40.0
 	sun.shadow_bias = 0.05
@@ -1068,10 +1487,10 @@ func _build_lighting() -> void:
 
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color.BLACK
+	env.background_color = Color("#17100c")
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color("#5a4636")
-	env.ambient_light_energy = 0.6
+	env.ambient_light_color = Color("#3a3038")
+	env.ambient_light_energy = 0.45
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.glow_enabled = true
 	env.glow_intensity = 0.8
@@ -1081,6 +1500,11 @@ func _build_lighting() -> void:
 	world_env.name = "WorldEnvironment"
 	world_env.environment = env
 	add_child(world_env)
+
+	# Small warm pool above the bar counter.
+	_add_omni_light(
+		self, Vector3(5.5, 3.2, -9.8), Color(1.0, 0.7, 0.45), 5.0, 1.0
+	)
 
 	var lights: Array = data.get("lights", [])
 	for i in range(lights.size()):
@@ -1185,6 +1609,28 @@ func _build_stairs() -> void:
 			rail_mat,
 			Vector3((px0 + px1) * 0.5, py + 0.95, pz1 - 0.1)
 		)
+		# A heavier handrail along the top, plus two post lamps (no light source).
+		_add_box(
+			root,
+			Vector3(px1 - px0, 0.12, 0.18),
+			rail_mat,
+			Vector3((px0 + px1) * 0.5, py + 1.04, pz1 - 0.1),
+			"Handrail"
+		)
+		var lamp_mat: StandardMaterial3D = _emissive_material(Color(1.0, 0.55, 0.28), 1.6)
+		for lamp_x in [px0 + 1.1, px1 - 1.1]:
+			_add_box(
+				root,
+				Vector3(0.12, 1.9, 0.12),
+				rail_mat,
+				Vector3(float(lamp_x), py + 0.95, pz1 - 0.1)
+			)
+			_add_box(
+				root,
+				Vector3(0.26, 0.3, 0.26),
+				lamp_mat,
+				Vector3(float(lamp_x), py + 2.05, pz1 - 0.1)
+			)
 
 
 # ---------------------------------------------------------------- hud / interaction
