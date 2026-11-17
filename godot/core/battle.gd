@@ -16,10 +16,13 @@ var martials: Dictionary = {}
 var first_strike: bool = false
 var round: int = 1
 var intents: Array = []
+var known_moves: Dictionary = {}
 var log: Array[String] = []
 
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _stunned_at_start: Array[bool] = []
+var _intent_from_queue: Array[bool] = []
+var _queues: Array = []
 var _current_action: Dictionary = {}
 
 
@@ -32,20 +35,34 @@ func _init(p_player, p_enemies: Array, p_loadout: Array, p_mastery, p_martials: 
 	first_strike = p_first_strike
 	_rng.seed = p_seed
 	round = 1
+	_queues = []
+	for i in range(enemies.size()):
+		_queues.append([])
 	begin_round()
 
 
 func begin_round() -> void:
 	intents = []
 	_stunned_at_start.clear()
+	_intent_from_queue.clear()
 	for i in range(enemies.size()):
 		var enemy: Variant = enemies[i]
 		var stunned: bool = enemy.is_stunned()
 		_stunned_at_start.append(stunned)
 		if enemy.is_dead() or stunned:
 			intents.append({})
+			_intent_from_queue.append(false)
 		else:
-			intents.append(EnemyAi.choose(enemy.def.moves, _rng))
+			var queued: bool = false
+			if i < _queues.size():
+				var queue: Array = _queues[i]
+				if not queue.is_empty():
+					intents.append(queue.pop_front())
+					_intent_from_queue.append(true)
+					queued = true
+			if not queued:
+				intents.append(EnemyAi.choose(enemy.def.moves, _rng))
+				_intent_from_queue.append(false)
 
 
 func submit(action: Dictionary) -> Dictionary:
@@ -96,12 +113,73 @@ func preview(martial_id: String, target: int) -> int:
 	)
 
 
+func is_move_known(enemy_index: int) -> bool:
+	if enemy_index < 0 or enemy_index >= enemies.size() or enemy_index >= intents.size():
+		return false
+	var intent: Dictionary = intents[enemy_index]
+	if intent.is_empty():
+		return false
+	var enemy: Variant = enemies[enemy_index]
+	var raw_ids: Variant = known_moves.get(str(enemy.id), [])
+	if not (raw_ids is Array):
+		return false
+	var ids: Array = raw_ids
+	return ids.has(str(intent.get("id", "")))
+
+
+func foreseen(enemy_index: int) -> Array:
+	var result: Array = []
+	if enemy_index < 0 or enemy_index >= enemies.size() or enemy_index >= _queues.size():
+		return result
+	var enemy: Variant = enemies[enemy_index]
+	if enemy.is_dead():
+		return result
+	if enemy_index < _intent_from_queue.size() and _intent_from_queue[enemy_index]:
+		if enemy_index < intents.size():
+			var current: Dictionary = intents[enemy_index]
+			if not current.is_empty():
+				result.append(current.duplicate())
+	for raw in _queues[enemy_index]:
+		var move: Dictionary = raw
+		result.append(move.duplicate())
+	return result
+
+
+func foresight_available() -> bool:
+	if player == null or int(player.foresight_points) <= 0:
+		return false
+	for enemy in enemies:
+		if not enemy.is_dead():
+			return true
+	return false
+
+
+func _mark_known(enemy_index: int, move_id: String) -> void:
+	if move_id == "":
+		return
+	if enemy_index < 0 or enemy_index >= enemies.size():
+		return
+	var enemy: Variant = enemies[enemy_index]
+	var key: String = str(enemy.id)
+	if not known_moves.has(key):
+		known_moves[key] = []
+	var ids: Array = known_moves[key]
+	if not ids.has(move_id):
+		ids.append(move_id)
+
+
 func _validate(action: Dictionary) -> Dictionary:
 	if state() != State.ONGOING:
 		return {"ok": false, "error": "battle is over"}
 	var kind: String = str(action.get("kind", ""))
-	if kind != "martial" and kind != "jianyi" and kind != "probe":
+	if kind != "martial" and kind != "jianyi" and kind != "probe" and kind != "foresight":
 		return {"ok": false, "error": "unknown action kind: %s" % kind}
+	if kind == "foresight":
+		if int(player.foresight_points) <= 0:
+			return {"ok": false, "error": "no foresight points left"}
+		if not foresight_available():
+			return {"ok": false, "error": "no living enemies for foresight"}
+		return {"ok": true, "error": ""}
 	var target_index: int = int(action.get("target", -1))
 	if target_index < 0 or target_index >= enemies.size():
 		return {"ok": false, "error": "target index out of range: %d" % target_index}
@@ -173,6 +251,9 @@ func _actor_order() -> Array:
 func _player_step(action: Dictionary) -> void:
 	var kind: String = str(action.get("kind", ""))
 	var target_index: int = int(action.get("target", -1))
+	if kind == "foresight":
+		_do_foresight()
+		return
 	var target: Variant = enemies[target_index]
 	if kind == "martial":
 		var id: String = str(action.get("id", ""))
@@ -188,6 +269,21 @@ func _player_step(action: Dictionary) -> void:
 		_log("R%d act:player probe -> e%d" % [round, target_index])
 
 
+func _do_foresight() -> void:
+	player.foresight_points -= 1
+	for i in range(enemies.size()):
+		var enemy: Variant = enemies[i]
+		if enemy.is_dead():
+			continue
+		var queue: Array = _queues[i]
+		while queue.size() < Balance.FORESIGHT_ROUNDS:
+			queue.append(EnemyAi.choose(enemy.def.moves, _rng))
+		for raw in queue:
+			var move: Dictionary = raw
+			_mark_known(i, str(move.get("id", "")))
+	_log("R%d act:player foresight" % round)
+
+
 func _enemy_step(index: int) -> void:
 	var enemy: Variant = enemies[index]
 	if enemy.is_dead():
@@ -199,6 +295,8 @@ func _enemy_step(index: int) -> void:
 	var intent: Dictionary = {}
 	if index < intents.size():
 		intent = intents[index]
+	if not intent.is_empty():
+		_mark_known(index, str(intent.get("id", "")))
 	var power: int = int(intent.get("power", 0))
 	var base_damage: int = maxi(1, power - int(player.stats["defense"]))
 
@@ -245,6 +343,7 @@ func _enemy_step(index: int) -> void:
 		mastery.add_exp(counter_id, 2)
 		if perfect:
 			Damage.hit(counter_martial.power, mastery.damage_multiplier(counter_id), player.stats, enemy)
+			player.foresight_points = mini(int(player.foresight_max), int(player.foresight_points) + 1)
 		if verdict == Counter.Verdict.ADVANTAGE:
 			for raw_effect in counter_martial.effects:
 				var effect: Dictionary = raw_effect

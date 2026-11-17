@@ -85,7 +85,9 @@ static func load_player(path: String) -> Dictionary:
 	var parsed = JSON.parse_string(text)
 	if not (parsed is Dictionary):
 		return {}
-	return parsed
+	var data: Dictionary = parsed
+	data["foresight_max"] = int(data.get("foresight_max", 0))
+	return data
 
 
 static func _validate_martial(def) -> Array[String]:

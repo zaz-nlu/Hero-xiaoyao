@@ -10,6 +10,7 @@
 	},
 	"max_hp": 100,
 	"jianyi_max": 1,
+	"foresight_max": 2,
 	"loadout": ["basic_sword", "parry", "sidestep", "taiji"],
 	"learned": ["basic_sword", "parry", "sidestep", "taiji"]
 }

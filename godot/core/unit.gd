@@ -13,13 +13,15 @@ var stun_turns: int = 0
 var stun_left: int = 0
 var jianyi_max: int = 0
 var jianyi_points: int = 0
+var foresight_max: int = 0
+var foresight_points: int = 0
 var weak_moves: Array = []
 var weak_revealed: bool = false
 var def: Variant = null
 var incorporeal: bool = false
 
 
-static func make_player(name: String, stats: Dictionary, max_hp: int, jianyi_max: int) -> Variant:
+static func make_player(name: String, stats: Dictionary, max_hp: int, jianyi_max: int, p_foresight_max: int = 0) -> Variant:
 	var script: Variant = load("res://core/unit.gd")
 	var u: Variant = script.new()
 	u.id = "player"
@@ -30,6 +32,8 @@ static func make_player(name: String, stats: Dictionary, max_hp: int, jianyi_max
 	u.hp = max_hp
 	u.jianyi_max = jianyi_max
 	u.jianyi_points = jianyi_max
+	u.foresight_max = p_foresight_max
+	u.foresight_points = p_foresight_max
 	return u
 
 
