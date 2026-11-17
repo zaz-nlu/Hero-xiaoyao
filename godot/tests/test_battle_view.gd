@@ -63,6 +63,7 @@ func test_press_action_advances_round() -> void:
 func test_invalid_action_is_reported_not_crashing() -> void:
 	var view: Variant = _make_view()
 	view.start("bandit", 1, true)
+	view.battle.enemies[0].hp = 30  # jianyi deals 42 now, a full-health bandit has 55
 	view.press_action({"kind": "jianyi", "target": 0})
 	assert_eq(int(view.battle.state()), Battle.State.WON, "jianyi kills the bandit")
 	var round_before: int = int(view.battle.round)
@@ -75,6 +76,7 @@ func test_invalid_action_is_reported_not_crashing() -> void:
 func test_win_shows_result() -> void:
 	var view: Variant = _make_view()
 	view.start("bandit", 1, true)
+	view.battle.enemies[0].hp = 30
 	view.press_action({"kind": "jianyi", "target": 0})
 	assert_true(view.result_label.text.contains("胜利"), "result label announces the win")
 	view.free()

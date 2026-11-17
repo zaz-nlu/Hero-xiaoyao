@@ -96,12 +96,12 @@ func test_tab_switching_with_select_and_keys() -> void:
 func test_attributes_update_after_growth() -> void:
 	var overlay: Variant = _open()
 	var before: String = _text_of(overlay.character_panel, "AttrValue_power")
-	assert_true(before.contains("10"), "power starts at its base value: %s" % before)
+	assert_true(before.contains("6"), "power starts at its base value: %s" % before)
 
 	GameState.stat_bonus["power"] = 1
 	overlay.refresh()
 	var after: String = _text_of(overlay.character_panel, "AttrValue_power")
-	assert_true(after.contains("11"), "the total includes the permanent bonus: %s" % after)
+	assert_true(after.contains("7"), "the total includes the permanent bonus: %s" % after)
 	assert_true(after.contains("+1"), "the bonus is shown next to the total: %s" % after)
 	assert_true(
 		overlay.character_panel.find_child("AttrBonusFill_power", true, false) != null,
@@ -176,7 +176,7 @@ func test_equipment_equip_and_unequip_flow() -> void:
 
 	overlay.character_panel.select_tab(0)
 	var defense_text: String = _text_of(overlay.character_panel, "AttrValue_defense")
-	assert_true(defense_text.contains("6"), "defense grows with the robe: %s" % defense_text)
+	assert_true(defense_text.contains("5"), "defense grows with the robe: %s" % defense_text)
 	assert_true(defense_text.contains("+1"), "the equipment bonus is shown: %s" % defense_text)
 
 	overlay.character_panel.select_tab(2)
@@ -235,7 +235,7 @@ func test_points_pending_confirm_and_cap() -> void:
 	)
 
 	GameState.unspent_points = 3
-	GameState.stat_bonus["speed"] = 35
+	GameState.stat_bonus["speed"] = 42
 	overlay.refresh()
 	var capped: Button = _button(overlay, "PointPlus_speed")
 	assert_true(capped != null and capped.disabled, "plus is disabled at the stat cap")
@@ -255,5 +255,54 @@ func test_points_reset_clears_pending() -> void:
 	assert_true(_press_button(overlay.character_panel, "ResetPoints"), "reset is clickable")
 	assert_eq(overlay.character_panel.pending_points.size(), 0, "reset clears the pending map")
 	assert_eq(GameState.unspent_points, 3, "reset does not spend points")
+	overlay.free()
+	GameState.reset()
+
+
+func test_left_column_shows_realm_stage_age_and_hp() -> void:
+	var overlay: Variant = _open()
+	assert_eq(
+		_text_of(overlay.character_panel, "CharRealm"), "炼体·中期",
+		"the left column shows realm name and stage"
+	)
+	var age_text: String = _text_of(overlay.character_panel, "CharAge")
+	assert_true(age_text.contains("9"), "the age line shows the player age: %s" % age_text)
+	assert_true(
+		_text_of(overlay.character_panel, "HpValue").contains("100"),
+		"hp comes from constitution (40 + 4 × 15)"
+	)
+	overlay.free()
+	GameState.reset()
+
+
+func test_constitution_point_hint_uses_realm_hp_per_con() -> void:
+	var overlay: Variant = _open()
+	overlay.character_panel.select_tab(3)
+	var hint: String = _text_of(overlay.character_panel, "ConstitutionHpHint")
+	assert_true(hint.contains("+15"), "the constitution row explains its hp value: %s" % hint)
+	overlay.free()
+	GameState.reset()
+
+
+func test_permanent_item_shows_use_button_and_applies() -> void:
+	var overlay: Variant = _open()
+	Progression.give_item("yangyuan_pill")
+	overlay.refresh()
+	overlay.character_panel.select_tab(2)
+	assert_true(
+		_press_button(overlay.character_panel, "Use_yangyuan_pill"),
+		"a permanent consumable has a use button"
+	)
+	assert_eq(Progression.item_count("yangyuan_pill"), 0, "using the pill consumes it")
+	assert_eq(int(GameState.stat_bonus.get("constitution", 0)), 1, "the pill adds constitution")
+	overlay.character_panel.select_tab(0)
+	assert_true(
+		_text_of(overlay.character_panel, "AttrValue_constitution").contains("5"),
+		"the attributes tab reflects the constitution gain"
+	)
+	assert_true(
+		_text_of(overlay.character_panel, "HpValue").contains("115"),
+		"the hp display follows the new constitution"
+	)
 	overlay.free()
 	GameState.reset()

@@ -7,7 +7,7 @@
 		"objectives": [
 			{"kind": "item", "key": "herb", "count": 3, "text": "采草药"}
 		],
-		"rewards": {"stats": {"recovery": 2}, "items": {}, "mastery_exp": {}, "points": 1},
+		"rewards": {"stats": {"recovery": 2}},
 		"dialogue": {
 			"offer": "res://data/dialogues/quest_herbs_offer.json",
 			"active": "res://data/dialogues/quest_herbs_active.json",
@@ -24,7 +24,7 @@
 		"objectives": [
 			{"kind": "defeat", "key": "disciple_spar", "count": 1, "text": "与紫霞派弟子切磋"}
 		],
-		"rewards": {"stats": {"skill": 2}, "items": {}, "mastery_exp": {}, "points": 1},
+		"rewards": {"stats": {"skill": 2}},
 		"dialogue": {
 			"offer": "res://data/dialogues/quest_spar_offer.json",
 			"active": "res://data/dialogues/quest_spar_active.json",
@@ -41,7 +41,7 @@
 		"objectives": [
 			{"kind": "defeat", "key": "bandit_scout", "count": 1, "text": "解决马匪探子"}
 		],
-		"rewards": {"stats": {"power": 1, "defense": 1}, "items": {}, "mastery_exp": {}, "points": 1},
+		"rewards": {"stats": {"power": 1, "defense": 1}, "items": {"yangyuan_pill": 1}},
 		"dialogue": {
 			"offer": "res://data/dialogues/quest_scout_offer.json",
 			"active": "res://data/dialogues/quest_scout_active.json",

@@ -76,13 +76,13 @@ func test_default_loadout_has_four_learned_martials() -> void:
 		assert_true(learned.has(def_id), "learned contains '%s'" % str(def_id))
 
 
-func test_player_route_totals_sixty() -> void:
+func test_player_stats_total_thirty_seven() -> void:
 	var player := DataLoader.load_player(PLAYER_PATH)
 	var stats: Dictionary = player.get("stats", {})
 	var total := 0
 	for key in Stats.KEYS:
 		total += int(stats.get(key, 0))
-	assert_eq(total, 60, "player stats total 60")
+	assert_eq(total, 37, "player stats total 37")
 
 
 func test_player_default_loadout_covers_boss_types() -> void:

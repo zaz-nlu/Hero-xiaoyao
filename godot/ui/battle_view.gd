@@ -339,7 +339,7 @@ func _refresh_enemy_group(index: int) -> void:
 		info_label.text = _enemy_info_text(enemy)
 	if index < enemy_hp_labels.size():
 		var hp_label: Label = enemy_hp_labels[index]
-		hp_label.text = "%d/%d" % [int(enemy.hp), int(enemy.max_hp)]
+		_fit_hp_label(hp_label, int(enemy.hp), int(enemy.max_hp), 10)
 	if index < enemy_hp_bars.size():
 		var hp_bar: ProgressBar = enemy_hp_bars[index]
 		hp_bar.max_value = maxf(1.0, float(enemy.max_hp))
@@ -1321,6 +1321,18 @@ func _build_enemy_head(index: int) -> void:
 
 # ---------------------------------------------------------------- hud refresh
 
+# 气血数字在条上居中显示；位数多时自动缩小字号，避免大数字（如 5290）挤出标签。
+func _fit_hp_label(label: Label, hp: int, max_hp: int, base_size: int) -> void:
+	var text := "%d/%d" % [hp, max_hp]
+	label.text = text
+	var size := base_size
+	if text.length() > 8:
+		size = maxi(7, base_size - 3)
+	elif text.length() > 5:
+		size = maxi(8, base_size - 2)
+	label.add_theme_font_size_override("font_size", size)
+
+
 func _refresh_player_card() -> void:
 	if battle == null or battle.player == null:
 		return
@@ -1331,7 +1343,7 @@ func _refresh_player_card() -> void:
 		player_hp_bar.max_value = maxf(1.0, float(player.max_hp))
 		player_hp_bar.value = float(maxi(0, int(player.hp)))
 	if player_hp_label != null:
-		player_hp_label.text = "%d/%d" % [int(player.hp), int(player.max_hp)]
+		_fit_hp_label(player_hp_label, int(player.hp), int(player.max_hp), 11)
 	if wound_label != null:
 		var wound: int = int(player.wound)
 		wound_label.visible = wound > 0

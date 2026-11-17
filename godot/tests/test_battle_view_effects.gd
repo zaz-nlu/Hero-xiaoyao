@@ -26,6 +26,7 @@ func _popup_texts(stage: Variant) -> String:
 func _setup_kaishan(view: Variant) -> void:
 	view.battle.intents[0] = KAISHAN.duplicate()
 	view.battle.enemies[0].weak_moves = ["kaishan"]
+	view.battle.player.stats["skill"] = 30  # initial skill 12 cannot counter threat 22
 
 
 func test_stage_created_under_view() -> void:

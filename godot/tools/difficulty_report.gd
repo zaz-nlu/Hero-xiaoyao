@@ -1,8 +1,8 @@
 extends SceneTree
 
-# Difficulty report for the forest tutorial. Runs the two target encounters with
-# both the starting and the fully-grown stat lines, using the random and smart
-# bots, then prints a Markdown table and rewrites section 9 of the design doc.
+# Difficulty report for chapter 1. Runs the two target encounters with both the
+# starting and the fully-grown stat lines, using the random, human and smart bots,
+# then prints a Markdown table and rewrites section 11 of the numbers design doc.
 #
 # Run with:
 #   godot --headless --path godot -s res://tools/difficulty_report.gd
@@ -11,11 +11,11 @@ const Simulator = preload("res://core/simulator.gd")
 const DataLoader = preload("res://core/data_loader.gd")
 
 const PLAYER_PATH := "res://data/player.json"
-const DOC_RELATIVE := "../docs/superpowers/specs/2026-11-17-forest-growth-tutorial-design.md"
+const DOC_RELATIVE := "../docs/superpowers/specs/2026-11-17-numbers-system-design.md"
 const BATTLES := 400
 const SEED := 1
-const TARGET_LOW := 15.0
-const TARGET_HIGH := 35.0
+const TARGET_LOW := 10.0
+const TARGET_HIGH := 30.0
 const GROWN_LOW := 65.0
 const GROWN_HIGH := 85.0
 
@@ -24,14 +24,17 @@ func _init() -> void:
 	var player_data: Dictionary = DataLoader.load_player(PLAYER_PATH)
 	var base_stats: Dictionary = player_data.get("stats", {})
 	var initial := base_stats.duplicate()
-	var grown := base_stats.duplicate()
-	# 3 unspent points into skill, sparring +2 skill, sword +1 speed/+1 power,
-	# herb +2 recovery, scout +1 power/+1 defense.
-	_add_stat(grown, "skill", 5)
-	_add_stat(grown, "speed", 1)
-	_add_stat(grown, "power", 2)
-	_add_stat(grown, "defense", 1)
-	_add_stat(grown, "recovery", 2)
+	# 第一章当前可得 9 点（宝箱剑 +2、草药 +2、试招 +2、探子 +2、养元丹 +1）
+	# 加 3 个自由点全加技巧；constitution 6 含之后由别的任务补的 1 点，
+	# 即文档 §7 的 50 点参考线。
+	var grown := {
+		"power": 8,
+		"speed": 9,
+		"defense": 5,
+		"recovery": 5,
+		"skill": 17,
+		"constitution": 6,
+	}
 
 	var stat_sets: Array = [
 		{"label": "初始属性", "stats": initial},
@@ -96,9 +99,9 @@ func _find_row(rows: Array, scenario: String, stats_label: String, bot: String) 
 
 func _build_section(rows: Array) -> String:
 	var lines: Array[String] = []
-	lines.append("## 9. 难度模拟结果")
+	lines.append("## 11. 模拟结果")
 	lines.append("")
-	lines.append("每格 400 局，`first_strike=false`，由 `tools/difficulty_report.gd` 生成。马匪头子数值已调整：三招威胁 +7、威力 +2（调参工具：`tools/tune_boss.gd`）。")
+	lines.append("每格 400 局，`first_strike=false`，由 `tools/difficulty_report.gd` 生成。数值为第一章炼体（s=1，h=15）的当前数值：初始六维合计 37（另有 3 个自由点），养成后取文档 §7 的 50 点参考线。")
 	lines.append("")
 	lines.append("| 遭遇 | 属性 | bot | 胜率 | 平均回合 | 玩家平均剩余 HP |")
 	lines.append("| --- | --- | --- | ---: | ---: | ---: |")
@@ -113,7 +116,7 @@ func _build_section(rows: Array) -> String:
 			float(row["avg_hp_pct"]) * 100.0,
 		])
 	lines.append("")
-	lines.append("bot 说明：random 乱出招；human 只用界面上看得到的信息（未知招靠猜，有预判点数先预判，已识别的招精确反制）；smart 能直接看到所有出招（上限）。目标：human 在初始属性下打马匪头子胜率 15%~35%，养成后 65%~85%（真人比 human 更容易失误，所以养成后偏高是预期的）。")
+	lines.append("bot 说明：random 乱出招；human 只用界面上看得到的信息（未知招靠猜，有预判点数先预判，已识别的招精确反制）；smart 能直接看到所有出招（上限）。目标：human 在初始属性下打马匪头子胜率 10%~30%，养成后 65%~85%（真人比 human 更容易失误，所以养成后偏高是预期的）。")
 
 	var boss_scenario := "酒馆遭遇（马匪头子 ×1）"
 	var initial_row := _find_row(rows, boss_scenario, "初始属性", "human")
@@ -149,7 +152,7 @@ func _append_to_doc(section: String) -> void:
 	var text := ""
 	if FileAccess.file_exists(path):
 		text = FileAccess.get_file_as_string(path)
-	var marker := "## 9. 难度模拟结果"
+	var marker := "## 11. 模拟结果"
 	var at := text.find(marker)
 	if at >= 0:
 		text = text.substr(0, at).strip_edges()

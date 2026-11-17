@@ -2,6 +2,7 @@ extends "res://tests/test_case.gd"
 
 const DataLoader = preload("res://core/data_loader.gd")
 const Stats = preload("res://core/stats.gd")
+const Unit = preload("res://core/unit.gd")
 
 
 func test_valid_martial_loads() -> void:
@@ -118,13 +119,13 @@ func test_shipped_forest_enemies_load() -> void:
 		var scout: Variant = defs["bandit_scout"]
 		assert_eq(str(scout.name), "马匪探子", "scout display name")
 		assert_eq(str(scout.sprite), "bandit", "the scout reuses the bandit sprite")
-		assert_eq(int(scout.max_hp), 36, "scout hp")
+		assert_eq(int(Unit.from_enemy(scout).max_hp), 55, "scout hp from constitution")
 		assert_eq(scout.moves.size(), 2, "the scout has two moves")
 	if defs.has("disciple_spar"):
 		var disciple: Variant = defs["disciple_spar"]
 		assert_eq(str(disciple.name), "紫霞弟子", "disciple display name")
 		assert_eq(str(disciple.sprite), "zixia_disciple", "the disciple uses its own sprite")
-		assert_eq(int(disciple.max_hp), 60, "disciple hp")
+		assert_eq(int(Unit.from_enemy(disciple).max_hp), 40, "disciple hp from constitution")
 		assert_eq(disciple.moves.size(), 2, "the disciple has two moves")
 
 
@@ -149,6 +150,28 @@ func test_enemy_sprite_field_is_read() -> void:
 	var result := DataLoader.parse_enemies(json)
 	assert_eq(result["errors"].size(), 0, "an explicit sprite is valid")
 	assert_eq(str(result["defs"]["bandit_scout"].sprite), "bandit", "the sprite field wins over the id")
+
+
+func test_shipped_enemy_hp_comes_from_constitution() -> void:
+	var result: Dictionary = DataLoader.load_enemies("res://data/enemies.json")
+	assert_eq(result["errors"].size(), 0, "the shipped enemies file is valid")
+	var defs: Dictionary = result["defs"]
+	var expected := {
+		"bandit": 55,
+		"bandit_scout": 55,
+		"disciple_spar": 40,
+		"ma_youwei": 295,
+	}
+	for raw_id in expected.keys():
+		var enemy_id := str(raw_id)
+		assert_true(defs.has(enemy_id), "enemy '%s' loads" % enemy_id)
+		if not defs.has(enemy_id):
+			continue
+		var unit: Variant = Unit.from_enemy(defs[enemy_id])
+		assert_eq(
+			int(unit.max_hp), int(expected[enemy_id]),
+			"enemy '%s' hp is 40 + constitution × 15" % enemy_id
+		)
 
 
 func _errors_contain(errors: Array, needle: String) -> bool:

@@ -92,6 +92,7 @@ func test_known_moves_survive_battle_and_next_fight() -> void:
 	view.battle_finished.connect(func(result: String) -> void:
 		results.append(result)
 	)
+	view.battle.enemies[0].hp = 10
 	view.press_action({"kind": "jianyi", "target": 0})
 	view.press_return()
 	assert_eq(results, ["won"], "the battle finishes before the knowledge is checked")

@@ -170,6 +170,22 @@ static func give_item(id: String, count: int = 1) -> void:
 	load("res://core/quests.gd").notify("item", id, count)
 
 
+# 服用带永久加成的消耗品（如养元丹）：消耗一颗，永久加属性，并提示气血上限变化。
+static func use_permanent_item(id: String) -> bool:
+	var item: Dictionary = item_def(id)
+	var raw_perm: Variant = item.get("perm", {})
+	if not (raw_perm is Dictionary):
+		return false
+	var perm: Dictionary = raw_perm
+	if perm.is_empty() or item_count(id) <= 0:
+		return false
+	GameState.inventory[id] = item_count(id) - 1
+	for key in perm.keys():
+		add_stat(str(key), int(perm[key]))
+	push_toast("气血上限 +%d" % Realms.hp_per_con(GameState.realm_id))
+	return true
+
+
 static func item_count(id: String) -> int:
 	return int(GameState.inventory.get(id, 0))
 

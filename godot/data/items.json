@@ -24,5 +24,11 @@
 		"name": "草药",
 		"kind": "material",
 		"desc": "林间采来的草药，味苦，据说能调理气息。"
+	},
+	"yangyuan_pill": {
+		"name": "养元丹",
+		"kind": "consumable",
+		"desc": "调养元气的丹药，服下后体质永久 +1。",
+		"perm": {"constitution": 1}
 	}
 }

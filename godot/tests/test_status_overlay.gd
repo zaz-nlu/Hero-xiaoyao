@@ -33,7 +33,7 @@ func test_character_panel_toggle_and_stats() -> void:
 	assert_true(bool(overlay.is_panel_open()), "C opens the character panel")
 	assert_eq(int(overlay.character_panel.tab_index), 0, "the panel opens on the attributes tab")
 	var power_text: String = _text_of(overlay.character_panel, "AttrValue_power")
-	assert_true(power_text.contains("10"), "the power row shows its base value: %s" % power_text)
+	assert_true(power_text.contains("6"), "the power row shows its base value: %s" % power_text)
 
 	GameState.stat_bonus["speed"] = 1
 	overlay.refresh()

@@ -10,6 +10,7 @@ const DataLoader = preload("res://core/data_loader.gd")
 const MoveTypes = preload("res://core/move_types.gd")
 const Balance = preload("res://core/balance.gd")
 const Stats = preload("res://core/stats.gd")
+const Realms = preload("res://core/realms.gd")
 const ImageCache = preload("res://ui/image_cache.gd")
 const Hud = preload("res://ui/battle_hud_style.gd")
 
@@ -68,6 +69,7 @@ const KIND_NAMES := {
 	"armor": "防具",
 	"accessory": "饰品",
 	"material": "材料",
+	"consumable": "丹药",
 }
 const SLOT_COLORS := {
 	"weapon": Color(0.72, 0.6, 0.38),
@@ -86,6 +88,7 @@ var _content_root: Control = null
 var _tab_buttons: Array[Button] = []
 var _name_label: Label = null
 var _realm_label: Label = null
+var _age_label: Label = null
 var _hp_bar: ProgressBar = null
 var _hp_label: Label = null
 var _jianyi_label: Label = null
@@ -158,8 +161,9 @@ func handle_key(code: int) -> bool:
 func _build_static() -> void:
 	_build_portrait()
 	_name_label = _make_label(self, "CharName", Vector2(22.0, 316.0), Vector2(196.0, 34.0), 26, Hud.GOLD_BRIGHT)
-	_realm_label = _make_label(self, "CharRealm", Vector2(22.0, 352.0), Vector2(196.0, 22.0), 15, Hud.MUTED)
+	_realm_label = _make_label(self, "CharRealm", Vector2(22.0, 350.0), Vector2(196.0, 20.0), 15, Hud.MUTED)
 	_realm_label.text = "初出茅庐"
+	_age_label = _make_label(self, "CharAge", Vector2(22.0, 368.0), Vector2(196.0, 14.0), 12, Hud.MUTED)
 
 	_hp_bar = ProgressBar.new()
 	_hp_bar.name = "HpBar"
@@ -265,7 +269,15 @@ func _update_left_column() -> void:
 	var player: Dictionary = _player()
 	if _name_label != null:
 		_name_label.text = str(player.get("name", "任逍遥"))
-	var max_hp := int(player.get("max_hp", 100))
+	if _realm_label != null:
+		var realm_text := Realms.name_of(GameState.realm_id)
+		var stage_text := Realms.stage_name(GameState.realm_stage)
+		if stage_text != "":
+			realm_text += "·" + stage_text
+		_realm_label.text = realm_text
+	if _age_label != null:
+		_age_label.text = "年龄 %d" % GameState.age
+	var max_hp := Progression.max_hp(_base_stats())
 	if _hp_bar != null:
 		_hp_bar.max_value = maxf(1.0, float(max_hp))
 		_hp_bar.value = float(max_hp)
@@ -404,7 +416,7 @@ func _build_attributes_tab() -> void:
 		_content_root, "DerivedRow", Vector2(0.0, y + 2.0), Vector2(592.0, 20.0), 14, Hud.GOLD
 	)
 	derived.text = "派生：气血上限 %d · 剑意上限 %d · 料敌上限 %d" % [
-		int(player.get("max_hp", 100)),
+		Progression.max_hp(_base_stats()),
 		int(player.get("jianyi_max", 1)),
 		int(player.get("foresight_max", 2)),
 	]
@@ -690,6 +702,14 @@ func _build_bag_row(item_id: String, count: int, y: float) -> void:
 	var desc := _make_label(row, "BagDesc_%s" % item_id, Vector2(10.0, 27.0), Vector2(480.0, 18.0), 12, Hud.MUTED)
 	desc.text = str(item.get("desc", ""))
 
+	var raw_perm: Variant = item.get("perm", {})
+	if raw_perm is Dictionary:
+		var perm: Dictionary = raw_perm
+		if not perm.is_empty():
+			var use_button := _make_small_button(row, "Use_%s" % item_id, "服用", Vector2(506.0, 12.0), Vector2(76.0, 28.0))
+			use_button.pressed.connect(_on_use_pressed.bind(item_id))
+			return
+
 	if not Progression.EQUIP_SLOTS.has(kind):
 		return
 	var slot := str(item.get("slot", kind))
@@ -706,6 +726,11 @@ func _build_bag_row(item_id: String, count: int, y: float) -> void:
 
 func _on_equip_pressed(item_id: String) -> void:
 	Progression.equip(item_id)
+	refresh()
+
+
+func _on_use_pressed(item_id: String) -> void:
+	Progression.use_permanent_item(item_id)
 	refresh()
 
 
@@ -775,6 +800,10 @@ func _build_points_tab() -> void:
 		)
 		if pending > 0:
 			pending_label.text = "+%d" % pending
+		if key == "constitution":
+			_make_label(
+				_content_root, "ConstitutionHpHint", Vector2(356.0, y + 2.0), Vector2(220.0, 20.0), 12, Hud.MUTED
+			).text = "+1 体质 = +%d 气血" % Realms.hp_per_con(GameState.realm_id)
 		y += 38.0
 
 	var total_pending := _total_pending()

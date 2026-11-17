@@ -95,6 +95,26 @@ func test_give_material_does_not_equip() -> void:
 	GameState.reset()
 
 
+func test_use_permanent_item_consumes_and_applies_bonus() -> void:
+	GameState.reset()
+	Progression.reload_items()
+	Progression.give_item("yangyuan_pill", 2)
+	Progression.take_toasts()
+	assert_true(Progression.use_permanent_item("yangyuan_pill"), "the pill can be used")
+	assert_eq(Progression.item_count("yangyuan_pill"), 1, "one pill is consumed")
+	assert_eq(int(GameState.stat_bonus.get("constitution", 0)), 1, "the pill adds constitution")
+	assert_eq(
+		Progression.take_toasts(),
+		["体质 +1", "气血上限 +15"],
+		"using the pill toasts the stat and the hp gain"
+	)
+	assert_true(Progression.use_permanent_item("yangyuan_pill"), "the second pill can be used")
+	assert_eq(Progression.item_count("yangyuan_pill"), 0, "the second pill is consumed")
+	assert_true(not Progression.use_permanent_item("yangyuan_pill"), "an empty stack cannot be used")
+	assert_true(not Progression.use_permanent_item("herb"), "items without perm cannot be used")
+	GameState.reset()
+
+
 func test_reset_clears_growth_state() -> void:
 	GameState.reset()
 	GameState.stat_bonus["power"] = 1
@@ -155,7 +175,7 @@ func test_can_spend_checks_points_names_and_cap() -> void:
 	GameState.unspent_points = 0
 	assert_true(not Progression.can_spend("power"), "no points means no spending")
 	GameState.unspent_points = 3
-	GameState.stat_bonus["speed"] = 35
+	GameState.stat_bonus["speed"] = 42
 	assert_true(not Progression.can_spend("speed"), "a stat at the cap cannot be raised")
 	assert_true(Progression.can_spend("power"), "other stats remain available")
 	assert_true(not Progression.spend_point("speed"), "spend_point honours the cap")

@@ -1,14 +1,13 @@
 {
 	"name": "任逍遥",
 	"stats": {
-		"power": 10,
-		"speed": 15,
-		"defense": 5,
-		"recovery": 5,
-		"skill": 20,
-		"constitution": 5
+		"power": 6,
+		"speed": 8,
+		"defense": 4,
+		"recovery": 3,
+		"skill": 12,
+		"constitution": 4
 	},
-	"max_hp": 100,
 	"jianyi_max": 1,
 	"foresight_max": 2,
 	"loadout": ["basic_sword", "parry", "sidestep", "taiji"],

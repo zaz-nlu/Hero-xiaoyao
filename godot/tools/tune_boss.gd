@@ -11,14 +11,16 @@ const DataLoader = preload("res://core/data_loader.gd")
 func _init() -> void:
 	var player_data: Dictionary = DataLoader.load_player("res://data/player.json")
 	var base: Dictionary = player_data.get("stats", {})
-	var grown := base.duplicate()
-	grown["skill"] = int(grown["skill"]) + 5
-	grown["speed"] = int(grown["speed"]) + 1
-	grown["power"] = int(grown["power"]) + 2
-	grown["defense"] = int(grown["defense"]) + 1
-	grown["recovery"] = int(grown["recovery"]) + 2
+	var grown := {
+		"power": 8,
+		"speed": 9,
+		"defense": 5,
+		"recovery": 5,
+		"skill": 17,
+		"constitution": 6,
+	}
 	var configs: Array = [
-		[7, 1, 300], [7, 2, 300], [7, 3, 300], [7, 3, 330], [7, 4, 340], [7, 4, 360], [7, 2, 340],
+		[0, 0, 295], [1, 0, 295], [2, 0, 295], [1, 1, 295], [2, 1, 295], [0, 1, 330], [1, 1, 360],
 	]
 	for cfg in configs:
 		var loaded: Dictionary = DataLoader.load_enemies("res://data/enemies.json")
@@ -31,6 +33,8 @@ func _init() -> void:
 			m["power"] = int(m["power"]) + int(cfg[1])
 			new_moves.append(m)
 		boss.moves = new_moves
+		# enemies.json 不再写 max_hp（默认按体质算 295）；这里显式覆盖以扫描血量，
+		# EnemyDef.max_hp 仍会被 Unit.from_enemy 优先采用。
 		boss.max_hp = int(cfg[2])
 		var line := "threat+%d power+%d hp %d :" % [cfg[0], cfg[1], cfg[2]]
 		for label in ["init", "grown"]:

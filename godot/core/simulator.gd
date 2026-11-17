@@ -132,7 +132,7 @@ static func _make_battle(
 		if raw_stats is Dictionary:
 			base_stats = raw_stats
 			stats = Progression.final_stats(base_stats)
-		# 本轮 player.json 仍带显式 max_hp；没有时才用体质公式。
+		# player.json 不再带显式 max_hp，气血由体质与境界算；若仍有 max_hp 则沿用（向后兼容）。
 		if player_data.has("max_hp"):
 			max_hp = int(player_data.get("max_hp", 0))
 		else:
