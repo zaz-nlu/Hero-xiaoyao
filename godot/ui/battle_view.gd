@@ -54,6 +54,8 @@ const STAT_NAMES := {
 var battle: Variant = null
 var selected_target: int = 0
 var last_error: String = ""
+# Set by the Game when the battle runs inside the game; null in standalone scenes.
+var audio: Variant = null
 
 var stage: Variant = null
 var dialogue_view: Variant = null
@@ -192,6 +194,7 @@ func press_action(action: Dictionary) -> void:
 	if _dialogue_active():
 		last_error = "dialogue active"
 		return
+	_play_sfx("sfx_confirm")
 	var result: Dictionary = battle.submit(action)
 	if bool(result.get("ok", false)):
 		last_error = ""
@@ -535,6 +538,10 @@ func _process_new_log() -> void:
 
 
 func _handle_log_line(line: String) -> void:
+	if line.contains(" dmg "):
+		_play_sfx("sfx_hit")
+	if line.contains("regen:player"):
+		_play_sfx("sfx_heal")
 	if line.contains("act:player"):
 		stage.lunge(stage.player_actor, 0.9)
 	if line.contains("act:player foresight"):
@@ -552,6 +559,7 @@ func _handle_log_line(line: String) -> void:
 		stage.lunge(stage.enemy_actors[enemy_index], -0.9)
 	var player_actor: Variant = stage.player_actor
 	if line.contains("verdict=ADVANTAGE") and line.contains("perfect=true"):
+		_play_sfx("sfx_perfect")
 		stage.popup(
 			"完美破招！",
 			stage.actor_position(player_actor),
@@ -559,6 +567,7 @@ func _handle_log_line(line: String) -> void:
 			1.6
 		)
 	elif line.contains("verdict=ADVANTAGE"):
+		_play_sfx("sfx_counter")
 		stage.popup(
 			"破！",
 			stage.actor_position(player_actor),
@@ -573,12 +582,19 @@ func _handle_log_line(line: String) -> void:
 			1.0
 		)
 	if line.contains("stunned=true") and enemy_index < stage.enemy_actors.size():
+		_play_sfx("sfx_stun")
 		stage.popup(
 			"破势！",
 			stage.actor_position(stage.enemy_actors[enemy_index]),
 			STUN_POPUP_COLOR,
 			1.5
 		)
+
+
+func _play_sfx(track: String, volume: float = 1.0) -> void:
+	if audio == null or not is_instance_valid(audio):
+		return
+	audio.play_sfx(track, volume)
 
 
 func _enemy_index_from_line(line: String) -> int:

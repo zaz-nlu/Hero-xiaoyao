@@ -2,6 +2,7 @@ extends Node3D
 
 signal exit_requested
 signal encounter_requested(enemy_id: String, count: int, first_strike: bool)
+signal state_changed(new_state: String)
 
 const TAVERN_PATH := "res://data/tavern.json"
 const SPEAKERS_PATH := "res://data/speakers.json"
@@ -242,6 +243,7 @@ func set_state(new_state: String, animate: bool = false) -> void:
 		return
 	state = new_state
 	_apply_state(new_state, animate)
+	emit_signal("state_changed", new_state)
 
 
 func _cycle_state() -> void:
