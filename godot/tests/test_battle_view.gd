@@ -1,6 +1,7 @@
 extends "res://tests/test_case.gd"
 
 const Battle = preload("res://core/battle.gd")
+const GameState = preload("res://core/game_state.gd")
 
 
 func _make_view() -> Variant:
@@ -10,19 +11,33 @@ func _make_view() -> Variant:
 
 
 func test_view_starts_and_shows_intent() -> void:
+	GameState.reset()
 	var view: Variant = _make_view()
 	view.start("bandit", 1, true)
 	var intent_name: String = str(view.battle.intents[0]["name"])
 	assert_true(intent_name != "", "bandit has an intent")
-	assert_true(view.intent_labels[0].text.contains(intent_name), "intent label shows the move name")
+	assert_true(view.intent_labels[0].text.contains("？？？"), "an unknown intent hides the move name")
+	var intent_id: String = str(view.battle.intents[0]["id"])
+	var enemy_key: String = str(view.battle.enemies[0].id)
+	view.battle.known_moves[enemy_key] = [intent_id]
+	view.refresh()
+	assert_true(view.intent_labels[0].text.contains(intent_name), "a recognized intent shows the move name")
 	view.free()
+	GameState.reset()
 
 
 func test_martial_buttons_show_verdict_marks() -> void:
+	GameState.reset()
 	var view: Variant = _make_view()
 	view.start("bandit", 1, true)
 	assert_eq(view.martial_buttons.size(), view.battle.loadout.size(), "one button per martial in loadout")
 	assert_eq(view.martial_badges.size(), view.battle.loadout.size(), "one verdict badge per martial card")
+	for badge in view.martial_badges:
+		assert_eq(badge.text, "？", "an unknown enemy move leaves the verdict hidden")
+	var intent_id: String = str(view.battle.intents[0]["id"])
+	var enemy_key: String = str(view.battle.enemies[0].id)
+	view.battle.known_moves[enemy_key] = [intent_id]
+	view.refresh()
 	for badge in view.martial_badges:
 		var marked: bool = false
 		for mark in ["✅", "⚠", "❌"]:
@@ -31,6 +46,7 @@ func test_martial_buttons_show_verdict_marks() -> void:
 				break
 		assert_true(marked, "martial card badge '%s' carries a verdict mark" % badge.text)
 	view.free()
+	GameState.reset()
 
 
 func test_press_action_advances_round() -> void:

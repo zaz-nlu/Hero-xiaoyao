@@ -7,6 +7,7 @@ const BattleStage = preload("res://world/battle_stage.gd")
 const Counter = preload("res://core/counter.gd")
 const DataLoader = preload("res://core/data_loader.gd")
 const Dialogue = preload("res://core/dialogue.gd")
+const GameState = preload("res://core/game_state.gd")
 const Jianyi = preload("res://core/jianyi.gd")
 const Mastery = preload("res://core/mastery.gd")
 const MoveTypes = preload("res://core/move_types.gd")
@@ -27,12 +28,14 @@ const PERFECT_POPUP_COLOR := Color(1.0, 0.85, 0.3)
 const ADVANTAGE_POPUP_COLOR := Color(0.5, 1.0, 0.7)
 const BARELY_POPUP_COLOR := Color(0.85, 0.85, 0.85)
 const STUN_POPUP_COLOR := Color(0.6, 0.8, 1.0)
+const FORESIGHT_POPUP_COLOR := Color(0.3, 0.85, 0.9)
 const LOG_LINES := 8
 
 const CARD_WIDTH := 84.0
 const CARD_HEIGHT := 112.0
 const SPECIAL_SLOT_JIANYI := 4
 const SPECIAL_SLOT_PROBE := 5
+const SPECIAL_SLOT_FORESIGHT := 6
 const HEAD_WIDTH := 128.0
 const HEAD_HEIGHT := 56.0
 const HEAD_WORLD_OFFSET := 2.6
@@ -67,8 +70,10 @@ var player_hp_bar: ProgressBar = null
 var player_hp_label: Label = null
 var wound_label: Label = null
 var jianyi_label: Label = null
+var foresight_label: Label = null
 var enemies_container: Control = null
 var intent_labels: Array = []
+var foresight_labels: Array = []
 var weak_labels: Array = []
 var enemy_info_labels: Array = []
 var target_buttons: Array = []
@@ -83,8 +88,10 @@ var martial_buttons: Array = []
 var martial_badges: Array = []
 var jianyi_button: Button = null
 var probe_button: Button = null
+var foresight_button: Button = null
 var jianyi_badge: Label = null
 var probe_badge: Label = null
+var foresight_badge: Label = null
 var result_label: Label = null
 var return_button: Button = null
 var log_label: RichTextLabel = null
@@ -136,7 +143,8 @@ func start(
 		str(player_data.get("name", "")),
 		stats,
 		int(player_data.get("max_hp", 0)),
-		int(player_data.get("jianyi_max", 0))
+		int(player_data.get("jianyi_max", 0)),
+		int(player_data.get("foresight_max", 0))
 	)
 	var enemies: Array = []
 	for i in range(enemy_count):
@@ -147,6 +155,8 @@ func start(
 	for raw_id in loadout:
 		mastery.learn(str(raw_id))
 	battle = Battle.new(player, enemies, loadout, mastery, martials, 1, first_strike)
+	# Share the persistent dictionary so recognized moves carry over between battles.
+	battle.known_moves = GameState.known_moves
 
 	selected_target = 0
 	last_error = ""
@@ -249,6 +259,10 @@ func _on_probe_pressed() -> void:
 	press_action({"kind": "probe", "target": selected_target})
 
 
+func _on_foresight_pressed() -> void:
+	press_action({"kind": "foresight"})
+
+
 func _on_target_pressed(index: int) -> void:
 	selected_target = index
 	refresh()
@@ -258,6 +272,7 @@ func _rebuild_enemy_groups() -> void:
 	for child in enemies_container.get_children():
 		child.free()
 	intent_labels.clear()
+	foresight_labels.clear()
 	weak_labels.clear()
 	enemy_info_labels.clear()
 	target_buttons.clear()
@@ -319,6 +334,11 @@ func _refresh_enemy_group(index: int) -> void:
 	if index < intent_labels.size():
 		var intent_label: Label = intent_labels[index]
 		intent_label.text = _intent_text(index)
+	if index < foresight_labels.size():
+		var foresight_label_node: Label = foresight_labels[index]
+		var foresight_text: String = _foresight_text(index)
+		foresight_label_node.text = foresight_text
+		foresight_label_node.visible = foresight_text != ""
 	if index < weak_labels.size():
 		var weak_label: Label = weak_labels[index]
 		weak_label.text = _weak_text(enemy)
@@ -349,14 +369,23 @@ func _refresh_martial_buttons() -> void:
 	var over: bool = battle.state() != Battle.State.ONGOING
 	var target_alive: bool = _target_alive()
 	var locked: bool = over or _dialogue_active()
+	var intent_known: bool = battle.is_move_known(selected_target)
 	for i in range(martial_buttons.size()):
 		var button: Button = martial_buttons[i]
 		var id: String = str(battle.loadout[i])
 		var verdict: int = battle.preview(id, selected_target)
 		if i < martial_badges.size():
 			var badge: Label = martial_badges[i]
-			badge.text = _verdict_mark(verdict)
-			badge.add_theme_color_override("font_color", _verdict_color(verdict))
+			if intent_known:
+				badge.text = _verdict_mark(verdict)
+				badge.add_theme_color_override("font_color", _verdict_color(verdict))
+			else:
+				badge.text = "？"
+				badge.add_theme_color_override("font_color", Hud.MUTED)
+		if intent_known:
+			button.tooltip_text = _martial_tooltip(id)
+		else:
+			button.tooltip_text = "%s\n出招未知，无法判断" % _martial_tooltip(id)
 		button.disabled = locked or not target_alive
 		_set_card_look(button, button.disabled)
 
@@ -378,6 +407,14 @@ func _refresh_special_buttons() -> void:
 		jianyi_badge.text = "%d/%d" % [points, cap]
 	if probe_badge != null:
 		probe_badge.text = ""
+	if foresight_button != null:
+		foresight_button.disabled = locked or not battle.foresight_available()
+		_set_card_look(foresight_button, foresight_button.disabled)
+		foresight_button.tooltip_text = _foresight_tooltip()
+	if foresight_badge != null:
+		foresight_badge.text = "%d/%d" % [
+			int(battle.player.foresight_points), int(battle.player.foresight_max)
+		]
 
 
 func _target_alive() -> bool:
@@ -476,6 +513,14 @@ func _process_new_log() -> void:
 func _handle_log_line(line: String) -> void:
 	if line.contains("act:player"):
 		stage.lunge(stage.player_actor, 0.9)
+	if line.contains("act:player foresight"):
+		stage.popup(
+			"料敌机先！",
+			stage.actor_position(stage.player_actor),
+			FORESIGHT_POPUP_COLOR,
+			0.75
+		)
+		return
 	var enemy_index: int = _enemy_index_from_line(line)
 	if enemy_index < 0:
 		return
@@ -610,9 +655,31 @@ func _intent_text(index: int) -> String:
 		intent = battle.intents[index]
 	if intent.is_empty():
 		return "（无意图）"
+	if not battle.is_move_known(index):
+		return "下一招：？？？"
 	var type_id: String = str(intent.get("type", ""))
 	var type_name: String = str(MoveTypes.NAMES.get(type_id, type_id))
 	return "下一招：%s（%s）" % [str(intent.get("name", "")), type_name]
+
+
+func _foresight_text(index: int) -> String:
+	if battle == null or index < 0 or index >= battle.enemies.size():
+		return ""
+	var moves: Array = battle.foreseen(index)
+	if moves.is_empty():
+		return ""
+	var names := PackedStringArray()
+	for raw_move in moves:
+		var move: Dictionary = raw_move
+		names.append(str(move.get("name", move.get("id", ""))))
+	return "预判：%s" % " → ".join(names)
+
+
+func _foresight_tooltip() -> String:
+	var left: int = 0
+	if battle != null and battle.player != null:
+		left = int(battle.player.foresight_points)
+	return "料敌机先：花一回合看清所有敌人接下来两次出招（剩余 %d 次）" % left
 
 
 func _weak_text(enemy: Variant) -> String:
@@ -808,6 +875,11 @@ func _build_character_card() -> Control:
 	Hud.configure_label(jianyi_label, 12, Hud.JIANYI_PURPLE)
 	info.add_child(jianyi_label)
 
+	foresight_label = Label.new()
+	foresight_label.name = "ForesightLabel"
+	Hud.configure_label(foresight_label, 12, Hud.FORESIGHT_CYAN)
+	info.add_child(foresight_label)
+
 	return card
 
 
@@ -903,6 +975,15 @@ func _build_special_cards(parent: Container) -> void:
 	probe_button.pressed.connect(_on_probe_pressed)
 	parent.add_child(probe_button)
 	probe_badge = probe_button.get_node("VerdictBadge")
+
+	foresight_button = _build_card_button(
+		SPECIAL_SLOT_FORESIGHT, Hud.FORESIGHT_CYAN, "算", "预判"
+	)
+	foresight_button.name = "ForesightCard"
+	foresight_button.tooltip_text = _foresight_tooltip()
+	foresight_button.pressed.connect(_on_foresight_pressed)
+	parent.add_child(foresight_button)
+	foresight_badge = foresight_button.get_node("VerdictBadge")
 
 
 func _build_return_area() -> Control:
@@ -1165,6 +1246,16 @@ func _build_enemy_head(index: int) -> void:
 	Hud.configure_label(intent_label, 11, Hud.TEXT)
 	box.add_child(intent_label)
 
+	var foresight_label_node := Label.new()
+	foresight_label_node.name = "ForesightLabel"
+	foresight_label_node.add_theme_stylebox_override("normal", Hud.bubble_style())
+	foresight_label_node.clip_text = true
+	foresight_label_node.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	foresight_label_node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	Hud.configure_label(foresight_label_node, 11, Hud.GOLD)
+	foresight_label_node.visible = false
+	box.add_child(foresight_label_node)
+
 	var weak_label := Label.new()
 	weak_label.name = "WeakLabel"
 	weak_label.clip_text = true
@@ -1198,6 +1289,7 @@ func _build_enemy_head(index: int) -> void:
 	enemy_stun_labels.append(stun_label)
 	enemy_markers.append(marker)
 	intent_labels.append(intent_label)
+	foresight_labels.append(foresight_label_node)
 	weak_labels.append(weak_label)
 	target_buttons.append(target_button)
 	_fit_enemy_head(head)
@@ -1226,6 +1318,12 @@ func _refresh_player_card() -> void:
 		var filled := "●".repeat(maxi(0, points))
 		var empty := "○".repeat(maxi(0, cap - points))
 		jianyi_label.text = "剑意 %s%s" % [filled, empty]
+	if foresight_label != null:
+		var f_points: int = int(player.foresight_points)
+		var f_cap: int = int(player.foresight_max)
+		var f_filled := "●".repeat(maxi(0, f_points))
+		var f_empty := "○".repeat(maxi(0, f_cap - f_points))
+		foresight_label.text = "料敌 %s%s" % [f_filled, f_empty]
 
 
 func _refresh_result_banner() -> void:
@@ -1400,6 +1498,8 @@ func _slot_for_key(code: int) -> int:
 			return 4
 		KEY_6:
 			return 5
+		KEY_7:
+			return 6
 		_:
 			return -1
 
@@ -1422,6 +1522,11 @@ func _activate_slot(slot: int) -> bool:
 		if probe_button == null or probe_button.disabled:
 			return false
 		_on_probe_pressed()
+		return true
+	if slot == SPECIAL_SLOT_FORESIGHT:
+		if foresight_button == null or foresight_button.disabled:
+			return false
+		_on_foresight_pressed()
 		return true
 	return false
 

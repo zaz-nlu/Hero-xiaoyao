@@ -2,6 +2,7 @@ extends RefCounted
 
 static var flags: Dictionary = {}
 static var town_return_pos: Variant = null
+static var known_moves: Dictionary = {}
 
 
 static func set_flag(key: String, value: bool = true) -> void:
@@ -15,3 +16,4 @@ static func has_flag(key: String) -> bool:
 static func reset() -> void:
 	flags.clear()
 	town_return_pos = null
+	known_moves.clear()
