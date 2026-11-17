@@ -15,6 +15,13 @@ const Progression = preload("res://core/progression.gd")
 const Unit = preload("res://core/unit.gd")
 const Hud = preload("res://ui/battle_hud_style.gd")
 const ImageCache = preload("res://ui/image_cache.gd")
+const AiAssets = preload("res://world/ai_assets.gd")
+const SkillSlot = preload("res://ui/skill_slot.gd")
+const HudBar = preload("res://ui/hud_bar.gd")
+const HudPips = preload("res://ui/hud_pips.gd")
+const HudDivider = preload("res://ui/hud_divider.gd")
+const OrnatePanel = preload("res://ui/ornate_panel.gd")
+const OrnateBox = preload("res://ui/ornate_box.gd")
 
 const PLAYER_PATH := "res://data/player.json"
 const MARTIALS_PATH := "res://data/martials.json"
@@ -32,12 +39,13 @@ const STUN_POPUP_COLOR := Color(0.6, 0.8, 1.0)
 const FORESIGHT_POPUP_COLOR := Color(0.3, 0.85, 0.9)
 const LOG_LINES := 8
 
-const CARD_WIDTH := 84.0
-const CARD_HEIGHT := 112.0
+const CARD_WIDTH := 82.0
+const CARD_HEIGHT := 104.0
+const HUD_HEIGHT := 172.0
 const SPECIAL_SLOT_JIANYI := 4
 const SPECIAL_SLOT_PROBE := 5
 const SPECIAL_SLOT_FORESIGHT := 6
-const HEAD_WIDTH := 128.0
+const HEAD_WIDTH := 138.0
 const HEAD_HEIGHT := 56.0
 const HEAD_WORLD_OFFSET := 2.6
 const HEAD_SCREEN_GAP := 10.0
@@ -74,6 +82,8 @@ var player_hp_label: Label = null
 var wound_label: Label = null
 var jianyi_label: Label = null
 var foresight_label: Label = null
+var jianyi_pips: Control = null
+var foresight_pips: Control = null
 var enemies_container: Control = null
 var intent_labels: Array = []
 var foresight_labels: Array = []
@@ -322,7 +332,8 @@ func _rebuild_martial_buttons() -> void:
 	for i in range(battle.loadout.size()):
 		var id: String = str(battle.loadout[i])
 		var button := _build_card_button(
-			i, _martial_color(id), _martial_glyph(id), _martial_name(id)
+			i, _martial_color(id), _martial_glyph(id), _martial_name(id),
+			"icon_martial_%s.png" % id
 		)
 		button.name = "MartialCard%d" % i
 		button.tooltip_text = _martial_tooltip(id)
@@ -384,6 +395,11 @@ func _refresh_enemy_group(index: int) -> void:
 		head.add_theme_stylebox_override(
 			"panel", Hud.head_style(index == selected_target, dead)
 		)
+		if head.has_method("set_frame"):
+			head.call(
+				"set_frame",
+				Hud.GOLD_BRIGHT if index == selected_target and not dead else Hud.GOLD
+			)
 		head.modulate = Color(0.62, 0.62, 0.66, 0.72) if dead else Color.WHITE
 		head.z_index = 10 if index == selected_target else 0
 		_fit_enemy_head(head)
@@ -401,11 +417,9 @@ func _refresh_martial_buttons() -> void:
 		if i < martial_badges.size():
 			var badge: Label = martial_badges[i]
 			if intent_known:
-				badge.text = _verdict_mark(verdict)
-				badge.add_theme_color_override("font_color", _verdict_color(verdict))
+				_set_badge(badge, _verdict_mark(verdict), _verdict_color(verdict))
 			else:
-				badge.text = "？"
-				badge.add_theme_color_override("font_color", Hud.MUTED)
+				_set_badge(badge, "？", Hud.MUTED)
 		if intent_known:
 			button.tooltip_text = _martial_tooltip(id)
 		else:
@@ -428,17 +442,19 @@ func _refresh_special_buttons() -> void:
 	_set_card_look(jianyi_button, jianyi_button.disabled)
 	_set_card_look(probe_button, probe_button.disabled)
 	if jianyi_badge != null:
-		jianyi_badge.text = "%d/%d" % [points, cap]
+		_set_badge(jianyi_badge, "%d/%d" % [points, cap], Hud.JIANYI_PURPLE.lightened(0.3))
 	if probe_badge != null:
-		probe_badge.text = ""
+		_set_badge(probe_badge, "", Hud.TOUGH_GOLD)
 	if foresight_button != null:
 		foresight_button.disabled = locked or not battle.foresight_available()
 		_set_card_look(foresight_button, foresight_button.disabled)
 		foresight_button.tooltip_text = _foresight_tooltip()
 	if foresight_badge != null:
-		foresight_badge.text = "%d/%d" % [
-			int(battle.player.foresight_points), int(battle.player.foresight_max)
-		]
+		_set_badge(
+			foresight_badge,
+			"%d/%d" % [int(battle.player.foresight_points), int(battle.player.foresight_max)],
+			Hud.FORESIGHT_CYAN.lightened(0.3)
+		)
 
 
 func _target_alive() -> bool:
@@ -820,20 +836,30 @@ func _build_bottom_hud() -> void:
 	panel.anchor_right = 1.0
 	panel.anchor_bottom = 1.0
 	panel.offset_left = 0.0
-	panel.offset_top = -150.0
+	panel.offset_top = -HUD_HEIGHT
 	panel.offset_right = 0.0
 	panel.offset_bottom = 0.0
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.add_theme_stylebox_override("panel", Hud.hud_style())
+	panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	add_child(panel)
+
+	# A soft dark fade so the HUD melts into the scene instead of cutting it off.
+	var backdrop := TextureRect.new()
+	backdrop.name = "Backdrop"
+	backdrop.texture = Hud.vertical_gradient(Color(0.03, 0.02, 0.05, 0.0), Color(0.03, 0.02, 0.05, 0.93))
+	backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	backdrop.stretch_mode = TextureRect.STRETCH_SCALE
+	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(backdrop)
 
 	var margin := MarginContainer.new()
 	margin.name = "PanelMargin"
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 12)
-	margin.add_theme_constant_override("margin_top", 8)
-	margin.add_theme_constant_override("margin_right", 12)
-	margin.add_theme_constant_override("margin_bottom", 8)
+	margin.add_theme_constant_override("margin_left", 14)
+	margin.add_theme_constant_override("margin_top", 30)
+	margin.add_theme_constant_override("margin_right", 14)
+	margin.add_theme_constant_override("margin_bottom", 12)
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(margin)
 
@@ -844,34 +870,34 @@ func _build_bottom_hud() -> void:
 	margin.add_child(row)
 
 	row.add_child(_build_character_card())
-	row.add_child(_build_card_strip())
-	row.add_child(_build_return_area())
+	row.add_child(_build_skill_bar())
+	_build_return_button()
 
 
 func _build_character_card() -> Control:
-	var card := Panel.new()
+	var card := OrnatePanel.new()
 	card.name = "CharacterCard"
-	card.custom_minimum_size = Vector2(232.0, 0.0)
+	card.custom_minimum_size = Vector2(268.0, 0.0)
 	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	card.add_theme_stylebox_override("panel", Hud.panel_style(0.9))
+	card.add_theme_stylebox_override("panel", Hud.plate_style())
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 8)
-	margin.add_theme_constant_override("margin_top", 8)
-	margin.add_theme_constant_override("margin_right", 8)
-	margin.add_theme_constant_override("margin_bottom", 8)
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_bottom", 10)
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card.add_child(margin)
 
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
+	row.add_theme_constant_override("separation", 12)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.add_child(row)
 
 	row.add_child(_build_portrait_frame())
 
 	var info := VBoxContainer.new()
-	info.add_theme_constant_override("separation", 4)
+	info.add_theme_constant_override("separation", 3)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	info.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -879,30 +905,48 @@ func _build_character_card() -> Control:
 
 	player_label = Label.new()
 	player_label.name = "PlayerLabel"
-	Hud.configure_label(player_label, 18, Hud.TEXT)
+	Hud.configure_label(player_label, 20, Hud.TEXT)
+	player_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.85))
+	player_label.add_theme_constant_override("outline_size", 4)
 	info.add_child(player_label)
 
+	var rule := TextureRect.new()
+	rule.texture = Hud.horizontal_fade_line(Hud.GOLD)
+	rule.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rule.stretch_mode = TextureRect.STRETCH_SCALE
+	rule.custom_minimum_size = Vector2(0.0, 2.0)
+	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	info.add_child(rule)
+
 	var hp_row := HBoxContainer.new()
-	hp_row.add_theme_constant_override("separation", 8)
+	hp_row.add_theme_constant_override("separation", 6)
 	hp_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	info.add_child(hp_row)
 
-	player_hp_bar = ProgressBar.new()
+	var hp_title := Label.new()
+	hp_title.text = "气血"
+	Hud.configure_label(hp_title, 12, Hud.MUTED)
+	hp_row.add_child(hp_title)
+
+	player_hp_bar = HudBar.new()
 	player_hp_bar.name = "PlayerHpBar"
-	player_hp_bar.show_percentage = false
-	player_hp_bar.custom_minimum_size = Vector2(96.0, 14.0)
+	player_hp_bar.custom_minimum_size = Vector2(96.0, 20.0)
 	player_hp_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	player_hp_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	player_hp_bar.max_value = 1.0
 	player_hp_bar.value = 0.0
 	player_hp_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	player_hp_bar.add_theme_stylebox_override("background", Hud.bar_bg_style())
-	player_hp_bar.add_theme_stylebox_override("fill", Hud.bar_fill_style(Hud.HP_RED))
 	hp_row.add_child(player_hp_bar)
 
 	player_hp_label = Label.new()
 	player_hp_label.name = "PlayerHpLabel"
-	Hud.configure_label(player_hp_label, 11, Hud.MUTED)
-	hp_row.add_child(player_hp_label)
+	player_hp_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	player_hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	player_hp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	Hud.configure_label(player_hp_label, 12, Color.WHITE)
+	player_hp_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.9))
+	player_hp_label.add_theme_constant_override("outline_size", 4)
+	player_hp_bar.add_child(player_hp_label)
 
 	wound_label = Label.new()
 	wound_label.name = "WoundLabel"
@@ -910,45 +954,64 @@ func _build_character_card() -> Control:
 	wound_label.visible = false
 	info.add_child(wound_label)
 
-	jianyi_label = Label.new()
-	jianyi_label.name = "JianyiLabel"
-	Hud.configure_label(jianyi_label, 12, Hud.JIANYI_PURPLE)
-	info.add_child(jianyi_label)
+	var jianyi_row := _build_pip_row("JianyiLabel", "剑意", Hud.JIANYI_PURPLE)
+	jianyi_label = jianyi_row.get_node("Title")
+	jianyi_pips = jianyi_row.get_node("Pips")
+	info.add_child(jianyi_row)
 
-	foresight_label = Label.new()
-	foresight_label.name = "ForesightLabel"
-	Hud.configure_label(foresight_label, 12, Hud.FORESIGHT_CYAN)
-	info.add_child(foresight_label)
+	var foresight_row := _build_pip_row("ForesightLabel", "料敌", Hud.FORESIGHT_CYAN)
+	foresight_label = foresight_row.get_node("Title")
+	foresight_pips = foresight_row.get_node("Pips")
+	info.add_child(foresight_row)
 
 	return card
 
 
+func _build_pip_row(node_name: String, title: String, color: Color) -> Control:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var title_label := Label.new()
+	title_label.name = "Title"
+	title_label.text = title
+	title_label.custom_minimum_size = Vector2(30.0, 0.0)
+	Hud.configure_label(title_label, 12, color)
+	row.add_child(title_label)
+	var pips := HudPips.new()
+	pips.name = "Pips"
+	pips.color = color
+	pips.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(pips)
+	row.name = node_name + "Row"
+	return row
+
+
 func _build_portrait_frame() -> Control:
-	var frame := Panel.new()
+	var frame := OrnatePanel.new()
 	frame.name = "PortraitFrame"
-	frame.custom_minimum_size = Vector2(96.0, 96.0)
+	frame.custom_minimum_size = Vector2(92.0, 92.0)
 	frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	frame.add_theme_stylebox_override("panel", Hud.panel_style(1.0, Hud.GOLD, 4))
+	frame.add_theme_stylebox_override("panel", Hud.panel_style(1.0, Hud.GOLD, 6))
 
 	var placeholder := ColorRect.new()
 	placeholder.name = "PortraitPlaceholder"
 	placeholder.color = Color(0.24, 0.2, 0.28, 1.0)
 	placeholder.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	placeholder.offset_left = 2.0
-	placeholder.offset_top = 2.0
-	placeholder.offset_right = -2.0
-	placeholder.offset_bottom = -2.0
+	placeholder.offset_left = 3.0
+	placeholder.offset_top = 3.0
+	placeholder.offset_right = -3.0
+	placeholder.offset_bottom = -3.0
 	placeholder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	frame.add_child(placeholder)
 
 	var portrait := TextureRect.new()
 	portrait.name = "Portrait"
 	portrait.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	portrait.offset_left = 2.0
-	portrait.offset_top = 2.0
-	portrait.offset_right = -2.0
-	portrait.offset_bottom = -2.0
+	portrait.offset_left = 3.0
+	portrait.offset_top = 3.0
+	portrait.offset_right = -3.0
+	portrait.offset_bottom = -3.0
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
@@ -975,33 +1038,51 @@ func _portrait_texture() -> Texture2D:
 	return atlas
 
 
-func _build_card_strip() -> Control:
+# The hotbar: martial slots, a divider, then the special actions, on one lacquered plate.
+func _build_skill_bar() -> Control:
+	var plate := OrnateBox.new()
+	plate.name = "SkillBar"
+	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	plate.size_flags_horizontal = Control.SIZE_EXPAND | Control.SIZE_SHRINK_CENTER
+	plate.add_theme_stylebox_override("panel", Hud.plate_style())
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 14)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_right", 14)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	plate.add_child(margin)
+
 	var strip := HBoxContainer.new()
 	strip.name = "CardStrip"
 	strip.alignment = BoxContainer.ALIGNMENT_CENTER
-	strip.add_theme_constant_override("separation", 16)
-	strip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	strip.add_theme_constant_override("separation", 6)
 	strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	margin.add_child(strip)
 
 	martial_row = HBoxContainer.new()
 	martial_row.name = "MartialRow"
 	martial_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	martial_row.add_theme_constant_override("separation", 6)
+	martial_row.add_theme_constant_override("separation", 8)
 	martial_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	strip.add_child(martial_row)
 
+	strip.add_child(HudDivider.new())
+
 	var special_row := HBoxContainer.new()
 	special_row.name = "SpecialRow"
-	special_row.add_theme_constant_override("separation", 6)
+	special_row.add_theme_constant_override("separation", 8)
 	special_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	strip.add_child(special_row)
 	_build_special_cards(special_row)
-	return strip
+	return plate
 
 
 func _build_special_cards(parent: Container) -> void:
 	jianyi_button = _build_card_button(
-		SPECIAL_SLOT_JIANYI, Hud.JIANYI_PURPLE, "剑", "剑意"
+		SPECIAL_SLOT_JIANYI, Hud.JIANYI_PURPLE, "剑", "剑意",
+		"icon_special_jianyi.png", Hud.JIANYI_PURPLE
 	)
 	jianyi_button.name = "JianyiCard"
 	jianyi_button.tooltip_text = "剑意：消耗一点剑意，对当前目标造成必中重伤。"
@@ -1009,7 +1090,10 @@ func _build_special_cards(parent: Container) -> void:
 	parent.add_child(jianyi_button)
 	jianyi_badge = jianyi_button.get_node("VerdictBadge")
 
-	probe_button = _build_card_button(SPECIAL_SLOT_PROBE, Hud.TOUGH_GOLD, "探", "试探")
+	probe_button = _build_card_button(
+		SPECIAL_SLOT_PROBE, Hud.TOUGH_GOLD, "探", "试探",
+		"icon_special_probe.png", Hud.TOUGH_GOLD
+	)
 	probe_button.name = "ProbeCard"
 	probe_button.tooltip_text = "试探：揭示当前目标下一招的弱点。"
 	probe_button.pressed.connect(_on_probe_pressed)
@@ -1017,7 +1101,8 @@ func _build_special_cards(parent: Container) -> void:
 	probe_badge = probe_button.get_node("VerdictBadge")
 
 	foresight_button = _build_card_button(
-		SPECIAL_SLOT_FORESIGHT, Hud.FORESIGHT_CYAN, "算", "预判"
+		SPECIAL_SLOT_FORESIGHT, Hud.FORESIGHT_CYAN, "算", "预判",
+		"icon_special_foresight.png", Hud.FORESIGHT_CYAN
 	)
 	foresight_button.name = "ForesightCard"
 	foresight_button.tooltip_text = _foresight_tooltip()
@@ -1026,88 +1111,92 @@ func _build_special_cards(parent: Container) -> void:
 	foresight_badge = foresight_button.get_node("VerdictBadge")
 
 
-func _build_return_area() -> Control:
-	var area := VBoxContainer.new()
-	area.name = "ReturnArea"
-	area.alignment = BoxContainer.ALIGNMENT_CENTER
-	area.custom_minimum_size = Vector2(132.0, 0.0)
-	area.mouse_filter = Control.MOUSE_FILTER_IGNORE
-
+# Shown above the HUD once the fight is over.
+func _build_return_button() -> void:
 	return_button = Button.new()
 	return_button.name = "ReturnButton"
 	return_button.text = "返回小镇"
-	return_button.custom_minimum_size = Vector2(120.0, 42.0)
+	return_button.anchor_left = 0.5
+	return_button.anchor_right = 0.5
+	return_button.anchor_top = 1.0
+	return_button.anchor_bottom = 1.0
+	return_button.offset_left = -90.0
+	return_button.offset_right = 90.0
+	return_button.offset_top = -HUD_HEIGHT - 52.0
+	return_button.offset_bottom = -HUD_HEIGHT - 6.0
 	return_button.visible = false
 	return_button.pressed.connect(press_return)
 	_style_card_button(return_button)
-	area.add_child(return_button)
-	return area
+	return_button.add_theme_font_size_override("font_size", 20)
+	return_button.add_theme_color_override("font_color", Hud.GOLD_BRIGHT)
+	add_child(return_button)
 
 
 func _build_card_button(
-	slot: int, icon_color: Color, glyph: String, title: String
+	slot: int, icon_color: Color, glyph: String, title: String,
+	icon_file: String = "", frame: Color = Hud.GOLD
 ) -> Button:
-	var button := Button.new()
+	var button := SkillSlot.new()
 	button.custom_minimum_size = Vector2(CARD_WIDTH, CARD_HEIGHT)
 	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	button.text = ""
-	button.clip_contents = true
+	button.clip_contents = false
 	button.focus_mode = Control.FOCUS_NONE
 	button.mouse_filter = Control.MOUSE_FILTER_STOP
 	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	_style_card_button(button)
+	var texture: Texture2D = null
+	if icon_file != "":
+		texture = AiAssets.load_texture(icon_file)
+	button.setup(texture, icon_color, frame, glyph)
 
 	var key_label := Label.new()
 	key_label.name = "KeyLabel"
 	key_label.text = str(slot + 1)
 	key_label.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	key_label.position = Vector2(6.0, 2.0)
-	Hud.configure_label(key_label, 11, Hud.MUTED)
+	key_label.offset_left = 4.0
+	key_label.offset_top = 4.0
+	key_label.offset_right = 20.0
+	key_label.offset_bottom = 20.0
+	key_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	key_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	key_label.add_theme_stylebox_override("normal", Hud.badge_style(frame))
+	Hud.configure_label(key_label, 11, Hud.GOLD_BRIGHT)
 	button.add_child(key_label)
 
 	var badge := Label.new()
 	badge.name = "VerdictBadge"
 	badge.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	badge.offset_left = -46.0
-	badge.offset_top = 2.0
-	badge.offset_right = -5.0
+	badge.offset_left = -42.0
+	badge.offset_top = 4.0
+	badge.offset_right = -4.0
 	badge.offset_bottom = 20.0
-	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	Hud.configure_label(badge, 12, Hud.GOLD_BRIGHT)
+	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	badge.add_theme_stylebox_override("normal", Hud.badge_style(frame))
+	Hud.configure_label(badge, 11, Hud.GOLD_BRIGHT)
+	badge.visible = false
 	button.add_child(badge)
-
-	var icon := Panel.new()
-	icon.name = "Icon"
-	icon.set_anchors_preset(Control.PRESET_CENTER)
-	icon.offset_left = -22.0
-	icon.offset_top = -22.0
-	icon.offset_right = 22.0
-	icon.offset_bottom = 22.0
-	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	icon.add_theme_stylebox_override("panel", Hud.circle_style(icon_color, 22))
-	button.add_child(icon)
-
-	var icon_label := Label.new()
-	icon_label.name = "IconLabel"
-	icon_label.text = glyph
-	icon_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	icon_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	Hud.configure_label(icon_label, 20, Hud.TEXT)
-	icon.add_child(icon_label)
 
 	var name_label := Label.new()
 	name_label.name = "CardName"
 	name_label.text = title
 	name_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	name_label.offset_top = -26.0
-	name_label.offset_bottom = -5.0
+	name_label.offset_top = -28.0
+	name_label.offset_bottom = -4.0
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	Hud.configure_label(name_label, 12, Hud.TEXT)
+	Hud.configure_label(name_label, 13, Hud.TEXT)
 	button.add_child(name_label)
 
 	return button
+
+
+func _set_badge(label: Label, text: String, color: Color) -> void:
+	if label == null:
+		return
+	label.text = text
+	label.visible = text != ""
+	label.add_theme_color_override("font_color", color)
 
 
 func _style_card_button(button: Button) -> void:
@@ -1183,7 +1272,7 @@ func _build_dialogue() -> void:
 
 
 func _build_enemy_head(index: int) -> void:
-	var head := Panel.new()
+	var head := OrnatePanel.new()
 	head.name = "EnemyHead%d" % index
 	head.custom_minimum_size = Vector2(HEAD_WIDTH, HEAD_HEIGHT)
 	head.size = Vector2(HEAD_WIDTH, HEAD_HEIGHT)
@@ -1196,12 +1285,14 @@ func _build_enemy_head(index: int) -> void:
 	marker.text = "▼"
 	marker.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	marker.offset_left = -24.0
-	marker.offset_top = -14.0
+	marker.offset_top = -20.0
 	marker.offset_right = 24.0
-	marker.offset_bottom = 4.0
+	marker.offset_bottom = 0.0
 	marker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	marker.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	Hud.configure_label(marker, 12, Hud.GOLD_BRIGHT)
+	Hud.configure_label(marker, 18, Hud.GOLD_BRIGHT)
+	marker.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.9))
+	marker.add_theme_constant_override("outline_size", 5)
 	marker.visible = false
 	marker.z_index = 1
 	head.add_child(marker)
@@ -1225,27 +1316,25 @@ func _build_enemy_head(index: int) -> void:
 	info_label.name = "InfoLabel"
 	info_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	Hud.configure_label(info_label, 13, Hud.TEXT)
+	info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	Hud.configure_label(info_label, 15, Hud.TEXT)
+	info_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.85))
+	info_label.add_theme_constant_override("outline_size", 4)
 	box.add_child(info_label)
 
 	var hp_stack := Control.new()
 	hp_stack.name = "HpStack"
-	hp_stack.custom_minimum_size = Vector2(0.0, 14.0)
+	hp_stack.custom_minimum_size = Vector2(0.0, 16.0)
 	hp_stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hp_stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(hp_stack)
 
-	var hp_bar := ProgressBar.new()
+	var hp_bar := HudBar.new()
 	hp_bar.name = "HpBar"
-	hp_bar.show_percentage = false
 	hp_bar.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	hp_bar.offset_top = 2.0
-	hp_bar.offset_bottom = -2.0
 	hp_bar.max_value = 1.0
 	hp_bar.value = 0.0
 	hp_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hp_bar.add_theme_stylebox_override("background", Hud.bar_bg_style())
-	hp_bar.add_theme_stylebox_override("fill", Hud.bar_fill_style(Hud.HP_RED))
 	hp_stack.add_child(hp_bar)
 
 	var hp_label := Label.new()
@@ -1364,18 +1453,10 @@ func _refresh_player_card() -> void:
 		var wound: int = int(player.wound)
 		wound_label.visible = wound > 0
 		wound_label.text = "伤 %d" % wound
-	if jianyi_label != null:
-		var points: int = int(player.jianyi_points)
-		var cap: int = int(player.jianyi_max)
-		var filled := "●".repeat(maxi(0, points))
-		var empty := "○".repeat(maxi(0, cap - points))
-		jianyi_label.text = "剑意 %s%s" % [filled, empty]
-	if foresight_label != null:
-		var f_points: int = int(player.foresight_points)
-		var f_cap: int = int(player.foresight_max)
-		var f_filled := "●".repeat(maxi(0, f_points))
-		var f_empty := "○".repeat(maxi(0, f_cap - f_points))
-		foresight_label.text = "料敌 %s%s" % [f_filled, f_empty]
+	if jianyi_pips != null:
+		jianyi_pips.call("set_pips", int(player.jianyi_points), int(player.jianyi_max))
+	if foresight_pips != null:
+		foresight_pips.call("set_pips", int(player.foresight_points), int(player.foresight_max))
 
 
 func _refresh_result_banner() -> void:
@@ -1446,7 +1527,7 @@ func _set_card_look(button: Button, dimmed: bool) -> void:
 func _toughness_text(enemy: Variant) -> String:
 	var left: float = maxf(0.0, float(enemy.toughness_left))
 	var shown: int = int(ceilf(left))
-	var text := "■".repeat(shown)
+	var text := "◆".repeat(shown)
 	if text == "":
 		text = "—"
 	return "耐性 %s" % text

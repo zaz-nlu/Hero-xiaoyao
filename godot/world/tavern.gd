@@ -534,20 +534,15 @@ func _build_beams() -> void:
 	var beam_mat: StandardMaterial3D = _wood_material(Vector2(3.0, 1.0))
 	beam_mat.albedo_color = Color(0.35, 0.3, 0.27)
 
-	# Main beams run across the room; the three cross beams tie them together.
-	for beam_z in [-10.5, -7.0, -3.5, 0.0, 3.5]:
+	# Only two beams, tucked against the back wall: more of them cross the camera's view of the
+	# upper wall and the windows and make the room look cluttered.
+	for beam_z in [-11.2, -8.6]:
 		_add_box(
 			root,
 			Vector3(width, 0.4, 0.4),
 			beam_mat,
-			Vector3(cx, 6.2, float(beam_z))
-		)
-	for beam_x in [4.0, 11.0, 18.0]:
-		_add_box(
-			root,
-			Vector3(0.3, 0.3, depth),
-			beam_mat,
-			Vector3(float(beam_x), 5.9, cz)
+			Vector3(cx, 6.2, float(beam_z)),
+			"Beam"
 		)
 
 

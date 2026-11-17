@@ -107,6 +107,7 @@ func test_toasts_consume_queue_and_respect_enabled() -> void:
 
 func test_game_syncs_input_blocked_and_battle_disables_overlay() -> void:
 	_reset()
+	Engine.set_meta("skip_title", true)
 	var game: Variant = load("res://ui/game.gd").new()
 	game.show_town()
 	var overlay: Variant = game.overlay

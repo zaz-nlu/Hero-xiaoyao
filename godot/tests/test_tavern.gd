@@ -225,7 +225,7 @@ func test_tavern_decor_and_rug_states() -> void:
 	var beams: Node = tavern.find_child("Beams", true, false)
 	assert_true(beams != null, "the tavern has a Beams node")
 	if beams != null:
-		assert_true(beams.get_child_count() >= 8, "five main beams and three cross beams")
+		assert_eq(beams.get_child_count(), 2, "two main beams against the back wall")
 	var rug_value: Variant = tavern.furniture_nodes.get("Rug", null)
 	assert_true(rug_value is Node3D, "the rug is a furniture node")
 	for i in range(1, 5):

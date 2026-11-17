@@ -3,8 +3,10 @@ extends Node
 const GameState = preload("res://core/game_state.gd")
 const Quests = preload("res://core/quests.gd")
 const Progression = preload("res://core/progression.gd")
+const Realms = preload("res://core/realms.gd")
 const AudioManager = preload("res://ui/audio_manager.gd")
 const SaveSystem = preload("res://core/save_system.gd")
+const Profile = preload("res://core/profile.gd")
 
 const TOWN_SCENE := "res://world/town.gd"
 const TAVERN_SCENE := "res://world/tavern.gd"
@@ -12,8 +14,10 @@ const FOREST_SCENE := "res://world/forest.gd"
 const BATTLE_SCENE := "res://ui/battle_view.gd"
 const STATUS_OVERLAY_SCENE := "res://ui/status_overlay.gd"
 const PAUSE_MENU_SCENE := "res://ui/pause_menu.gd"
+const TITLE_SCREEN_SCENE := "res://ui/title_screen.gd"
 const BOSS_ENEMY_ID := "ma_youwei"
 const AUTOSAVE_INTERVAL := 120.0
+const PROFILE_POLL_INTERVAL := 0.5
 const SAVE_KINDS: Array[String] = ["town", "tavern", "forest"]
 
 var current: Node = null
@@ -22,6 +26,7 @@ var overlay: Variant = null
 var audio: Variant = null
 var pause_menu: Variant = null
 var save_dir: String = SaveSystem.SAVE_DIR
+var profile_path: String = Profile.PROFILE_PATH
 
 var _battle_enemy: String = ""
 var _battle_count: int = 0
@@ -30,21 +35,26 @@ var _panel_was_open: bool = false
 var _seen_toasts: Array = []
 var _loading_slot: bool = false
 var _autosave_timer: float = 0.0
+var _profile_timer: float = 0.0
+var _gate_profile_checked: bool = false
 
 
 func _ready() -> void:
 	_ensure_overlay()
 	_ensure_pause_menu()
-	show_town()
-	if not GameState.has_flag("intro_hint_shown"):
-		GameState.set_flag("intro_hint_shown")
-		Progression.push_toast("按 C 打开角色面板，可以分配 3 点属性点")
-		Progression.push_toast("按 J 查看任务，Shift 可以蹲伏")
+	# Tests and the frame-based smoke test set this meta to keep booting straight
+	# into the town; normal startup always goes through the title screen.
+	if Engine.has_meta("skip_title") and bool(Engine.get_meta("skip_title")):
+		show_town()
+		_show_intro_hints()
+	else:
+		show_title()
 
 
 func _process(_delta: float) -> void:
 	_process_toast_sfx()
 	_tick_playtime(_delta)
+	_tick_profile(_delta)
 	if overlay == null or current == null:
 		return
 	var panel_open: bool = overlay.is_panel_open()
@@ -91,6 +101,29 @@ func _tick_playtime(delta: float) -> void:
 	if _autosave_timer >= AUTOSAVE_INTERVAL:
 		_autosave_timer = 0.0
 		_autosave_now()
+
+
+# Title-screen places unlock from real progress. The boss check runs in any scene
+# (so a freshly loaded save is caught too); the town position checks are throttled.
+func _tick_profile(delta: float) -> void:
+	if GameState.has_flag("boss_defeated") and not _gate_profile_checked:
+		# One write attempt is enough: Profile silently ignores IO failures.
+		Profile.unlock("gate", profile_path)
+		_gate_profile_checked = true
+	if current == null or current_kind != "town":
+		return
+	_profile_timer += maxf(0.0, delta)
+	if _profile_timer < PROFILE_POLL_INTERVAL:
+		return
+	_profile_timer = 0.0
+	var value: Variant = current.get("player_pos")
+	if not (value is Vector2):
+		return
+	var pos: Vector2 = value
+	if pos.x < -36.0:
+		Profile.unlock("west_street", profile_path)
+	if pos.x > 22.0:
+		Profile.unlock("gate", profile_path)
 
 
 func _schedule_autosave() -> void:
@@ -161,6 +194,8 @@ func load_from_slot(slot: String) -> bool:
 	_loading_slot = true
 	_autosave_timer = 0.0
 	GameState.from_dict(state)
+	if GameState.has_flag("boss_defeated"):
+		Profile.unlock("gate", profile_path)
 	var location: Variant = data.get("location", {})
 	var kind := "town"
 	var pos: Variant = null
@@ -196,10 +231,78 @@ func _read_location_pos(value: Variant) -> Variant:
 	return null
 
 
+func show_title() -> void:
+	_ensure_overlay()
+	_ensure_audio()
+	_ensure_pause_menu()
+	overlay.close_all()
+	overlay.enabled = false
+	_release_current()
+	var title: Variant = load(TITLE_SCREEN_SCENE).new()
+	title.name = "TitleScreen"
+	title.game = self
+	title.audio = audio
+	title.save_dir = save_dir
+	add_child(title)
+	if not title.is_inside_tree():
+		title.build()
+	title.connect("new_game_requested", Callable(self, "_on_title_new_game"))
+	title.connect("continue_requested", Callable(self, "_on_title_continue"))
+	title.connect("load_requested", Callable(self, "_on_title_continue"))
+	title.connect("quit_requested", Callable(self, "_on_title_quit"))
+	current = title
+	current_kind = "title"
+	var tree := get_tree()
+	if tree != null:
+		tree.paused = false
+	_play_music("music_title")
+	_play_ambience("")
+
+
+func start_new_game() -> void:
+	GameState.reset()
+	Progression.reload_items()
+	Quests.reload()
+	Realms.reload()
+	show_town()
+	_show_intro_hints()
+	_schedule_autosave()
+
+
+func _show_intro_hints() -> void:
+	if GameState.has_flag("intro_hint_shown"):
+		return
+	GameState.set_flag("intro_hint_shown")
+	Progression.push_toast("按 C 打开角色面板，可以分配 3 点属性点")
+	Progression.push_toast("按 J 查看任务，Shift 可以蹲伏")
+
+
+func _on_title_new_game() -> void:
+	start_new_game()
+
+
+func _on_title_continue(slot: String) -> void:
+	if load_from_slot(slot):
+		return
+	if current != null and current.has_method("show_error"):
+		current.call("open_page", "main")
+		current.call("show_error", "存档已损坏")
+
+
+func _on_title_quit() -> void:
+	var tree := get_tree()
+	if tree != null:
+		tree.paused = false
+		tree.quit()
+
+
 func go_to_title() -> void:
 	if pause_menu != null:
 		pause_menu.close()
-	push_warning("go_to_title: 标题页尚未实现")
+	var tree := get_tree()
+	if tree != null:
+		tree.paused = false
+	show_title()
 
 
 func _ensure_pause_menu() -> void:
@@ -281,6 +384,7 @@ func show_tavern() -> void:
 	tavern.connect("state_changed", Callable(self, "_on_tavern_state_changed"))
 	current = tavern
 	current_kind = "tavern"
+	Profile.unlock("tavern_inside", profile_path)
 	overlay.enabled = true
 	_play_tavern_music(str(tavern.current_state()))
 	_play_ambience("")
@@ -300,6 +404,7 @@ func show_forest() -> void:
 	forest.connect("encounter_requested", Callable(self, "_on_encounter_requested"))
 	current = forest
 	current_kind = "forest"
+	Profile.unlock("forest", profile_path)
 	overlay.enabled = true
 	_play_music("music_forest")
 	_play_ambience("amb_forest_birds")

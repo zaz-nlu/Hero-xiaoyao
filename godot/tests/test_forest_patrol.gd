@@ -18,6 +18,7 @@ func _on_encounter_requested(enemy_id: String, count: int, first_strike: bool) -
 
 
 func _new_game() -> Variant:
+	Engine.set_meta("skip_title", true)
 	var game: Variant = load("res://ui/game.gd").new()
 	game.show_town()
 	return game

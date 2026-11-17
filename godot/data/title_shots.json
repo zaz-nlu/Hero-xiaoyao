@@ -1,0 +1,208 @@
+{
+  "shots": [
+    {
+      "id": "town_far",
+      "place": "town",
+      "world": "town",
+      "caption": "紫霞镇",
+      "subtitle": "清晨",
+      "duration": 12.0,
+      "from": {
+        "pos": [
+          -34,
+          19,
+          60
+        ],
+        "look": [
+          4,
+          3.5,
+          -3
+        ],
+        "fov": 34.0
+      },
+      "to": {
+        "pos": [
+          8,
+          9.5,
+          30
+        ],
+        "look": [
+          6,
+          3.2,
+          -3
+        ],
+        "fov": 30.0
+      }
+    },
+    {
+      "id": "tavern_outside",
+      "place": "tavern_outside",
+      "world": "town",
+      "caption": "紫霞镇·酒馆",
+      "subtitle": "檐下灯笼",
+      "duration": 11.0,
+      "from": {
+        "pos": [
+          -2,
+          7.5,
+          20
+        ],
+        "look": [
+          6,
+          3.2,
+          -3
+        ],
+        "fov": 30.0
+      },
+      "to": {
+        "pos": [
+          6,
+          4.8,
+          15
+        ],
+        "look": [
+          6,
+          3.2,
+          -3
+        ],
+        "fov": 28.0
+      }
+    },
+    {
+      "id": "west_street",
+      "place": "west_street",
+      "world": "town",
+      "caption": "紫霞镇·西街",
+      "subtitle": "市井人家",
+      "duration": 11.0,
+      "from": {
+        "pos": [
+          -62,
+          12,
+          24
+        ],
+        "look": [
+          -46,
+          2,
+          1
+        ],
+        "fov": 30.0
+      },
+      "to": {
+        "pos": [
+          -50,
+          5,
+          14
+        ],
+        "look": [
+          -46,
+          2.5,
+          0
+        ],
+        "fov": 28.0
+      }
+    },
+    {
+      "id": "tavern_inside",
+      "place": "tavern_inside",
+      "world": "tavern",
+      "caption": "酒馆内景",
+      "subtitle": "人声鼎沸",
+      "duration": 11.0,
+      "from": {
+        "pos": [
+          11,
+          8.5,
+          19
+        ],
+        "look": [
+          11,
+          1.8,
+          -4
+        ],
+        "fov": 36.0
+      },
+      "to": {
+        "pos": [
+          11,
+          5.2,
+          11
+        ],
+        "look": [
+          11,
+          2.3,
+          -5
+        ],
+        "fov": 32.0
+      }
+    },
+    {
+      "id": "forest",
+      "place": "forest",
+      "world": "forest",
+      "caption": "紫霞林",
+      "subtitle": "林间晨雾",
+      "duration": 12.0,
+      "from": {
+        "pos": [
+          0,
+          11,
+          40
+        ],
+        "look": [
+          0,
+          2.2,
+          12
+        ],
+        "fov": 34.0
+      },
+      "to": {
+        "pos": [
+          0,
+          4.2,
+          28
+        ],
+        "look": [
+          0,
+          2.2,
+          10
+        ],
+        "fov": 30.0
+      }
+    },
+    {
+      "id": "gate",
+      "place": "gate",
+      "world": "town",
+      "caption": "紫霞派山门",
+      "subtitle": "拾级而上",
+      "duration": 11.0,
+      "from": {
+        "pos": [
+          18,
+          3.2,
+          9
+        ],
+        "look": [
+          30,
+          5.2,
+          -13
+        ],
+        "fov": 36.0
+      },
+      "to": {
+        "pos": [
+          25.5,
+          3.8,
+          1
+        ],
+        "look": [
+          30,
+          6.5,
+          -15
+        ],
+        "fov": 30.0
+      }
+    }
+  ]
+}

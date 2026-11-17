@@ -6,6 +6,7 @@ var battle_finished_count: int = 0
 
 
 func _new_game() -> Variant:
+	Engine.set_meta("skip_title", true)
 	var game: Variant = load("res://ui/game.gd").new()
 	game.show_town()
 	return game

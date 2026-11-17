@@ -31,7 +31,7 @@ static func save(
 	var bak_path := path + ".bak"
 	var payload := {
 		"version": VERSION,
-		"saved_at": int(Time.get_unix_time_from_system()),
+		"saved_at": Time.get_unix_time_from_system(),
 		"playtime": GameState.playtime,
 		"location": location.duplicate(true),
 		"summary": _summary(summary_extra, str(location.get("kind", ""))),
@@ -88,7 +88,7 @@ static func list_slots(dir: String = SAVE_DIR) -> Array:
 			if data.is_empty():
 				item["corrupt"] = true
 			else:
-				item["saved_at"] = int(data.get("saved_at", 0))
+				item["saved_at"] = float(data.get("saved_at", 0.0))
 				item["playtime"] = float(data.get("playtime", 0.0))
 				var summary: Variant = data.get("summary", {})
 				if summary is Dictionary:
@@ -122,11 +122,11 @@ static func has_any(dir: String = SAVE_DIR) -> bool:
 
 static func latest_slot(dir: String = SAVE_DIR) -> String:
 	var best_slot := ""
-	var best_time := -1
+	var best_time := -1.0
 	for item in list_slots(dir):
 		if not bool(item.get("exists", false)) or bool(item.get("corrupt", false)):
 			continue
-		var saved_at := int(item.get("saved_at", 0))
+		var saved_at := float(item.get("saved_at", 0.0))
 		if saved_at > best_time:
 			best_time = saved_at
 			best_slot = str(item.get("slot", ""))
@@ -147,7 +147,7 @@ static func format_playtime(seconds: float) -> String:
 	return "%d小时%d分" % [hours, rest]
 
 
-static func format_time(unix: int) -> String:
+static func format_time(unix: float) -> String:
 	var bias := int(Time.get_time_zone_from_system().get("bias", 0)) * 60
 	var date := Time.get_datetime_dict_from_unix_time(unix + bias)
 	return "%02d-%02d %02d:%02d" % [

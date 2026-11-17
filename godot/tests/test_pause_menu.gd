@@ -33,6 +33,7 @@ func _key(code: int) -> InputEventKey:
 
 
 func _new_game(dir: String) -> Variant:
+	Engine.set_meta("skip_title", true)
 	GameState.reset()
 	var game: Variant = load("res://ui/game.gd").new()
 	game.save_dir = dir
