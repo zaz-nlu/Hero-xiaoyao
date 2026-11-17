@@ -9,11 +9,25 @@ const SPEAKERS_PATH := "res://data/speakers.json"
 const AMBUSH_OPEN_PATH := "res://data/dialogues/tavern_ambush_open.json"
 const AMBUSH_MANY_PATH := "res://data/dialogues/tavern_ambush_many.json"
 const AMBUSH_FEW_PATH := "res://data/dialogues/tavern_ambush_few.json"
+const PREFIGHT_END_PATH := "res://data/dialogues/tavern_prefight_end.json"
 const CAMERA_OFFSET := Vector3(0.0, 13.0, 30.0)
 const LOOK_AHEAD := Vector3(0.0, 1.5, -7.5)
 const ANIM_DURATION := 1.2
 const ENTRANCE_STAGGER := 0.25
 const STATES: Array[String] = ["normal", "brawl", "aftermath"]
+
+# 前戏演出：紫霞一方从楼梯方向入场，和马匪在中央混战约 5 秒。
+const PREFIGHT_START := Vector3(17.0, 0.0, -7.0)
+const PREFIGHT_DURATION := 4.5
+const PREFIGHT_LUNGE := 0.4
+const PREFIGHT_POPUP_LIFE := 1.0
+const PREFIGHT_POPUP_RISE := 1.4
+const BOSS_BAR_HEIGHT := 2.6
+const BOSS_MAX_HP := 300.0
+const DISCIPLE_IDS: Array[String] = ["disciple_1", "disciple_2", "disciple_3"]
+const ZIXIA_IDS: Array[String] = ["zixia", "disciple_1", "disciple_2", "disciple_3"]
+const FALLEN_COLOR := Color(0.45, 0.45, 0.5, 0.75)
+const PREFIGHT_HIT_COLOR := Color(1.0, 0.35, 0.35, 1.0)
 
 const Texgen = preload("res://world/texgen.gd")
 const AiAssets = preload("res://world/ai_assets.gd")
@@ -22,6 +36,7 @@ const PlayerMotion = preload("res://world/player_motion.gd")
 const Dialogue = preload("res://core/dialogue.gd")
 const GameState = preload("res://core/game_state.gd")
 const Interaction = preload("res://world/interaction.gd")
+const Prefight = preload("res://core/prefight.gd")
 
 const VIGNETTE_SHADER := """
 shader_type canvas_item;
@@ -81,6 +96,20 @@ var _ambush_triggered: bool = false
 var _ambush_elapsed: float = 0.0
 var _ambush_stage: String = ""
 var _stagger_entrance: bool = false
+
+# 前戏演出状态（advance(delta) 驱动，测试可以直接推进）。
+var _prefight_active: bool = false
+var _prefight_elapsed: float = 0.0
+var _prefight_result: Dictionary = {}
+var _prefight_base: Dictionary = {}
+var _prefight_popups: Array = []
+var _prefight_flashes: Array = []
+var _prefight_popup_times: Array = []
+var _prefight_popup_index: int = 0
+var _prefight_fallen: int = 0
+var _prefight_crouched: bool = false
+var _boss_bar: Node3D = null
+var _boss_bar_fill: Sprite3D = null
 
 
 func _ready() -> void:
@@ -341,7 +370,10 @@ func _finish_ambush_open() -> void:
 	set_state("brawl", true)
 	_stagger_entrance = false
 	if not _anim_active:
-		_begin_ambush_dialogue()
+		if GameState.has_flag("prefight_done"):
+			_begin_ambush_dialogue()
+		else:
+			_begin_prefight()
 
 
 func _begin_ambush_dialogue() -> void:
@@ -361,11 +393,411 @@ func _finish_ambush_encounter() -> void:
 
 func _emit_ambush_encounter() -> void:
 	var count: int = bandit_count()
+	# 头子的带伤状态来自前戏；战败重来或读档后缓存为空时按同一 N 重新推演一次。
+	var loss: int = int(GameState.prefight_loss_cached)
+	if loss <= 0:
+		loss = int(Prefight.simulate(count).get("boss_damage", 0))
+		GameState.prefight_loss_cached = loss
+	GameState.boss_hp_loss = loss
 	GameState.encounter_group = [
 		{"id": "ma_youwei", "count": 1},
 		{"id": "bandit", "count": count},
 	]
 	emit_signal("encounter_requested", "ma_youwei", 1, false)
+
+
+# ---------------------------------------------------------------- prefight performance
+
+# 紫霞一方与马匪的混战演出：advance(delta) 驱动，约 5 秒。
+# 结束时把结果写进 GameState（头子带伤），再进 tavern_prefight_end 对话。
+func _begin_prefight() -> void:
+	if npc_nodes.get("zixia") == null:
+		_begin_ambush_dialogue()
+		return
+	_ambush_stage = "prefight"
+	_prefight_result = Prefight.simulate(bandit_count())
+	_prefight_active = true
+	_prefight_elapsed = 0.0
+	_prefight_popup_index = 0
+	_prefight_fallen = 0
+	_prefight_crouched = false
+	_prefight_base.clear()
+	for id in ZIXIA_IDS:
+		_cache_prefight_base(str(id))
+	for id in npc_nodes.keys():
+		if str(id) == "ma_youwei" or str(id).begins_with("bandit_"):
+			_cache_prefight_base(str(id))
+	_build_prefight_popup_times()
+	_face_prefight_sides()
+	_ensure_boss_bar()
+	_place_boss_bar()
+	if _boss_bar != null:
+		_boss_bar.visible = true
+	_set_boss_bar_ratio(1.0)
+
+
+func _cache_prefight_base(id: String) -> void:
+	var node_value: Variant = npc_nodes.get(id, null)
+	if node_value is Node3D:
+		_prefight_base[id] = (node_value as Node3D).position
+
+
+# 每条日志对应一次飘字，均匀铺在演出前 82% 的时间里。
+func _build_prefight_popup_times() -> void:
+	_prefight_popup_times.clear()
+	var log: Array = _prefight_result.get("log", [])
+	if log.is_empty():
+		return
+	var span: float = PREFIGHT_DURATION * 0.82
+	for i in range(log.size()):
+		_prefight_popup_times.append(span * float(i) / float(log.size()))
+
+
+func _face_prefight_sides() -> void:
+	for id in ZIXIA_IDS:
+		_face_npc(str(id), "right")
+	for id in npc_nodes.keys():
+		if str(id) == "ma_youwei" or str(id).begins_with("bandit_"):
+			_face_npc(str(id), "left")
+
+
+func _face_brawl_enemies() -> void:
+	for id in npc_nodes.keys():
+		if str(id) == "ma_youwei" or str(id).begins_with("bandit_"):
+			_face_npc(str(id), "down")
+
+
+func _face_npc(id: String, facing: String) -> void:
+	var node_value: Variant = npc_nodes.get(id, null)
+	if node_value is Node:
+		(node_value as Node).call("set_facing", facing)
+
+
+func _advance_prefight(delta: float) -> void:
+	_prefight_elapsed += maxf(0.0, delta)
+	var t: float = clampf(_prefight_elapsed / PREFIGHT_DURATION, 0.0, 1.0)
+	_apply_prefight_motion(t)
+	_spawn_due_prefight_popups()
+	_advance_prefight_popups(delta)
+	_advance_prefight_flashes(delta)
+	var damage: int = int(_prefight_result.get("boss_damage", 0))
+	_set_boss_bar_ratio(1.0 - float(damage) * t / BOSS_MAX_HP)
+	_place_boss_bar()
+	# 最后半秒三名弟子依次倒下，师姐单膝半蹲。
+	if t >= 0.78 and _prefight_fallen < 1:
+		_prefight_fallen = 1
+		_lay_down_disciple(0)
+	if t >= 0.84 and _prefight_fallen < 2:
+		_prefight_fallen = 2
+		_lay_down_disciple(1)
+	if t >= 0.90 and _prefight_fallen < 3:
+		_prefight_fallen = 3
+		_lay_down_disciple(2)
+	if t >= 0.94 and not _prefight_crouched:
+		_prefight_crouched = true
+		_crouch_sister()
+	if _prefight_elapsed >= PREFIGHT_DURATION:
+		_finish_prefight()
+
+
+# 双方小幅突进/后撤：正弦位移，两侧方向相反，每个单位相位错开。
+func _apply_prefight_motion(t: float) -> void:
+	var index := 0
+	for raw_id in _prefight_base.keys():
+		var id: String = str(raw_id)
+		var node_value: Variant = npc_nodes.get(id, null)
+		if not (node_value is Node3D):
+			continue
+		var node: Node3D = node_value
+		var base: Vector3 = _prefight_base[raw_id]
+		var side: float = 1.0 if ZIXIA_IDS.has(id) else -1.0
+		var phase: float = PI * 0.5 * float(index % 4)
+		var offset: float = PREFIGHT_LUNGE * sin(TAU * t * 2.0 + phase)
+		node.position = Vector3(base.x + side * offset, base.y, base.z)
+		index += 1
+
+
+func _spawn_due_prefight_popups() -> void:
+	var log: Array = _prefight_result.get("log", [])
+	while _prefight_popup_index < _prefight_popup_times.size() \
+			and _prefight_popup_index < log.size() \
+			and _prefight_elapsed >= float(_prefight_popup_times[_prefight_popup_index]):
+		_spawn_prefight_popup(str(log[_prefight_popup_index]))
+		_prefight_popup_index += 1
+
+
+func _spawn_prefight_popup(line: String) -> void:
+	var parsed: Dictionary = _parse_prefight_log(line)
+	if parsed.is_empty():
+		return
+	var target_value: Variant = npc_nodes.get(str(parsed.get("target", "")), null)
+	if not (target_value is Node3D):
+		return
+	var target: Node3D = target_value
+	var label := Label3D.new()
+	label.text = "-%d" % int(parsed.get("amount", 0))
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.no_depth_test = true
+	label.fixed_size = false
+	label.pixel_size = 0.012
+	label.font_size = 48
+	label.outline_size = 8
+	label.outline_modulate = Color(0.0, 0.0, 0.0, 1.0)
+	label.modulate = Color(0.95, 0.95, 0.95, 1.0)
+	var base: Vector3 = target.position + Vector3(0.0, 2.2, 0.0)
+	label.position = base
+	add_child(label)
+	_prefight_popups.append({
+		"node": label,
+		"age": 0.0,
+		"base": base,
+		"color": Color(0.95, 0.95, 0.95, 1.0),
+	})
+	_flash_prefight_target(target)
+
+
+func _parse_prefight_log(line: String) -> Dictionary:
+	var separator: int = line.rfind(":")
+	if separator <= 0:
+		return {}
+	var pair: String = line.substr(0, separator)
+	var arrow: int = pair.find(">")
+	if arrow <= 0:
+		return {}
+	return {
+		"target": pair.substr(arrow + 1),
+		"amount": absi(int(line.substr(separator + 1))),
+	}
+
+
+func _advance_prefight_popups(delta: float) -> void:
+	var kept: Array = []
+	for entry_value in _prefight_popups:
+		if not (entry_value is Dictionary):
+			continue
+		var entry: Dictionary = entry_value
+		var node_value: Variant = entry.get("node", null)
+		if not (node_value is Label3D):
+			continue
+		var label: Label3D = node_value
+		entry["age"] = float(entry.get("age", 0.0)) + delta
+		var age: float = float(entry["age"])
+		var t: float = clampf(age / PREFIGHT_POPUP_LIFE, 0.0, 1.0)
+		var base: Vector3 = entry.get("base", label.position)
+		label.position = base + Vector3(0.0, PREFIGHT_POPUP_RISE * t, 0.0)
+		var color: Color = entry.get("color", Color.WHITE)
+		color.a = 1.0 - t
+		label.modulate = color
+		if age >= PREFIGHT_POPUP_LIFE:
+			label.queue_free()
+			continue
+		kept.append(entry)
+	_prefight_popups = kept
+
+
+func _flash_prefight_target(node: Node3D) -> void:
+	var restore: Color = Color.WHITE
+	var sprite_value: Variant = node.get_node_or_null("Sprite")
+	if sprite_value is Sprite3D:
+		restore = (sprite_value as Sprite3D).modulate
+	_set_npc_tint(node, PREFIGHT_HIT_COLOR)
+	var kept: Array = []
+	for entry_value in _prefight_flashes:
+		if not (entry_value is Dictionary):
+			continue
+		var entry: Dictionary = entry_value
+		if entry.get("node", null) == node:
+			continue
+		kept.append(entry)
+	_prefight_flashes = kept
+	_prefight_flashes.append({"node": node, "time": 0.18, "restore": restore})
+
+
+func _advance_prefight_flashes(delta: float) -> void:
+	var kept: Array = []
+	for entry_value in _prefight_flashes:
+		if not (entry_value is Dictionary):
+			continue
+		var entry: Dictionary = entry_value
+		var node_value: Variant = entry.get("node", null)
+		if not (node_value is Node3D):
+			continue
+		entry["time"] = float(entry.get("time", 0.0)) - delta
+		if float(entry["time"]) <= 0.0:
+			_set_npc_tint(node_value as Node3D, entry.get("restore", Color.WHITE))
+			continue
+		kept.append(entry)
+	_prefight_flashes = kept
+
+
+func _set_npc_tint(node: Node3D, color: Color) -> void:
+	var sprite_value: Variant = node.get_node_or_null("Sprite")
+	if sprite_value is Sprite3D:
+		(sprite_value as Sprite3D).modulate = color
+
+
+func _lay_down_disciple(index: int) -> void:
+	if index < 0 or index >= DISCIPLE_IDS.size():
+		return
+	var node_value: Variant = npc_nodes.get(DISCIPLE_IDS[index], null)
+	if not (node_value is Node3D):
+		return
+	var node: Node3D = node_value
+	node.rotation.z = PI / 2.0
+	_set_npc_tint(node, FALLEN_COLOR)
+
+
+func _crouch_sister() -> void:
+	var node_value: Variant = npc_nodes.get("zixia", null)
+	if not (node_value is Node3D):
+		return
+	(node_value as Node3D).scale = Vector3(1.0, 0.85, 1.0)
+
+
+func _finish_prefight() -> void:
+	if not _prefight_active:
+		return
+	_prefight_active = false
+	_restore_prefight_positions()
+	for i in range(DISCIPLE_IDS.size()):
+		_lay_down_disciple(i)
+	_prefight_fallen = DISCIPLE_IDS.size()
+	_crouch_sister()
+	_prefight_crouched = true
+	GameState.boss_hp_loss = int(_prefight_result.get("boss_damage", 0))
+	GameState.prefight_loss_cached = GameState.boss_hp_loss
+	GameState.set_flag("prefight_done")
+	_face_brawl_enemies()
+	_apply_boss_bar()
+	_ambush_stage = "prefight_end"
+	if not _play_story_dialogue(PREFIGHT_END_PATH):
+		_begin_ambush_dialogue()
+
+
+func _restore_prefight_positions() -> void:
+	for raw_id in _prefight_base.keys():
+		var node_value: Variant = npc_nodes.get(str(raw_id), null)
+		if node_value is Node3D:
+			(node_value as Node3D).position = _prefight_base[raw_id]
+	_prefight_base.clear()
+
+
+# 战败回到 brawl 时不再重放演出，只按 prefight_done 摆好姿势与头子血条。
+func _apply_brawl_poses() -> void:
+	var done: bool = GameState.has_flag("prefight_done")
+	for id in ZIXIA_IDS:
+		var node_value: Variant = npc_nodes.get(str(id), null)
+		if not (node_value is Node3D):
+			continue
+		var node: Node3D = node_value
+		node.rotation = Vector3.ZERO
+		node.scale = Vector3.ONE
+		if not done:
+			node.call("set_facing", "right")
+	if done:
+		for i in range(DISCIPLE_IDS.size()):
+			_lay_down_disciple(i)
+		_crouch_sister()
+		_face_brawl_enemies()
+		_apply_boss_bar()
+	else:
+		_face_prefight_sides()
+		_hide_boss_bar()
+
+
+# 胜利后的酒馆：紫霞师姐站在吧台前，弟子们在她身后，面向镜头。
+func _apply_aftermath_poses() -> void:
+	for id in ZIXIA_IDS:
+		var node_value: Variant = npc_nodes.get(str(id), null)
+		if not (node_value is Node3D):
+			continue
+		var node: Node3D = node_value
+		node.rotation = Vector3.ZERO
+		node.scale = Vector3.ONE
+		_set_npc_tint(node, Color.WHITE)
+		node.call("set_facing", "down")
+
+
+func _ensure_prefight_cache() -> void:
+	if GameState.prefight_loss_cached > 0:
+		return
+	if not GameState.has_flag("prefight_done"):
+		return
+	GameState.prefight_loss_cached = int(
+		Prefight.simulate(bandit_count()).get("boss_damage", 0)
+	)
+
+
+func _apply_boss_bar() -> void:
+	if state != "brawl" or not GameState.has_flag("prefight_done"):
+		_hide_boss_bar()
+		return
+	_ensure_prefight_cache()
+	_ensure_boss_bar()
+	_place_boss_bar()
+	if _boss_bar != null:
+		_boss_bar.visible = true
+	_set_boss_bar_ratio(
+		(BOSS_MAX_HP - float(GameState.prefight_loss_cached)) / BOSS_MAX_HP
+	)
+
+
+func _hide_boss_bar() -> void:
+	if _boss_bar != null:
+		_boss_bar.visible = false
+
+
+func _ensure_boss_bar() -> void:
+	if _boss_bar != null:
+		return
+	_boss_bar = Node3D.new()
+	_boss_bar.name = "BossHpBar"
+	add_child(_boss_bar)
+	var back := Sprite3D.new()
+	back.name = "Back"
+	back.texture = _boss_bar_texture(Color(0.16, 0.05, 0.05, 0.95), 108, 12)
+	back.pixel_size = 0.02
+	back.centered = false
+	back.position = Vector3(-1.08, -0.06, 0.0)
+	back.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	back.no_depth_test = true
+	back.shaded = false
+	back.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	_boss_bar.add_child(back)
+	_boss_bar_fill = Sprite3D.new()
+	_boss_bar_fill.name = "Fill"
+	_boss_bar_fill.texture = _boss_bar_texture(Color(0.78, 0.12, 0.1, 1.0), 100, 6)
+	_boss_bar_fill.pixel_size = 0.02
+	_boss_bar_fill.centered = false
+	_boss_bar_fill.position = Vector3(-1.0, 0.0, 0.01)
+	_boss_bar_fill.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_boss_bar_fill.no_depth_test = true
+	_boss_bar_fill.shaded = false
+	_boss_bar_fill.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	_boss_bar.add_child(_boss_bar_fill)
+	_boss_bar.visible = false
+
+
+func _boss_bar_texture(color: Color, width: int, height: int) -> ImageTexture:
+	var img: Image = Image.create_empty(width, height, false, Image.FORMAT_RGBA8)
+	img.fill(color)
+	return ImageTexture.create_from_image(img)
+
+
+func _place_boss_bar() -> void:
+	if _boss_bar == null:
+		return
+	var boss_value: Variant = npc_nodes.get("ma_youwei", null)
+	if not (boss_value is Node3D):
+		_boss_bar.visible = false
+		return
+	_boss_bar.position = (boss_value as Node3D).position + Vector3(0.0, BOSS_BAR_HEIGHT, 0.0)
+
+
+func _set_boss_bar_ratio(ratio: float) -> void:
+	if _boss_bar_fill == null:
+		return
+	_boss_bar_fill.scale.x = clampf(ratio, 0.0, 1.0)
 
 
 func _start_boss_challenge() -> bool:
@@ -1312,23 +1744,50 @@ func _apply_state(new_state: String, animate: bool) -> void:
 		else:
 			node.transform = target
 	_sync_npcs(new_state, animate)
+	if new_state == "brawl" and not skip_actors:
+		_apply_brawl_poses()
+	elif new_state == "aftermath" and not skip_actors:
+		_apply_aftermath_poses()
+		_hide_boss_bar()
+	else:
+		_hide_boss_bar()
 	if animate and (not _anim_furniture.is_empty() or not _anim_npcs.is_empty()):
 		_anim_active = true
 
 
 func advance(delta: float) -> void:
-	if not _anim_active:
+	var remaining: float = maxf(0.0, delta)
+	if _anim_active:
+		var total: float = _animation_total()
+		var time_left: float = maxf(0.0, total - _anim_t)
+		_anim_t += remaining
+		if _anim_t >= total:
+			# 动画提前结束时把剩下的时间交给下一段（前戏）继续推进，
+			# 这样测试里一次 advance(6) 也能走完入场 + 演出。
+			remaining = maxf(0.0, remaining - time_left)
+			_finish_animation()
+		else:
+			_step_animation()
+			remaining = 0.0
+	if remaining <= 0.0:
 		return
-	_anim_t += delta
+	if _prefight_active:
+		_advance_prefight(remaining)
+	else:
+		_advance_prefight_popups(remaining)
+
+
+func _animation_total() -> float:
 	var total: float = ANIM_DURATION
 	for record_value in _anim_npcs:
 		if not (record_value is Dictionary):
 			continue
 		var record: Dictionary = record_value
 		total = maxf(total, ANIM_DURATION + float(record.get("delay", 0.0)))
-	if _anim_t >= total:
-		_finish_animation()
-		return
+	return total
+
+
+func _step_animation() -> void:
 	var weight := clampf(_anim_t / ANIM_DURATION, 0.0, 1.0)
 	for record_value in _anim_furniture:
 		if not (record_value is Dictionary):
@@ -1379,7 +1838,11 @@ func _finish_animation() -> void:
 	_anim_active = false
 	_anim_t = 0.0
 	if _ambush_stage == "animating":
-		_begin_ambush_dialogue()
+		# 入场动画结束后先演紫霞一方与马匪的前戏，再进闯入对话。
+		if GameState.has_flag("prefight_done"):
+			_begin_ambush_dialogue()
+		else:
+			_begin_prefight()
 
 
 # ---------------------------------------------------------------- npcs
@@ -1421,10 +1884,10 @@ func _sync_npcs(new_state: String, animate: bool) -> void:
 			character.setup(str(entry.get("sprite", "")))
 			character.set_facing(str(entry.get("facing", "down")))
 			if animate:
-				character.position = _entrance_position()
+				character.position = _npc_entrance_position(str(id))
 				character.call("set_moving", true)
 				var delay := 0.0
-				if _stagger_entrance:
+				if _stagger_entrance and not ZIXIA_IDS.has(str(id)):
 					delay = ENTRANCE_STAGGER * float(entrance_index)
 					entrance_index += 1
 				_anim_npcs.append({
@@ -1499,6 +1962,13 @@ func _entrance_position() -> Vector3:
 			float(entrance.get("x", 11.0)), 0.0, float(entrance.get("z", 5.5))
 		)
 	return Vector3(11.0, 0.0, 5.5)
+
+
+# 紫霞一方从楼梯方向（走廊平台下方）入场，和马匪同时走到中央。
+func _npc_entrance_position(id: String) -> Vector3:
+	if ZIXIA_IDS.has(id):
+		return PREFIGHT_START
+	return _entrance_position()
 
 
 func nearby_npc() -> String:
@@ -1963,6 +2433,9 @@ func _face_player(npc_id: String) -> void:
 func _on_dialogue_finished() -> void:
 	if _ambush_stage == "open":
 		_finish_ambush_open()
+		return
+	if _ambush_stage == "prefight_end":
+		_begin_ambush_dialogue()
 		return
 	if _ambush_stage == "ambush":
 		_finish_ambush_encounter()

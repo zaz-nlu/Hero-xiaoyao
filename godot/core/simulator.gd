@@ -24,6 +24,7 @@ static func run(config: Dictionary) -> Dictionary:
 	var enemy_count: int = int(config.get("enemy_count", 1))
 	var enemy_id: String = str(config.get("enemy_id", ""))
 	var herbs: int = int(config.get("herbs", 0))
+	var boss_hp_loss: int = int(config.get("boss_hp_loss", 0))
 	var enemies_spec: Array = []
 	var raw_enemies: Variant = config.get("enemies", [])
 	if raw_enemies is Array:
@@ -97,6 +98,11 @@ static func run(config: Dictionary) -> Dictionary:
 			stats_override
 		)
 		battle.inventory["herb"] = herbs
+		# 前戏减伤：只扣头子的当前气血，上限保持不变（血条带伤）。
+		if boss_hp_loss > 0:
+			for enemy in battle.enemies:
+				if str(enemy.id) == "ma_youwei":
+					enemy.hp = maxi(1, int(enemy.hp) - boss_hp_loss)
 		_run_battle(battle, bot, bot_rng)
 		if battle.state() == Battle.State.WON:
 			battle.settle_exp()

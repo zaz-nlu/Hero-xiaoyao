@@ -12,6 +12,12 @@
 		"side": "right"
 	},
 	{
+		"id": "zixia_sister",
+		"name": "紫霞师姐",
+		"portrait": "res://assets/portraits/zixia.png",
+		"side": "right"
+	},
+	{
 		"id": "zixia_disciple",
 		"name": "紫霞弟子",
 		"portrait": "res://assets/portraits/zixia_disciple.png",

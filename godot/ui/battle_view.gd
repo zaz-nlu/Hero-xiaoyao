@@ -195,6 +195,14 @@ func start(
 			return
 		for i in range(enemy_count):
 			enemies.append(Unit.from_enemy(enemy_def))
+	# 前戏里紫霞师姐打掉的伤势只作用于马匪头子：当前气血降低、上限不变，
+	# 血条显示成 "207/295" 这样的带伤状态。小兵保持满血。
+	var boss_hp_loss: int = int(GameState.boss_hp_loss)
+	if boss_hp_loss > 0:
+		for enemy in enemies:
+			if str(enemy.id) == "ma_youwei":
+				enemy.hp = maxi(1, int(enemy.hp) - boss_hp_loss)
+		GameState.boss_hp_loss = 0
 	var mastery: Variant = Mastery.new()
 	mastery.set_grades(_martial_grades(martials))
 	mastery.import_exp(GameState.mastery_total)

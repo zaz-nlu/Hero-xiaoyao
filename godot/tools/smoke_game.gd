@@ -63,15 +63,21 @@ func _process(_delta: float) -> bool:
 			cur.dialogue_view.advance()
 			guard += 1
 	elif frames == 25:
-		cur.advance(5.0)
+		# brawl entrance (about 1.5 s) + the Zixia pre-fight show (about 6 s)
+		cur.advance(14.0)
 		if not cur.is_dialogue_active():
-			_fail("the ambush dialogue did not follow the brawl animation")
+			_fail("the pre-fight/ambush dialogue did not follow the brawl animation")
 			return false
 	elif frames == 30:
-		var guard2: int = 0
-		while cur.is_dialogue_active() and guard2 < 60:
-			cur.dialogue_view.advance()
-			guard2 += 1
+		# the pre-fight end dialogue chains into the ambush dialogue: keep going until the fight starts
+		for round in range(6):
+			var guard2: int = 0
+			while cur.is_dialogue_active() and guard2 < 60:
+				cur.dialogue_view.advance()
+				guard2 += 1
+			if game.current_kind != "tavern":
+				break
+			cur.advance(1.0)
 	elif frames == 45:
 		if game.current_kind != "battle":
 			_fail("did not enter the battle after the ambush (kind=%s)" % game.current_kind)

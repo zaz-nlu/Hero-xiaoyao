@@ -350,6 +350,66 @@
       "states": ["brawl"],
       "positions": {"brawl": [11.0, -6.4]},
       "dialogues": {"brawl": "res://data/dialogues/npc_bandit_2.json"}
+    },
+    {
+      "id": "zixia",
+      "sprite": "zixia",
+      "name": "紫霞师姐",
+      "facing": "right",
+      "states": ["brawl", "aftermath"],
+      "positions": {
+        "brawl": [6.5, -2.5],
+        "aftermath": [8.5, -8.0]
+      },
+      "dialogues": {
+        "brawl": "",
+        "aftermath": "res://data/dialogues/npc_zixia_aftermath.json"
+      }
+    },
+    {
+      "id": "disciple_1",
+      "sprite": "zixia_disciple",
+      "name": "紫霞弟子",
+      "facing": "right",
+      "states": ["brawl", "aftermath"],
+      "positions": {
+        "brawl": [5.0, -0.5],
+        "aftermath": [7.0, -8.0]
+      },
+      "dialogues": {
+        "brawl": "",
+        "aftermath": "res://data/dialogues/npc_zixia_disciple_aftermath.json"
+      }
+    },
+    {
+      "id": "disciple_2",
+      "sprite": "zixia_disciple",
+      "name": "紫霞弟子",
+      "facing": "right",
+      "states": ["brawl", "aftermath"],
+      "positions": {
+        "brawl": [6.0, 1.0],
+        "aftermath": [10.0, -8.0]
+      },
+      "dialogues": {
+        "brawl": "",
+        "aftermath": "res://data/dialogues/npc_zixia_disciple_aftermath.json"
+      }
+    },
+    {
+      "id": "disciple_3",
+      "sprite": "zixia_disciple",
+      "name": "紫霞弟子",
+      "facing": "right",
+      "states": ["brawl", "aftermath"],
+      "positions": {
+        "brawl": [4.8, -3.8],
+        "aftermath": [11.5, -7.5]
+      },
+      "dialogues": {
+        "brawl": "",
+        "aftermath": "res://data/dialogues/npc_zixia_disciple_aftermath.json"
+      }
     }
   ],
   "lights": []

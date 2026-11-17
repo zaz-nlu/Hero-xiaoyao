@@ -91,6 +91,10 @@
 - "准备好"：满做 50 点，头子 + 2 个马匪，3 份草药：human bot 胜率目标 **65%~85%**。
 - 紫霞师姐前戏：头子损失 100 ± 12 点，仅头子带伤，马匪满血。
 
+<!-- prefight-report:start -->
+（运行 `tools/difficulty_report.gd` 生成前戏减伤后的胜率表。）
+<!-- prefight-report:end -->
+
 ## 10. 工程改动清单（为了不返工，一次到位）
 1. `data/realms.json` + `core/realms.gd`（读表、s(id)、h(id)、阶段名），`data/progression.json`（年龄点、体质加成）。
 2. 属性改名 `mechanism → constitution`（数据、core、UI、测试、模拟器、DS 方案里的奖励）。

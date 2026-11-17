@@ -1,0 +1,6 @@
+{
+  "zixia_sister": {"name": "紫霞师姐", "power": 8, "speed": 10, "defense": 5, "skill": 9, "hp": 160},
+  "zixia_disciple": {"name": "紫霞弟子", "power": 4, "speed": 8, "defense": 3, "skill": 8, "hp": 40, "count": 3},
+  "target_boss_damage": 100,
+  "tolerance": 12
+}

@@ -28,10 +28,18 @@ func _on_encounter(enemy_id: String, count: int, first_strike: bool) -> void:
 
 
 func _finish_dialogue(tavern: Variant) -> void:
-	for i in range(120):
+	# 前戏结束后会先播 tavern_prefight_end，再自动接上闯入对话；把整条链上
+	# 出现过的文字都记下来，原来的断言（many / few 的第一句）仍然有效。
+	var texts: Array[String] = []
+	for i in range(320):
 		if not bool(tavern.dialogue_view.is_active()):
-			return
+			break
+		var text: String = str(tavern.dialogue_view.text_label.text)
+		if text != "" and not texts.has(text):
+			texts.append(text)
 		tavern.dialogue_view.advance()
+	if not texts.is_empty():
+		last_ambush_text = "\n".join(texts)
 
 
 func _bandit_nodes(tavern: Variant) -> int:
@@ -59,9 +67,10 @@ func _run_ambush(killed: int) -> Variant:
 	assert_true(GameState.has_flag("bandits_entered"), "the ambush sets bandits_entered")
 	_finish_dialogue(tavern)
 	assert_eq(str(tavern.current_state()), "brawl", "the tavern switches to the brawl")
-	tavern.advance(5.0)
-	assert_true(tavern.is_dialogue_active(), "the ambush dialogue follows the animation")
-	last_ambush_text = str(tavern.dialogue_view.text_label.text)
+	# 入场动画 → 紫霞前戏演出 → 前戏结束对话 → 闯入对话 → encounter。
+	tavern.advance(3.0)
+	tavern.advance(6.0)
+	assert_true(tavern.is_dialogue_active(), "the prefight-end dialogue follows the performance")
 	_finish_dialogue(tavern)
 	return tavern
 

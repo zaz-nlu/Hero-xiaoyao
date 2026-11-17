@@ -9,6 +9,7 @@ extends SceneTree
 
 const Simulator = preload("res://core/simulator.gd")
 const DataLoader = preload("res://core/data_loader.gd")
+const Prefight = preload("res://core/prefight.gd")
 
 const PLAYER_PATH := "res://data/player.json"
 const DOC_RELATIVE := "../docs/superpowers/specs/2026-11-17-numbers-system-design.md"
@@ -45,6 +46,7 @@ func _init() -> void:
 				{"id": "ma_youwei", "count": 1},
 				{"id": "bandit", "count": 5},
 			],
+			"bandits": 5,
 			"herbs": 0,
 		},
 		{
@@ -55,6 +57,7 @@ func _init() -> void:
 				{"id": "ma_youwei", "count": 1},
 				{"id": "bandit", "count": 2},
 			],
+			"bandits": 2,
 			"herbs": 3,
 		},
 	]
@@ -93,6 +96,44 @@ func _init() -> void:
 
 	var section := _build_section(rows)
 	_append_to_doc(section)
+
+	# 再跑一次两个酒馆场景，这次带上紫霞师姐前戏打出来的头子伤势。
+	var prefight_rows: Array = []
+	for scenario_value in scenarios:
+		var scenario: Dictionary = scenario_value
+		var bandit_count: int = int(scenario["bandits"])
+		var loss: int = int(Prefight.simulate(bandit_count).get("boss_damage", 0))
+		for bot in bots:
+			var result: Dictionary = Simulator.run({
+				"enemies": scenario["enemies"],
+				"herbs": int(scenario["herbs"]),
+				"battles": BATTLES,
+				"seed": SEED,
+				"bot": bot,
+				"first_strike": false,
+				"stats_override": scenario["stats_override"],
+				"boss_hp_loss": loss,
+			})
+			var row := {
+				"scenario": str(scenario["label"]),
+				"stats": str(scenario["stats"]),
+				"bot": bot,
+				"boss_hp_loss": loss,
+				"win_rate": float(result["win_rate"]),
+				"avg_rounds": float(result["avg_rounds"]),
+				"avg_hp_pct": float(result["avg_hp_pct"]),
+			}
+			prefight_rows.append(row)
+			print("%s | %s | %s | 前戏减伤 %d | 胜率 %.1f%% | 平均回合 %.1f | 剩余 HP %.1f%%" % [
+				row["scenario"],
+				row["stats"],
+				row["bot"],
+				int(row["boss_hp_loss"]),
+				float(row["win_rate"]) * 100.0,
+				float(row["avg_rounds"]),
+				float(row["avg_hp_pct"]) * 100.0,
+			])
+	_write_prefight_section(_build_prefight_section(prefight_rows))
 	quit(0)
 
 
@@ -152,6 +193,61 @@ func _range_gap(value: float, low: float, high: float) -> String:
 	if value > high:
 		return "比目标上限高 %.1f 个百分点" % (value - high)
 	return "落在目标区间内"
+
+
+# 前戏减伤后的重跑结果，写进设计文档 §9（标记之间），不覆盖 §11 的旧表。
+func _build_prefight_section(rows: Array) -> String:
+	var lines: Array[String] = []
+	lines.append("### 9.1 前戏减伤后的模拟结果")
+	lines.append("")
+	lines.append("每格 400 局，`first_strike=false`，由 `tools/difficulty_report.gd` 生成。紫霞师姐前戏只让马匪头子带伤（`boss_hp_loss = prefight.simulate(小兵数).boss_damage`），小兵仍是满血。")
+	lines.append("")
+	lines.append("| 遭遇 | 属性 | bot | 头子减伤 | 胜率 | 平均回合 | 玩家平均剩余 HP |")
+	lines.append("| --- | --- | --- | ---: | ---: | ---: | ---: |")
+	for row_value in rows:
+		var row: Dictionary = row_value
+		lines.append("| %s | %s | %s | %d | %.1f%% | %.1f | %.1f%% |" % [
+			row["scenario"],
+			row["stats"],
+			row["bot"],
+			int(row["boss_hp_loss"]),
+			float(row["win_rate"]) * 100.0,
+			float(row["avg_rounds"]),
+			float(row["avg_hp_pct"]) * 100.0,
+		])
+	lines.append("")
+	lines.append("目标不变：未准备 human 10%~30%，准备好 human 65%~85%。")
+	return "\n".join(lines) + "\n"
+
+
+func _write_prefight_section(section: String) -> void:
+	var path := _doc_path()
+	var text := ""
+	if FileAccess.file_exists(path):
+		text = FileAccess.get_file_as_string(path)
+	var start_marker := "<!-- prefight-report:start -->"
+	var end_marker := "<!-- prefight-report:end -->"
+	var block := start_marker + "\n" + section + end_marker
+	var at := text.find(start_marker)
+	if at >= 0:
+		var end_at := text.find(end_marker, at)
+		if end_at >= 0:
+			text = text.substr(0, at) + block + text.substr(end_at + end_marker.length())
+		else:
+			text = text.substr(0, at) + block
+	else:
+		var next_section := text.find("## 10.")
+		if next_section >= 0:
+			text = text.substr(0, next_section) + block + "\n\n" + text.substr(next_section)
+		else:
+			text += "\n\n" + block
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	if file == null:
+		push_warning("difficulty_report: cannot write %s" % path)
+		return
+	file.store_string(text)
+	file.close()
+	print("wrote prefight section to %s" % path)
 
 
 func _doc_path() -> String:
