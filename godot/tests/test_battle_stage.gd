@@ -3,8 +3,8 @@ extends "res://tests/test_case.gd"
 const PLAYER_POS := Vector3(4.2, 0.0, 1.6)
 const CAM_POS := Vector3(6.4, 14.0, 36.0)
 const ENEMY_POSITIONS_2: Array = [
-	Vector3(8.0, 0.0, 0.2),
-	Vector3(9.2, 0.0, 2.4),
+	Vector3(7.0, 0.0, 0.2),
+	Vector3(10.8, 0.0, 2.4),
 ]
 
 
@@ -41,7 +41,7 @@ func test_stage_camera_params() -> void:
 	var stage: Variant = _make_stage()
 	assert_true(stage.camera != null, "the stage owns a camera")
 	if stage.camera != null:
-		assert_near(stage.camera.fov, 30.0, 0.01, "the battle camera has its own fov")
+		assert_near(stage.camera.fov, 26.0, 0.01, "the battle camera has its own fov")
 		assert_true(stage.camera.position.distance_to(CAM_POS) < 0.01, "the camera sits at the stage position")
 	stage.free()
 

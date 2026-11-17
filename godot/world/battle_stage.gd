@@ -6,8 +6,8 @@ const PLAYER_POS := Vector3(4.2, 0.0, 1.6)
 const PLAYER_SPRITE_ID := "ren_xiaoyao"
 const ENEMY_POSITIONS: Array = [
 	[Vector3(8.4, 0.0, 1.2)],
-	[Vector3(8.0, 0.0, 0.2), Vector3(9.2, 0.0, 2.4)],
-	[Vector3(8.0, 0.0, -0.2), Vector3(9.4, 0.0, 1.2), Vector3(8.0, 0.0, 2.6)],
+	[Vector3(7.0, 0.0, 0.2), Vector3(10.8, 0.0, 2.4)],
+	[Vector3(6.8, 0.0, -0.2), Vector3(9.8, 0.0, 1.2), Vector3(12.8, 0.0, 2.6)],
 ]
 const CAM_POS := Vector3(6.4, 14.0, 36.0)
 const CAM_TARGET := Vector3(6.4, 0.0, 0.0)

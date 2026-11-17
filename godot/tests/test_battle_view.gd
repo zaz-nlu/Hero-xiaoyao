@@ -22,13 +22,14 @@ func test_martial_buttons_show_verdict_marks() -> void:
 	var view: Variant = _make_view()
 	view.start("bandit", 1, true)
 	assert_eq(view.martial_buttons.size(), view.battle.loadout.size(), "one button per martial in loadout")
-	for button in view.martial_buttons:
+	assert_eq(view.martial_badges.size(), view.battle.loadout.size(), "one verdict badge per martial card")
+	for badge in view.martial_badges:
 		var marked: bool = false
 		for mark in ["✅", "⚠", "❌"]:
-			if button.text.contains(mark):
+			if badge.text.contains(mark):
 				marked = true
 				break
-		assert_true(marked, "martial button '%s' carries a verdict mark" % button.text)
+		assert_true(marked, "martial card badge '%s' carries a verdict mark" % badge.text)
 	view.free()
 
 
@@ -64,7 +65,7 @@ func test_win_shows_result() -> void:
 func test_probe_reveals_weak_in_ui() -> void:
 	var view: Variant = _make_view()
 	view.start("ma_youwei", 1, false)
-	assert_true(view.weak_labels[0].text.contains("未知"), "weakness is hidden before probing")
+	assert_true(view.weak_labels[0].text.contains("？"), "weakness is hidden before probing")
 	var guard := 0
 	while view.dialogue_view.is_active() and guard < 40:
 		view.dialogue_view.advance()
