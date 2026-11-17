@@ -300,13 +300,13 @@ func _build_ground() -> void:
 	var fill := MeshInstance3D.new()
 	fill.name = "GroundFill"
 	var fill_mesh := PlaneMesh.new()
-	fill_mesh.size = Vector2(600.0, 600.0)
+	fill_mesh.size = Vector2(600.0, 70.0)
 	fill.mesh = fill_mesh
 	var fill_mat := StandardMaterial3D.new()
 	fill_mat.albedo_color = Color("#65722c")
 	fill_mat.roughness = 1.0
 	fill.material_override = fill_mat
-	fill.position = Vector3(12.0, -0.05, 0.0)
+	fill.position = Vector3(12.0, -0.05, 6.0)
 	root.add_child(fill)
 	var grounds: Array = data.get("ground", [])
 	for i in range(grounds.size()):
@@ -1274,7 +1274,7 @@ func _build_backdrop() -> void:
 	var mountain_tex: ImageTexture = AiAssets.load_texture("bg_mountains.png")
 	if mountain_tex != null:
 		var quad := QuadMesh.new()
-		quad.size = Vector2(320.0, 80.0)
+		quad.size = Vector2(240.0, 60.0)
 		var mat := StandardMaterial3D.new()
 		mat.albedo_texture = mountain_tex
 		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -1284,7 +1284,7 @@ func _build_backdrop() -> void:
 		mat.metallic_specular = 0.0
 		mat.set("disable_fog", true)
 		var backdrop := _add_mesh(
-			root, quad, mat, Vector3(12.0, 32.0, -90.0), "MountainBackdrop"
+			root, quad, mat, Vector3(12.0, 19.0, -29.6), "MountainBackdrop"
 		)
 		backdrop.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		return

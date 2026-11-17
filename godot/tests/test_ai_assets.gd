@@ -165,11 +165,11 @@ func test_town_builds_tavern_sign_and_mountain_backdrop() -> void:
 			var quad := backdrop.mesh as QuadMesh
 			assert_true(quad != null, "mountain backdrop uses a QuadMesh")
 			if quad != null:
-				assert_near(quad.size.x, 320.0, 0.001, "mountain backdrop width")
-				assert_near(quad.size.y, 80.0, 0.001, "mountain backdrop height")
+				assert_near(quad.size.x, 240.0, 0.001, "mountain backdrop width")
+				assert_near(quad.size.y, 60.0, 0.001, "mountain backdrop height")
 			assert_true(
-				backdrop.position.is_equal_approx(Vector3(12.0, 32.0, -90.0)),
-				"mountain backdrop sits far behind the town"
+				backdrop.position.is_equal_approx(Vector3(12.0, 19.0, -29.6)),
+				"mountain backdrop sits just beyond the town edge"
 			)
 	town.free()
 
