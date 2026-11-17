@@ -5,7 +5,7 @@ signal encounter_requested(enemy_id: String, count: int, first_strike: bool)
 const TOWN_PATH := "res://data/town.json"
 const NPC_DIALOGUES_PATH := "res://data/npc_dialogues.json"
 const SPEAKERS_PATH := "res://data/speakers.json"
-const CAMERA_OFFSET := Vector3(0.0, 13.0, 17.0)
+const CAMERA_OFFSET := Vector3(0.0, 32.5, 42.5)
 const DEFEATED_NPC_IDS: Array[String] = ["ma_youwei", "bandit_1", "bandit_2"]
 
 const TownData = preload("res://world/town_data.gd")
@@ -254,6 +254,18 @@ func _build_ground() -> void:
 	var root := Node3D.new()
 	root.name = "Ground"
 	add_child(root)
+	# A huge dull-grass plane under the town so the far-away camera never sees the void.
+	var fill := MeshInstance3D.new()
+	fill.name = "GroundFill"
+	var fill_mesh := PlaneMesh.new()
+	fill_mesh.size = Vector2(600.0, 600.0)
+	fill.mesh = fill_mesh
+	var fill_mat := StandardMaterial3D.new()
+	fill_mat.albedo_color = Color("#6f8a4a")
+	fill_mat.roughness = 1.0
+	fill.material_override = fill_mat
+	fill.position = Vector3(12.0, -0.05, 0.0)
+	root.add_child(fill)
 	var grounds: Array = data.get("ground", [])
 	for i in range(grounds.size()):
 		var ground_value: Variant = grounds[i]
@@ -1001,7 +1013,7 @@ func _build_lighting() -> void:
 	env.glow_hdr_threshold = 0.9
 	env.fog_enabled = true
 	env.fog_light_color = Color("#e8d8c0")
-	env.fog_density = 0.003
+	env.fog_density = 0.0008
 	world_env = WorldEnvironment.new()
 	world_env.name = "WorldEnvironment"
 	world_env.environment = env
@@ -1046,11 +1058,12 @@ func _build_camera() -> void:
 func _camera_attributes() -> CameraAttributesPractical:
 	var attributes := CameraAttributesPractical.new()
 	attributes.dof_blur_far_enabled = true
-	attributes.dof_blur_far_distance = 26.0
+	var dist: float = CAMERA_OFFSET.length()
+	attributes.dof_blur_far_distance = dist + 14.0
 	attributes.dof_blur_far_transition = 22.0
 	attributes.dof_blur_near_enabled = true
-	attributes.dof_blur_near_distance = 9.0
-	attributes.dof_blur_near_transition = 5.0
+	attributes.dof_blur_near_distance = dist - 12.0
+	attributes.dof_blur_near_transition = 8.0
 	attributes.dof_blur_amount = 0.08
 	return attributes
 
