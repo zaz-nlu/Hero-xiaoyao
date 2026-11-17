@@ -23,6 +23,10 @@ var _battle_origin: String = ""
 func _ready() -> void:
 	_ensure_overlay()
 	show_town()
+	if not GameState.has_flag("intro_hint_shown"):
+		GameState.set_flag("intro_hint_shown")
+		Progression.push_toast("按 C 打开角色面板，可以分配 3 点属性点")
+		Progression.push_toast("按 J 查看任务，Shift 可以蹲伏")
 
 
 func _process(_delta: float) -> void:

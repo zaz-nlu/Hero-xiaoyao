@@ -1,0 +1,11 @@
+[
+	{"speaker": "vendor", "name": "包子摊老板", "text": "逍遥，来得正好。"},
+	{"speaker": "vendor", "name": "包子摊老板", "text": "我这几天腰疼，大夫开了一味药——林子里有一种草，叶子细长，开白花，你去采三株回来。"},
+	{"speaker": "ren_xiaoyao", "text": "我？采草药？"},
+	{"speaker": "vendor", "name": "包子摊老板", "text": "你不是天天说要练身手？林子里有马匪出没，正好练练胆子。"},
+	{"speaker": "ren_xiaoyao", "text": "马匪？"},
+	{"speaker": "vendor", "name": "包子摊老板", "text": "别硬碰。看见了就绕开，蹲下来，躲进草丛，他们眼神不好。"},
+	{"speaker": "vendor", "name": "包子摊老板", "text": "采回来，我请你吃包子——不收钱的那种。"},
+	{"speaker": "ren_xiaoyao", "text": "成交。"},
+	{"speaker": "narrator", "text": "【任务】草药：到紫霞林采集三株草药。（林子在镇子南边，过桥一直走。）"}
+]

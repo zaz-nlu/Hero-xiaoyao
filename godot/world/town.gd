@@ -43,7 +43,12 @@ const CharacterSprite = preload("res://world/character_sprite.gd")
 const PlayerMotion = preload("res://world/player_motion.gd")
 const Dialogue = preload("res://core/dialogue.gd")
 const GameState = preload("res://core/game_state.gd")
+const Quests = preload("res://core/quests.gd")
+const Quest_flow = preload("res://core/quest_flow.gd")
 const Interaction = preload("res://world/interaction.gd")
+
+const QUEST_MARKER_HEIGHT := 3.0
+const QUEST_MARKER_INTERVAL := 0.5
 
 const VIGNETTE_SHADER := """
 shader_type canvas_item;
@@ -72,6 +77,7 @@ var bounds_rect: Rect2 = Rect2()
 var dialogue_view: Control = null
 var prompt_label: Label = null
 var pending_encounter: Dictionary = {}
+var pending_after: Dictionary = {}
 var current_npc_id: String = ""
 var skip_actors: bool = false
 var input_blocked: bool = false
@@ -82,6 +88,9 @@ var _textures: Dictionary = {}
 var _water_material: StandardMaterial3D = null
 var _banners: Array[Node3D] = []
 var _banner_phases: Array[float] = []
+var _quest_markers: Dictionary = {}
+var _marker_phases: Dictionary = {}
+var _marker_timer: float = 0.0
 var _time: float = 0.0
 var _focus: Vector3 = Vector3.ZERO
 var _hud_layer: CanvasLayer = null
@@ -145,6 +154,7 @@ func build() -> void:
 		_build_npcs()
 		_build_player()
 		snap_camera()
+	_refresh_quest_markers()
 
 
 func _process(delta: float) -> void:
@@ -154,6 +164,7 @@ func _process(delta: float) -> void:
 			and Input.is_action_just_pressed("interact"):
 		try_interact()
 	_time += delta
+	_update_quest_markers(delta, _time)
 	if _water_material != null:
 		_water_material.uv1_offset.x += 0.05 * delta
 	for i in range(_banners.size()):
@@ -1479,6 +1490,60 @@ func _build_npcs() -> void:
 		character.set_facing(str(npc.get("facing", "down")))
 		root.add_child(character)
 		npc_nodes[id] = character
+		_add_quest_marker(id, character, i)
+
+
+func _add_quest_marker(npc_id: String, parent: Node3D, index: int) -> void:
+	if not Quest_flow.has_quests(npc_id):
+		return
+	var label := Label3D.new()
+	label.name = "QuestMarker_%s" % npc_id
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.no_depth_test = true
+	label.render_priority = 10
+	label.font_size = 96
+	label.pixel_size = 0.024
+	label.outline_size = 22
+	label.outline_modulate = Color(0.0, 0.0, 0.0)
+	label.modulate = Color("#ffd24a")
+	label.text = ""
+	label.visible = false
+	label.position = Vector3(0.0, QUEST_MARKER_HEIGHT, 0.0)
+	parent.add_child(label)
+	_quest_markers[npc_id] = label
+	_marker_phases[npc_id] = float(index) * 1.3
+
+
+func _refresh_quest_markers() -> void:
+	for raw_id in _quest_markers.keys():
+		var npc_id := str(raw_id)
+		var label_value: Variant = _quest_markers[raw_id]
+		if not is_instance_valid(label_value) or not (label_value is Label3D):
+			continue
+		var label: Label3D = label_value
+		var marker := Quest_flow.marker(npc_id)
+		label.text = marker
+		label.visible = marker != ""
+		if marker == "…":
+			label.modulate = Color(0.72, 0.72, 0.72)
+		else:
+			label.modulate = Color("#ffd24a")
+
+
+func _update_quest_markers(delta: float, elapsed: float) -> void:
+	_marker_timer += delta
+	if _marker_timer >= QUEST_MARKER_INTERVAL:
+		_marker_timer = 0.0
+		_refresh_quest_markers()
+	for raw_id in _quest_markers.keys():
+		var label_value: Variant = _quest_markers[raw_id]
+		if not is_instance_valid(label_value) or not (label_value is Label3D):
+			continue
+		var label: Label3D = label_value
+		if not label.visible:
+			continue
+		var phase := float(_marker_phases.get(raw_id, 0.0))
+		label.position.y = QUEST_MARKER_HEIGHT + sin(elapsed * 2.0 + phase) * 0.08
 
 
 # ---------------------------------------------------------------- player
@@ -1658,13 +1723,19 @@ func try_interact() -> bool:
 	current_npc_id = npc_id
 	_face_player(npc_id)
 
+	var picked: Dictionary = Quest_flow.pick(npc_id, path)
+	var dialogue_path := str(picked.get("file", path))
+	var after_value: Variant = picked.get("after", {})
+	pending_after = after_value if after_value is Dictionary else {"kind": "none"}
+
 	var speakers: Dictionary = Dialogue.load_speakers(SPEAKERS_PATH).get("defs", {})
-	var loaded: Dictionary = Dialogue.load_file(path, speakers)
+	var loaded: Dictionary = Dialogue.load_file(dialogue_path, speakers)
 	var errors: Array = loaded.get("errors", [])
 	if not errors.is_empty():
 		for error_text in errors:
 			push_warning("town dialogue: %s" % str(error_text))
 		current_npc_id = ""
+		pending_after = {}
 		return false
 
 	pending_encounter = {}
@@ -1681,6 +1752,7 @@ func try_interact() -> bool:
 	if dialogue_view == null:
 		build_hud()
 	if dialogue_view == null:
+		pending_after = {}
 		return false
 	var lines: Array = loaded.get("lines", [])
 	dialogue_view.call("start", lines)
@@ -1769,4 +1841,29 @@ func _on_dialogue_finished() -> void:
 			int(encounter.get("count", 1)),
 			bool(encounter.get("first_strike", false))
 		)
+	var after: Dictionary = pending_after
+	pending_after = {}
+	_apply_quest_after(after)
 	current_npc_id = ""
+	_refresh_quest_markers()
+
+
+func _apply_quest_after(after: Dictionary) -> void:
+	var kind := str(after.get("kind", "none"))
+	var quest_id := str(after.get("quest", ""))
+	match kind:
+		"start":
+			Quests.start(quest_id)
+		"turn_in":
+			Quests.turn_in(quest_id)
+		"encounter":
+			var encounter_value: Variant = after.get("encounter", {})
+			if not (encounter_value is Dictionary):
+				return
+			var encounter: Dictionary = encounter_value
+			emit_signal(
+				"encounter_requested",
+				str(encounter.get("enemy", "")),
+				int(encounter.get("count", 1)),
+				bool(encounter.get("first_strike", false))
+			)

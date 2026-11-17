@@ -19,7 +19,8 @@
 		"id": "spar",
 		"name": "试招",
 		"giver": "disciple",
-		"summary": "紫霞派弟子想和你切磋一场。",
+		"summary": "紫霞弟子想和你切磋一场，点到为止。",
+		"active_encounter": {"enemy": "disciple_spar", "count": 1, "first_strike": false},
 		"objectives": [
 			{"kind": "defeat", "key": "disciple_spar", "count": 1, "text": "与紫霞派弟子切磋"}
 		],
@@ -35,6 +36,7 @@
 		"id": "scout",
 		"name": "林中探子",
 		"giver": "disciple",
+		"requires": "spar",
 		"summary": "林子里有个马匪探子，紫霞派弟子请你去解决他。",
 		"objectives": [
 			{"kind": "defeat", "key": "bandit_scout", "count": 1, "text": "解决马匪探子"}
