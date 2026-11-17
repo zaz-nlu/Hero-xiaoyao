@@ -7,6 +7,22 @@ const NPC_DIALOGUES_PATH := "res://data/npc_dialogues.json"
 const SPEAKERS_PATH := "res://data/speakers.json"
 const CAMERA_OFFSET := Vector3(0.0, 32.5, 42.5)
 const DEFEATED_NPC_IDS: Array[String] = ["ma_youwei", "bandit_1", "bandit_2"]
+const DECOR_FILES := {
+	"shrub": "prop_shrub.png",
+	"grass_tuft": "prop_grass.png",
+	"peony": "prop_peony.png",
+	"chrysanthemum": "prop_chrysanthemum.png",
+	"bamboo": "prop_bamboo.png",
+	"rocks": "prop_rocks.png",
+}
+const DECOR_HEIGHTS := {
+	"shrub": 1.1,
+	"grass_tuft": 1.0,
+	"peony": 1.0,
+	"chrysanthemum": 0.9,
+	"bamboo": 3.2,
+	"rocks": 1.0,
+}
 
 const TownData = preload("res://world/town_data.gd")
 const Texgen = preload("res://world/texgen.gd")
@@ -172,6 +188,23 @@ func _get_tex(key: String) -> ImageTexture:
 	return texture
 
 
+# Uses the AI stone-wall texture when available; the passed tiling is in
+# "one tile per world unit" terms, and the AI tile spans 2.5 world units.
+func _make_step_stone_material(tiling: Vector2) -> StandardMaterial3D:
+	var tex: ImageTexture = AiAssets.load_texture("tex_stone_wall.png")
+	if tex != null:
+		return Texgen.make_material(tex, tiling / 2.5)
+	return Texgen.make_material(_get_tex("step_stone"), tiling)
+
+
+# Same idea for street/step tops, with the AI cobblestone tile spanning 3 units.
+func _make_street_material(tiling: Vector2) -> StandardMaterial3D:
+	var tex: ImageTexture = AiAssets.load_texture("tex_cobblestone.png")
+	if tex != null:
+		return Texgen.make_material(tex, tiling / 3.0)
+	return Texgen.make_material(_get_tex("stone_street"), tiling)
+
+
 func _add_mesh(
 	parent: Node3D, mesh: Mesh, mat: Material, pos: Vector3, node_name: String = ""
 ) -> MeshInstance3D:
@@ -263,7 +296,7 @@ func _build_ground() -> void:
 	fill_mesh.size = Vector2(600.0, 600.0)
 	fill.mesh = fill_mesh
 	var fill_mat := StandardMaterial3D.new()
-	fill_mat.albedo_color = Color("#6f8a4a")
+	fill_mat.albedo_color = Color("#65722c")
 	fill_mat.roughness = 1.0
 	fill.material_override = fill_mat
 	fill.position = Vector3(12.0, -0.05, 0.0)
@@ -303,11 +336,19 @@ func _build_ground() -> void:
 					tex = _get_tex("stone_street")
 			"water":
 				y = 0.02
-				tex = _get_tex("water")
+				tex = AiAssets.load_texture("tex_water.png")
+				if tex != null:
+					uv_scale = Vector2(width / 6.0, depth / 6.0)
+				else:
+					tex = _get_tex("water")
 				node_name = "WaterSurface"
 			_:
 				y = 0.0
-				tex = _get_tex("grass")
+				tex = AiAssets.load_texture("tex_grass.png")
+				if tex != null:
+					uv_scale = Vector2(width / 4.0, depth / 4.0)
+				else:
+					tex = _get_tex("grass")
 		var plane := PlaneMesh.new()
 		plane.size = Vector2(width, depth)
 		var mat: StandardMaterial3D = Texgen.make_material(tex, uv_scale)
@@ -410,9 +451,7 @@ func _build_building(parent: Node3D, building: Dictionary) -> void:
 	var door_h := 3.6 if kind == "tavern" else 3.2
 
 	# stone base
-	var base_mat: StandardMaterial3D = Texgen.make_material(
-		_get_tex("step_stone"), Vector2(width, depth)
-	)
+	var base_mat: StandardMaterial3D = _make_step_stone_material(Vector2(width, depth))
 	_add_box(
 		parent,
 		Vector3(width + 0.2, base_y, depth + 0.2),
@@ -529,9 +568,7 @@ func _build_building(parent: Node3D, building: Dictionary) -> void:
 		_build_balcony(parent, door_x, z_front)
 
 	if kind == "smith":
-		var chimney_mat: StandardMaterial3D = Texgen.make_material(
-			_get_tex("step_stone"), Vector2(0.8, 2.0)
-		)
+		var chimney_mat: StandardMaterial3D = _make_step_stone_material(Vector2(0.8, 2.0))
 		_add_box(
 			parent,
 			Vector3(0.8, 2.0, 0.8),
@@ -557,6 +594,15 @@ func _try_build_facade(
 	parent.add_child(facade)
 	if kind == "tavern":
 		_tavern_facade = true
+		var door_x := float(building.get("door_x", (x0 + x1) * 0.5))
+		var sign := AiAssets.make_sprite(
+			"prop_tavern_sign.png",
+			1.9,
+			Vector3(door_x + 2.7, 1.5, z_front + 0.5),
+			"TavernSign"
+		)
+		if sign != null:
+			parent.add_child(sign)
 	return true
 
 
@@ -746,6 +792,22 @@ func _build_props() -> void:
 				_build_stone_lantern(root, x, z, i)
 			"boat":
 				_build_boat(root, x, z, i)
+			"shrub", "grass_tuft", "peony", "chrysanthemum", "bamboo", "rocks":
+				_build_decor(root, kind, x, z, i)
+
+
+func _build_decor(parent: Node3D, kind: String, x: float, z: float, index: int) -> void:
+	var file := str(DECOR_FILES.get(kind, ""))
+	if file == "":
+		return
+	var sprite := AiAssets.make_sprite(
+		file,
+		float(DECOR_HEIGHTS.get(kind, 1.0)),
+		Vector3(x, 0.0, z),
+		"Decor_%s_%d" % [kind, index]
+	)
+	if sprite != null:
+		parent.add_child(sprite)
 
 
 func _build_barrel(parent: Node3D, x: float, z: float) -> void:
@@ -998,9 +1060,7 @@ func _build_stairs() -> void:
 		var z_start := float(stairs.get("z_start", 0.0))
 		var z_end := float(stairs.get("z_end", 0.0))
 		var steps: int = int(ceil(absf(z_start - z_end)))
-		var step_mat: StandardMaterial3D = Texgen.make_material(
-			_get_tex("step_stone"), Vector2(1.0, 1.0)
-		)
+		var step_mat: StandardMaterial3D = _make_step_stone_material(Vector2(1.0, 1.0))
 		for i in range(steps):
 			var height := 0.5 * float(i + 1)
 			var z_center := z_start - float(i) - 0.5
@@ -1010,9 +1070,7 @@ func _build_stairs() -> void:
 				step_mat,
 				Vector3((x0 + x1) * 0.5, height * 0.5, z_center)
 			)
-		var wall_mat: StandardMaterial3D = Texgen.make_material(
-			_get_tex("step_stone"), Vector2(1.0, 1.0)
-		)
+		var wall_mat: StandardMaterial3D = _make_step_stone_material(Vector2(1.0, 1.0))
 		var wall_len := absf(z_start - z_end)
 		var wall_z := (z_start + z_end) * 0.5
 		_add_box(root, Vector3(0.3, 1.0, wall_len), wall_mat, Vector3(x0 - 0.25, 0.5, wall_z))
@@ -1030,17 +1088,15 @@ func _build_stairs() -> void:
 				var px1 := float(rect[2])
 				var pz1 := float(rect[3])
 				var py := float(platform.get("y", 7.0))
-				var side_mat: StandardMaterial3D = Texgen.make_material(
-					_get_tex("step_stone"), Vector2(1.0, 1.0)
-				)
+				var side_mat: StandardMaterial3D = _make_step_stone_material(Vector2(1.0, 1.0))
 				_add_box(
 					root,
 					Vector3(px1 - px0, py, pz1 - pz0),
 					side_mat,
 					Vector3((px0 + px1) * 0.5, py * 0.5, (pz0 + pz1) * 0.5)
 				)
-				var top_mat: StandardMaterial3D = Texgen.make_material(
-					_get_tex("stone_street"), Vector2(px1 - px0, pz1 - pz0)
+				var top_mat: StandardMaterial3D = _make_street_material(
+					Vector2(px1 - px0, pz1 - pz0)
 				)
 				_add_box(
 					root,
@@ -1084,6 +1140,23 @@ func _build_backdrop() -> void:
 	var root := Node3D.new()
 	root.name = "Backdrop"
 	add_child(root)
+	var mountain_tex: ImageTexture = AiAssets.load_texture("bg_mountains.png")
+	if mountain_tex != null:
+		var quad := QuadMesh.new()
+		quad.size = Vector2(320.0, 80.0)
+		var mat := StandardMaterial3D.new()
+		mat.albedo_texture = mountain_tex
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR
+		mat.roughness = 1.0
+		mat.metallic = 0.0
+		mat.metallic_specular = 0.0
+		mat.set("disable_fog", true)
+		var backdrop := _add_mesh(
+			root, quad, mat, Vector3(12.0, 32.0, -90.0), "MountainBackdrop"
+		)
+		backdrop.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		return
 	var layers: Array[Dictionary] = [
 		{"z": -46.0, "seed": 31, "color": Color("#6f7f9a")},
 		{"z": -60.0, "seed": 32, "color": Color("#8e9bb2")},

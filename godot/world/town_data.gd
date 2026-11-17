@@ -3,7 +3,8 @@ extends RefCounted
 const BUILDING_KINDS: Array[String] = ["house", "smith", "shop", "tavern"]
 const PROP_KINDS: Array[String] = [
 	"barrel", "crate", "bench", "lamp_post", "banner", "cart", "stall", "tree",
-	"jars", "baskets", "stone_lantern", "boat"
+	"jars", "baskets", "stone_lantern", "boat",
+	"shrub", "grass_tuft", "peony", "chrysanthemum", "bamboo", "rocks"
 ]
 
 

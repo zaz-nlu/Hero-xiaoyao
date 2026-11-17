@@ -1,6 +1,12 @@
 extends "res://tests/test_case.gd"
 
 const AiAssets = preload("res://world/ai_assets.gd")
+const TownData = preload("res://world/town_data.gd")
+
+const TOWN_PATH := "res://data/town.json"
+const DECOR_KINDS: Array[String] = [
+	"shrub", "grass_tuft", "peony", "chrysanthemum", "bamboo", "rocks"
+]
 
 const ASSET_FILES: Array[String] = [
 	"facade_tavern.png",
@@ -18,10 +24,21 @@ const ASSET_FILES: Array[String] = [
 	"prop_stall.png",
 	"prop_willow.png",
 	"prop_boat.png",
+	"prop_tavern_sign.png",
+	"prop_shrub.png",
+	"prop_grass.png",
+	"prop_peony.png",
+	"prop_chrysanthemum.png",
+	"prop_bamboo.png",
+	"prop_rocks.png",
 	"tex_cobblestone.png",
 	"tex_gray_roof_tiles.png",
 	"tex_aged_plaster.png",
 	"tex_dark_wood.png",
+	"tex_grass.png",
+	"tex_water.png",
+	"tex_stone_wall.png",
+	"bg_mountains.png",
 ]
 
 
@@ -127,3 +144,70 @@ func test_town_builds_facades_and_boats() -> void:
 		)
 		assert_near(boat.position.y, -0.15, 0.001, "boat bottom sits just below the water")
 	town.free()
+
+
+func test_town_builds_tavern_sign_and_mountain_backdrop() -> void:
+	var town = load("res://world/town.gd").new()
+	town.build()
+	var signs: Array = town.find_children("TavernSign", "Sprite3D", true, false)
+	assert_eq(signs.size(), 1, "the tavern sign is created")
+	if not signs.is_empty():
+		var sign := signs[0] as Sprite3D
+		if sign != null:
+			assert_near(sign.position.x, 8.7, 0.001, "tavern sign hangs right of the door")
+			assert_near(sign.position.y, 1.5, 0.001, "tavern sign bottom edge height")
+			assert_near(sign.position.z, -2.5, 0.001, "tavern sign sits in front of the facade")
+	var backdrops: Array = town.find_children("MountainBackdrop", "MeshInstance3D", true, false)
+	assert_eq(backdrops.size(), 1, "the AI mountain backdrop is used")
+	if not backdrops.is_empty():
+		var backdrop := backdrops[0] as MeshInstance3D
+		if backdrop != null:
+			var quad := backdrop.mesh as QuadMesh
+			assert_true(quad != null, "mountain backdrop uses a QuadMesh")
+			if quad != null:
+				assert_near(quad.size.x, 320.0, 0.001, "mountain backdrop width")
+				assert_near(quad.size.y, 80.0, 0.001, "mountain backdrop height")
+			assert_true(
+				backdrop.position.is_equal_approx(Vector3(12.0, 32.0, -90.0)),
+				"mountain backdrop sits far behind the town"
+			)
+	town.free()
+
+
+func test_decor_props_avoid_river_bridge_and_landmarks() -> void:
+	var loaded: Dictionary = TownData.load_town(TOWN_PATH)
+	var town_data: Dictionary = loaded["data"]
+	var props: Array = town_data.get("props", [])
+	var decor: Array = []
+	var landmarks: Array = []
+	for prop_value in props:
+		var prop: Dictionary = prop_value
+		var kind := str(prop.get("kind", ""))
+		if DECOR_KINDS.has(kind):
+			decor.append(prop)
+		elif kind == "tree" or kind == "boat":
+			landmarks.append(prop)
+	assert_true(decor.size() >= 25, "at least 25 decor props (%d)" % decor.size())
+	for prop_value in decor:
+		var prop: Dictionary = prop_value
+		var x := float(prop["x"])
+		var z := float(prop["z"])
+		assert_true(
+			z < 9.0 or z > 12.0,
+			"decor at (%.1f, %.1f) stays off the river" % [x, z]
+		)
+		assert_true(
+			x < -14.0 or x > -10.0 or z < 4.0 or z > 16.0,
+			"decor at (%.1f, %.1f) stays off the bridge" % [x, z]
+		)
+		for landmark_value in landmarks:
+			var landmark: Dictionary = landmark_value
+			var lx := float(landmark["x"])
+			var lz := float(landmark["z"])
+			var dist := sqrt((x - lx) * (x - lx) + (z - lz) * (z - lz))
+			assert_true(
+				dist >= 1.0,
+				"decor at (%.1f, %.1f) clears %s at (%.1f, %.1f)" % [
+					x, z, str(landmark.get("kind", "")), lx, lz
+				]
+			)
