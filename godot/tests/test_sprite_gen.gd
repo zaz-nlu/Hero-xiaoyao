@@ -8,7 +8,7 @@ const FRAME_H := 48
 const SHEET_W := 160
 const SHEET_H := 192
 
-const REN_SNAPSHOT_PATH := "res://assets/sprites/ren_xiaoyao.png"
+const REN_SNAPSHOT_PATH := "res://tests/fixtures/ren_xiaoyao_procedural.png"
 const CAST_PATHS := {
 	"zixia": "res://data/sprites/zixia.json",
 	"zixia_disciple": "res://data/sprites/zixia_disciple.json",
