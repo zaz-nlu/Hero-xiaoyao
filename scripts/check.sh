@@ -21,6 +21,13 @@ if echo "$OUT5" | grep -qE "SCRIPT ERROR|Parse Error"; then
   echo "CHECK FAILED: tavern scene has script errors"; exit 1
 fi
 if [ $RC5 -ne 0 ]; then echo "CHECK FAILED: tavern scene rc=$RC5"; exit 1; fi
+OUT6=$(timeout 120 "$G" --headless --path godot res://world/forest.tscn --quit-after 5 2>&1)
+RC6=$?
+if echo "$OUT6" | grep -qE "SCRIPT ERROR|Parse Error"; then
+  echo "$OUT6" | grep -E "SCRIPT ERROR|Parse Error|   at:" | sort | uniq -c | sort -rn | head -20
+  echo "CHECK FAILED: forest scene has script errors"; exit 1
+fi
+if [ $RC6 -ne 0 ]; then echo "CHECK FAILED: forest scene rc=$RC6"; exit 1; fi
 OUT3=$(timeout 120 "$G" --headless --path godot --quit-after 5 2>&1)
 RC3=$?
 if echo "$OUT3" | grep -qE "SCRIPT ERROR|Parse Error"; then

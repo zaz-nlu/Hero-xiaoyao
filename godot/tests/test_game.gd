@@ -148,3 +148,57 @@ func test_town_tavern_round_trip() -> void:
 		"the player comes back to the spot in front of the tavern door"
 	)
 	game.free()
+
+
+func test_town_forest_round_trip() -> void:
+	GameState.reset()
+	var game: Variant = _new_game()
+	var town: Variant = game.current
+	town.enter_requested.emit("forest")
+	assert_eq(str(game.current_kind), "forest", "the south exit enters the forest")
+	var forest: Variant = game.current
+	forest.exit_requested.emit("town")
+	assert_eq(str(game.current_kind), "town", "leaving the forest returns to the town")
+	var back: Variant = game.current
+	assert_true(
+		back.player_pos.distance_to(Vector2(0.0, 19.2)) < 0.01,
+		"the player comes back to the spot in front of the forest exit"
+	)
+	game.free()
+
+
+func test_forest_battle_returns_to_forest() -> void:
+	GameState.reset()
+	var game: Variant = _new_game()
+	var town: Variant = game.current
+	town.enter_requested.emit("forest")
+	var forest: Variant = game.current
+	forest.player_pos = Vector2(3.0, 9.0)
+	forest.encounter_requested.emit("bandit", 1, false)
+	assert_eq(str(game.current_kind), "battle", "a forest encounter enters the battle")
+	assert_eq(str(GameState.battle_backdrop), "forest", "the battle uses the forest backdrop")
+	assert_eq(GameState.forest_return_pos, Vector2(3.0, 9.0), "the forest position is saved")
+	var view: Variant = game.current
+	view.battle.player.hp = 0
+	view.refresh()
+	view.press_return()
+	assert_eq(str(game.current_kind), "forest", "the battle returns to the forest")
+	assert_eq(str(GameState.battle_backdrop), "town", "the backdrop resets after the battle")
+	var back: Variant = game.current
+	assert_true(
+		back.player_pos.distance_to(Vector2(3.0, 9.0)) < 0.01,
+		"the player returns to the same forest spot"
+	)
+	game.free()
+
+
+func test_wasteland_exit_shows_toast() -> void:
+	GameState.reset()
+	var game: Variant = _new_game()
+	var town: Variant = game.current
+	town.enter_requested.emit("forest")
+	var forest: Variant = game.current
+	forest.exit_requested.emit("wasteland")
+	assert_eq(str(game.current_kind), "forest", "the wasteland placeholder stays in the forest")
+	assert_true(GameState.toasts.has("前方荒山，暂时过不去"), "a toast explains the blocked path")
+	game.free()

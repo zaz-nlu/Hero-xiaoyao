@@ -1,5 +1,7 @@
 extends "res://tests/test_case.gd"
 
+const GameState = preload("res://core/game_state.gd")
+
 const PLAYER_POS := Vector3(4.2, 0.0, 1.6)
 const CAM_POS := Vector3(6.4, 14.0, 36.0)
 const ENEMY_POSITIONS_2: Array = [
@@ -104,3 +106,31 @@ func test_lunge_returns_to_origin() -> void:
 	stage.advance(0.2)
 	assert_true(actor.position.distance_to(origin) < 0.01, "the actor returns to its origin")
 	stage.free()
+
+
+func test_forest_backdrop_offsets_the_stage() -> void:
+	GameState.reset()
+	GameState.battle_backdrop = "forest"
+	var stage: Variant = load("res://world/battle_stage.gd").new()
+	stage.build(["bandit", "bandit"])
+	var forest_origin: Vector3 = stage.town.arena_origin
+	assert_true(
+		stage.origin.is_equal_approx(forest_origin),
+		"the stage adopts the forest arena origin"
+	)
+	assert_true(
+		stage.player_actor.position.is_equal_approx(forest_origin + PLAYER_POS),
+		"the player stands at origin + PLAYER_POS"
+	)
+	for i in range(stage.enemy_actors.size()):
+		var actor: Variant = stage.enemy_actors[i]
+		assert_true(
+			actor.position.is_equal_approx(forest_origin + ENEMY_POSITIONS_2[i]),
+			"enemy %d is offset by the forest origin" % i
+		)
+	assert_true(
+		stage.camera.position.distance_to(forest_origin + CAM_POS) < 0.01,
+		"the camera is offset by the forest origin"
+	)
+	stage.free()
+	GameState.reset()

@@ -2,9 +2,11 @@ extends Node
 
 const GameState = preload("res://core/game_state.gd")
 const Quests = preload("res://core/quests.gd")
+const Progression = preload("res://core/progression.gd")
 
 const TOWN_SCENE := "res://world/town.gd"
 const TAVERN_SCENE := "res://world/tavern.gd"
+const FOREST_SCENE := "res://world/forest.gd"
 const BATTLE_SCENE := "res://ui/battle_view.gd"
 const STATUS_OVERLAY_SCENE := "res://ui/status_overlay.gd"
 const BOSS_ENEMY_ID := "ma_youwei"
@@ -15,6 +17,7 @@ var overlay: Variant = null
 
 var _battle_enemy: String = ""
 var _battle_count: int = 0
+var _battle_origin: String = ""
 
 
 func _ready() -> void:
@@ -25,7 +28,7 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if overlay == null or current == null:
 		return
-	if current_kind == "town" or current_kind == "tavern":
+	if current_kind == "town" or current_kind == "tavern" or current_kind == "forest":
 		current.set("input_blocked", overlay.is_panel_open())
 
 
@@ -68,7 +71,27 @@ func show_tavern() -> void:
 	overlay.enabled = true
 
 
+func show_forest() -> void:
+	_ensure_overlay()
+	_release_current()
+	var forest: Variant = load(FOREST_SCENE).new()
+	add_child(forest)
+	if not forest.is_inside_tree():
+		forest.build()
+		forest.build_hud()
+	forest.connect("exit_requested", Callable(self, "_on_forest_exit_requested"))
+	forest.connect("encounter_requested", Callable(self, "_on_encounter_requested"))
+	current = forest
+	current_kind = "forest"
+	overlay.enabled = true
+
+
 func _on_enter_requested(place: String) -> void:
+	if place == "forest":
+		if current != null and current_kind == "town":
+			GameState.town_return_pos = Vector2(0.0, 19.2)
+		show_forest()
+		return
 	if place != "tavern":
 		return
 	if current != null and current_kind == "town":
@@ -80,10 +103,28 @@ func _on_tavern_exit_requested() -> void:
 	show_town()
 
 
+func _on_forest_exit_requested(place: String) -> void:
+	if place == "town":
+		show_town()
+	elif place == "wasteland":
+		Progression.push_toast("前方荒山，暂时过不去")
+
+
 func _on_encounter_requested(enemy_id: String, count: int, first_strike: bool) -> void:
-	if current != null and current_kind == "town":
-		var town: Variant = current
-		GameState.town_return_pos = town.player_pos
+	if current != null:
+		var origin: Variant = current
+		match current_kind:
+			"town":
+				GameState.town_return_pos = origin.player_pos
+				_battle_origin = "town"
+				GameState.battle_backdrop = "town"
+			"tavern":
+				_battle_origin = "tavern"
+				GameState.battle_backdrop = "town"
+			"forest":
+				GameState.forest_return_pos = origin.player_pos
+				_battle_origin = "forest"
+				GameState.battle_backdrop = "forest"
 	show_battle(enemy_id, count, first_strike, false)
 
 
@@ -113,7 +154,13 @@ func _on_battle_finished(result: String) -> void:
 		Quests.notify("defeat", _battle_enemy, _battle_count)
 		if _battle_enemy == BOSS_ENEMY_ID:
 			GameState.set_flag("boss_defeated")
-	show_town()
+	var origin := _battle_origin
+	_battle_origin = ""
+	GameState.battle_backdrop = "town"
+	if origin == "forest":
+		show_forest()
+	else:
+		show_town()
 
 
 func _release_current() -> void:

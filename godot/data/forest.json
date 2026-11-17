@@ -1,0 +1,73 @@
+{
+  "bounds": {"x0": -24, "x1": 24, "z0": -24, "z1": 24},
+  "spawn": {"x": 0.0, "z": 21.5, "facing": "up"},
+  "tree_count": 90,
+  "tree_seed": 20261117,
+  "ground": [
+    {"type": "grass", "rect": [-24, -24, 24, 24]},
+    {"type": "dirt", "rect": [-1.5, 14, 1.5, 24]},
+    {"type": "dirt", "rect": [-1.5, 12.5, 11.5, 15.5]},
+    {"type": "dirt", "rect": [8.5, 2.5, 11.5, 15.5]},
+    {"type": "dirt", "rect": [-5.5, 2.5, 11.5, 5.5]},
+    {"type": "dirt", "rect": [-5.5, -9.5, -2.5, 5.5]},
+    {"type": "dirt", "rect": [-5.5, -9.5, 7.5, -6.5]},
+    {"type": "dirt", "rect": [4.5, -21.5, 7.5, -6.5]}
+  ],
+  "road": [[0, 24], [0, 14], [10, 14], [10, 4], [-4, 4], [-4, -8], [6, -8], [6, -20]],
+  "arena": {"origin": [-2.0, 0.0, -2.0]},
+  "exits": {
+    "town": {"rect": [-3, 22.2, 3, 23.8], "prompt": "按 E 返回紫霞镇"},
+    "wasteland": {"rect": [4, -23.8, 8, -22.2], "prompt": "按 E 前往荒山"}
+  },
+  "pickups": [
+    {"id": 1, "kind": "herb", "item": "herb", "x": 2.5, "z": 11.0, "flag": "herb_picked_1"},
+    {"id": 2, "kind": "herb", "item": "herb", "x": 12.5, "z": 5.5, "flag": "herb_picked_2"},
+    {"id": 3, "kind": "herb", "item": "herb", "x": -6.5, "z": -3.5, "flag": "herb_picked_3"},
+    {"id": 1, "kind": "chest", "item": "plain_sword", "x": 8.0, "z": -21.0, "flag": "chest_plain_sword_opened"}
+  ],
+  "hide_spots": [
+    {"x": 2.6, "z": 12.2, "radius": 1.8, "road": true},
+    {"x": 12.2, "z": 6.2, "radius": 1.8, "road": true},
+    {"x": -5.8, "z": -1.5, "radius": 1.8, "road": true},
+    {"x": 4.0, "z": -10.3, "radius": 1.8, "road": true},
+    {"x": 3.5, "z": 16.2, "radius": 1.8, "road": true},
+    {"x": 8.0, "z": 1.8, "radius": 1.8, "road": true},
+    {"x": -1.8, "z": 8.0, "radius": 1.8, "road": true},
+    {"x": 8.2, "z": -13.0, "radius": 1.8, "road": true},
+    {"x": 9.0, "z": 18.0, "radius": 1.8, "road": false},
+    {"x": -8.0, "z": 16.0, "radius": 1.8, "road": false},
+    {"x": 14.0, "z": 12.0, "radius": 1.8, "road": false},
+    {"x": -12.0, "z": 8.0, "radius": 1.8, "road": false},
+    {"x": 16.0, "z": 0.0, "radius": 1.8, "road": false},
+    {"x": -14.0, "z": -2.0, "radius": 1.8, "road": false},
+    {"x": 12.0, "z": -6.0, "radius": 1.8, "road": false},
+    {"x": 2.0, "z": -14.0, "radius": 1.8, "road": false},
+    {"x": -10.0, "z": -12.0, "radius": 1.8, "road": false},
+    {"x": -2.0, "z": -18.0, "radius": 1.8, "road": false},
+    {"x": 14.0, "z": -16.0, "radius": 1.8, "road": false},
+    {"x": 18.0, "z": -10.0, "radius": 1.8, "road": false},
+    {"x": -18.0, "z": 2.0, "radius": 1.8, "road": false},
+    {"x": -16.0, "z": 12.0, "radius": 1.8, "road": false},
+    {"x": 10.0, "z": 20.0, "radius": 1.8, "road": false},
+    {"x": -4.0, "z": 20.0, "radius": 1.8, "road": false},
+    {"x": 20.0, "z": 18.0, "radius": 1.8, "road": false}
+  ],
+  "patrol_slots": {
+    "routes": [
+      [[2.0, 18.0], [2.0, 8.0], [8.0, 8.0], [8.0, 1.0]],
+      [[-2.0, -1.0], [-2.0, -6.0], [3.0, -6.0], [3.0, -12.0], [0.0, -12.0]]
+    ],
+    "scout": [4.0, 9.0]
+  },
+  "lights": {
+    "sun_color": "#eef0c0",
+    "sun_energy": 1.1,
+    "sun_rotation": [-48, -38, 0],
+    "ambient_color": "#6b7f66",
+    "ambient_energy": 0.7,
+    "fog_color": "#b8c9a8",
+    "fog_density": 0.0018,
+    "sky_top": "#7fa6d8",
+    "sky_horizon": "#f2d9b0"
+  }
+}

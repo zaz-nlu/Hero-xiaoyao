@@ -1,6 +1,7 @@
 extends Node3D
 
 const CharacterSprite = preload("res://world/character_sprite.gd")
+const GameState = preload("res://core/game_state.gd")
 
 const PLAYER_POS := Vector3(4.2, 0.0, 1.6)
 const PLAYER_SPRITE_ID := "ren_xiaoyao"
@@ -23,6 +24,7 @@ var camera: Camera3D = null
 var player_actor: Variant = null
 var enemy_actors: Array = []
 var popups: Array = []
+var origin: Vector3 = Vector3.ZERO
 
 var _bases: Dictionary = {}
 var _flashes: Array = []
@@ -68,11 +70,20 @@ func _detach_and_free(actor: Variant) -> void:
 func _build_town() -> void:
 	if town != null and is_instance_valid(town):
 		return
-	town = load("res://world/town.gd").new()
-	town.set("skip_actors", true)
-	add_child(town)
-	if not town.is_inside_tree():
-		town.build()
+	if str(GameState.battle_backdrop) == "forest":
+		town = load("res://world/forest.gd").new()
+		town.set("skip_actors", true)
+		add_child(town)
+		if not town.is_inside_tree():
+			town.build()
+		origin = town.arena_origin
+	else:
+		town = load("res://world/town.gd").new()
+		town.set("skip_actors", true)
+		add_child(town)
+		if not town.is_inside_tree():
+			town.build()
+		origin = Vector3.ZERO
 	town.set_process(false)
 
 
@@ -83,14 +94,14 @@ func _setup_camera() -> void:
 	if camera == null:
 		return
 	camera.fov = CAM_FOV
-	camera.position = CAM_POS
+	camera.position = origin + CAM_POS
 	_setup_dof()
 	if camera.is_inside_tree():
-		camera.look_at(CAM_TARGET, Vector3.UP)
+		camera.look_at(origin + CAM_TARGET, Vector3.UP)
 		camera.current = true
 	else:
 		camera.transform = Transform3D(
-			Basis.looking_at(CAM_TARGET - CAM_POS, Vector3.UP), CAM_POS
+			Basis.looking_at(CAM_TARGET - CAM_POS, Vector3.UP), origin + CAM_POS
 		)
 
 
@@ -111,7 +122,7 @@ func _build_player_actor() -> void:
 	actor.name = "PlayerActor"
 	actor.setup(PLAYER_SPRITE_ID)
 	actor.set_facing("right")
-	actor.position = PLAYER_POS
+	actor.position = origin + PLAYER_POS
 	add_child(actor)
 	player_actor = actor
 
@@ -126,7 +137,7 @@ func _build_enemy_actors(enemy_sprite_ids: Array) -> void:
 		actor.name = "EnemyActor%d" % i
 		actor.setup(str(enemy_sprite_ids[i]))
 		actor.set_facing("left")
-		actor.position = slots[i % slots.size()]
+		actor.position = origin + slots[i % slots.size()]
 		add_child(actor)
 		enemy_actors.append(actor)
 

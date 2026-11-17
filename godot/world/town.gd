@@ -9,6 +9,8 @@ const SPEAKERS_PATH := "res://data/speakers.json"
 const CAMERA_OFFSET := Vector3(0.0, 16.7, 37.5)
 # Look slightly north of the player so the characters sit in the lower half of the frame.
 const LOOK_AHEAD := Vector3(0.0, 1.0, -4.0)
+const FOREST_EXIT_RECT := Rect2(-4.0, 20.0, 8.0, 1.8)
+const FOREST_SIGN_POS := Vector2(5.4, 20.7)
 const DEFEATED_NPC_IDS: Array[String] = ["ma_youwei", "bandit_1", "bandit_2"]
 const DECOR_FILES := {
 	"shrub": "prop_shrub.png",
@@ -133,6 +135,7 @@ func build() -> void:
 	_build_ground()
 	_build_buildings()
 	_build_props()
+	_build_forest_sign()
 	_build_stairs()
 	_build_backdrop()
 	_build_lighting()
@@ -1185,6 +1188,22 @@ func _build_boat(parent: Node3D, x: float, z: float, index: int) -> void:
 		parent.add_child(sprite)
 
 
+# A small wooden sign pointing down the southern path to the forest.
+func _build_forest_sign() -> void:
+	var root := Node3D.new()
+	root.name = "ForestSign"
+	root.position = Vector3(FOREST_SIGN_POS.x, 0.0, FOREST_SIGN_POS.y)
+	add_child(root)
+	var wood_mat: StandardMaterial3D = Texgen.make_material(
+		_get_tex("wood_planks"), Vector2(0.5, 2.0)
+	)
+	_add_box(root, Vector3(0.14, 1.7, 0.14), wood_mat, Vector3(0.0, 0.85, 0.0), "Post")
+	_add_box(root, Vector3(2.0, 0.55, 0.1), wood_mat, Vector3(0.0, 1.55, 0.0), "Board")
+	var label := _make_label("紫霞林", 0.012, 48)
+	label.position = Vector3(0.0, 1.55, 0.08)
+	root.add_child(label)
+
+
 # ---------------------------------------------------------------- stairs, platform, gate
 
 func _build_stairs() -> void:
@@ -1625,7 +1644,9 @@ func try_interact() -> bool:
 		return false
 	var npc_id: String = nearby_npc()
 	if npc_id == "" or not npc_dialogues.has(npc_id):
-		return _try_enter_tavern()
+		if _try_enter_tavern():
+			return true
+		return _try_enter_forest()
 	var entry_value: Variant = npc_dialogues[npc_id]
 	if not (entry_value is Dictionary):
 		return false
@@ -1675,6 +1696,17 @@ func _try_enter_tavern() -> bool:
 	return true
 
 
+func is_in_forest_exit() -> bool:
+	return FOREST_EXIT_RECT.has_point(player_pos)
+
+
+func _try_enter_forest() -> bool:
+	if not is_in_forest_exit():
+		return false
+	emit_signal("enter_requested", "forest")
+	return true
+
+
 func is_dialogue_active() -> bool:
 	return dialogue_view != null and bool(dialogue_view.call("is_active"))
 
@@ -1689,6 +1721,10 @@ func update_prompt() -> void:
 	if npc_id == "":
 		if _near_tavern_door():
 			prompt_label.text = "按 E 进入酒馆"
+			prompt_label.visible = true
+			return
+		if is_in_forest_exit():
+			prompt_label.text = "按 E 前往紫霞林"
 			prompt_label.visible = true
 			return
 		prompt_label.visible = false
