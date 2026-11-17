@@ -130,3 +130,21 @@ func test_start_three_args_still_plays_intro() -> void:
 		"a four-argument start can skip the intro"
 	)
 	quiet.free()
+
+
+func test_town_tavern_round_trip() -> void:
+	GameState.reset()
+	var game: Variant = _new_game()
+	var town: Variant = game.current
+	var return_pos: Vector2 = town.tavern_return_pos()
+	town.enter_requested.emit("tavern")
+	assert_eq(str(game.current_kind), "tavern", "the tavern door enters the tavern")
+	var tavern: Variant = game.current
+	tavern.exit_requested.emit()
+	assert_eq(str(game.current_kind), "town", "leaving the tavern returns to the town")
+	var back: Variant = game.current
+	assert_true(
+		back.player_pos.distance_to(return_pos) < 0.01,
+		"the player comes back to the spot in front of the tavern door"
+	)
+	game.free()

@@ -1,6 +1,7 @@
 extends Node3D
 
 signal encounter_requested(enemy_id: String, count: int, first_strike: bool)
+signal enter_requested(place: String)
 
 const TOWN_PATH := "res://data/town.json"
 const NPC_DIALOGUES_PATH := "res://data/npc_dialogues.json"
@@ -82,6 +83,8 @@ var _time: float = 0.0
 var _focus: Vector3 = Vector3.ZERO
 var _hud_layer: CanvasLayer = null
 var _tavern_facade: bool = false
+var _tavern_door_point: Vector2 = Vector2.INF
+var _tavern_return_point: Vector2 = Vector2.INF
 
 
 func _ready() -> void:
@@ -124,6 +127,8 @@ func build() -> void:
 		push_warning("town: %s" % str(error_text))
 	blockers = TownData.footprints(data)
 	bounds_rect = _read_bounds()
+	_tavern_door_point = _tavern_entrance(0.8)
+	_tavern_return_point = _tavern_entrance(1.5)
 	_build_ground()
 	_build_buildings()
 	_build_props()
@@ -1500,6 +1505,37 @@ func _read_bounds() -> Rect2:
 	return Rect2(x0, z0, x1 - x0, z1 - z0)
 
 
+# Point just outside the tavern door, `offset` world units in front of the facade.
+func _tavern_entrance(offset: float) -> Vector2:
+	var buildings: Array = data.get("buildings", [])
+	for building_value in buildings:
+		if typeof(building_value) != TYPE_DICTIONARY:
+			continue
+		var building: Dictionary = building_value
+		if str(building.get("id", "")) != "tavern":
+			continue
+		var x0 := float(building.get("x0", 0.0))
+		var x1 := float(building.get("x1", 0.0))
+		var door_x := float(building.get("door_x", (x0 + x1) * 0.5))
+		var z_front := float(building.get("z_front", 0.0))
+		return Vector2(door_x, z_front + offset)
+	return Vector2.INF
+
+
+func tavern_door() -> Vector2:
+	return _tavern_door_point
+
+
+func tavern_return_pos() -> Vector2:
+	return _tavern_return_point
+
+
+func _near_tavern_door() -> bool:
+	if _tavern_door_point == Vector2.INF:
+		return false
+	return player_pos.distance_to(_tavern_door_point) <= 2.0
+
+
 func set_input_override(v: Variant) -> void:
 	_input_override = v
 
@@ -1584,7 +1620,7 @@ func try_interact() -> bool:
 		return false
 	var npc_id: String = nearby_npc()
 	if npc_id == "" or not npc_dialogues.has(npc_id):
-		return false
+		return _try_enter_tavern()
 	var entry_value: Variant = npc_dialogues[npc_id]
 	if not (entry_value is Dictionary):
 		return false
@@ -1627,6 +1663,13 @@ func try_interact() -> bool:
 	return true
 
 
+func _try_enter_tavern() -> bool:
+	if not _near_tavern_door():
+		return false
+	emit_signal("enter_requested", "tavern")
+	return true
+
+
 func is_dialogue_active() -> bool:
 	return dialogue_view != null and bool(dialogue_view.call("is_active"))
 
@@ -1639,6 +1682,10 @@ func update_prompt() -> void:
 		return
 	var npc_id: String = nearby_npc()
 	if npc_id == "":
+		if _near_tavern_door():
+			prompt_label.text = "按 E 进入酒馆"
+			prompt_label.visible = true
+			return
 		prompt_label.visible = false
 		return
 	prompt_label.text = "按 E 与 %s 交谈" % _npc_display_name(npc_id)

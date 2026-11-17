@@ -3,6 +3,7 @@ extends Node
 const GameState = preload("res://core/game_state.gd")
 
 const TOWN_SCENE := "res://world/town.gd"
+const TAVERN_SCENE := "res://world/tavern.gd"
 const BATTLE_SCENE := "res://ui/battle_view.gd"
 const BOSS_ENEMY_ID := "ma_youwei"
 
@@ -24,9 +25,35 @@ func show_town() -> void:
 		town.build()
 		town.build_hud()
 	town.connect("encounter_requested", Callable(self, "_on_encounter_requested"))
+	town.connect("enter_requested", Callable(self, "_on_enter_requested"))
 	current = town
 	current_kind = "town"
 	GameState.town_return_pos = null
+
+
+func show_tavern() -> void:
+	_release_current()
+	var tavern: Variant = load(TAVERN_SCENE).new()
+	add_child(tavern)
+	if not tavern.is_inside_tree():
+		tavern.build()
+		tavern.build_hud()
+	tavern.connect("exit_requested", Callable(self, "_on_tavern_exit_requested"))
+	tavern.connect("encounter_requested", Callable(self, "_on_encounter_requested"))
+	current = tavern
+	current_kind = "tavern"
+
+
+func _on_enter_requested(place: String) -> void:
+	if place != "tavern":
+		return
+	if current != null and current_kind == "town":
+		GameState.town_return_pos = current.tavern_return_pos()
+	show_tavern()
+
+
+func _on_tavern_exit_requested() -> void:
+	show_town()
 
 
 func _on_encounter_requested(enemy_id: String, count: int, first_strike: bool) -> void:
