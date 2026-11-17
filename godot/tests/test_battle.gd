@@ -8,14 +8,14 @@ const Battle = preload("res://core/battle.gd")
 const Balance = preload("res://core/balance.gd")
 
 
-func _stats(power := 0, speed := 15, defense := 0, recovery := 0, skill := 0, mechanism := 0) -> Dictionary:
+func _stats(power := 0, speed := 15, defense := 0, recovery := 0, skill := 0, constitution := 0) -> Dictionary:
 	return {
 		"power": power,
 		"speed": speed,
 		"defense": defense,
 		"recovery": recovery,
 		"skill": skill,
-		"mechanism": mechanism,
+		"constitution": constitution,
 	}
 
 

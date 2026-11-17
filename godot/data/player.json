@@ -6,7 +6,7 @@
 		"defense": 5,
 		"recovery": 5,
 		"skill": 20,
-		"mechanism": 5
+		"constitution": 5
 	},
 	"max_hp": 100,
 	"jianyi_max": 1,

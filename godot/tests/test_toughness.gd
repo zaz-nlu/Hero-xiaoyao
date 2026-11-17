@@ -9,7 +9,7 @@ func _make_enemy(toughness := 2, stun_turns := 1) -> Variant:
 		"id": "minion",
 		"name": "马匪",
 		"tier": "minion",
-		"stats": {"power": 5, "speed": 8, "defense": 3, "recovery": 1, "skill": 5, "mechanism": 5},
+		"stats": {"power": 5, "speed": 8, "defense": 3, "recovery": 1, "skill": 5, "constitution": 5},
 		"max_hp": 40,
 		"toughness": toughness,
 		"stun_turns": stun_turns,

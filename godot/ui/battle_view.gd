@@ -48,7 +48,7 @@ const STAT_NAMES := {
 	"defense": "护体",
 	"recovery": "养气",
 	"skill": "剑术",
-	"mechanism": "机巧",
+	"constitution": "体质",
 }
 
 var battle: Variant = null
@@ -137,16 +137,24 @@ func start(
 		learned = raw_learned
 
 	var stats: Dictionary = {}
+	var base_stats: Dictionary = {}
 	var raw_stats: Variant = player_data.get("stats", {})
 	if raw_stats is Dictionary:
-		var base_stats: Dictionary = raw_stats
+		base_stats = raw_stats
 		stats = Progression.final_stats(base_stats)
+	var player_realm := str(GameState.realm_id)
+	var max_hp := 0
+	if player_data.has("max_hp"):
+		max_hp = int(player_data.get("max_hp", 0))
+	else:
+		max_hp = Progression.max_hp(base_stats)
 	var player: Variant = Unit.make_player(
 		str(player_data.get("name", "")),
 		stats,
-		int(player_data.get("max_hp", 0)),
+		max_hp,
 		int(player_data.get("jianyi_max", 0)),
-		int(player_data.get("foresight_max", 0))
+		int(player_data.get("foresight_max", 0)),
+		player_realm
 	)
 	var enemies: Array = []
 	for i in range(enemy_count):

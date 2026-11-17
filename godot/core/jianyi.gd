@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Balance = preload("res://core/balance.gd")
+const Realms = preload("res://core/realms.gd")
 
 
 static func can_strike(attacker, target) -> bool:
@@ -12,7 +13,9 @@ static func can_strike(attacker, target) -> bool:
 static func strike(attacker, target) -> int:
 	if not can_strike(attacker, target):
 		return -1
-	var damage: int = Balance.JIANYI_BASE + int(attacker.stats["skill"])
+	var damage: int = floori(
+		float(Balance.JIANYI_BASE + int(attacker.stats["skill"])) * Realms.scale(str(attacker.realm))
+	)
 	target.take_wound(damage)
 	attacker.jianyi_points -= 1
 	return damage

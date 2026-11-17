@@ -21,7 +21,7 @@ func _make_martial(overrides := {}) -> Variant:
 
 
 func _stats() -> Dictionary:
-	return {"power": 10, "speed": 15, "defense": 5, "recovery": 5, "skill": 20, "mechanism": 5}
+	return {"power": 10, "speed": 15, "defense": 5, "recovery": 5, "skill": 20, "constitution": 5}
 
 
 func _move(type := "heavy", threat := 20) -> Dictionary:
@@ -87,7 +87,7 @@ func test_perfect_needs_weak_move_and_top_stat() -> void:
 func test_perfect_counts_ties() -> void:
 	var tied := {
 		"power": 10, "speed": 10, "defense": 10,
-		"recovery": 10, "skill": 10, "mechanism": 10,
+		"recovery": 10, "skill": 10, "constitution": 10,
 	}
 	var martial: Variant = _make_martial({"advantage_stat": "power"})
 	assert_true(

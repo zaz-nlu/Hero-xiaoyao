@@ -11,7 +11,7 @@ func _base() -> Dictionary:
 		"defense": 5,
 		"recovery": 5,
 		"skill": 20,
-		"mechanism": 5,
+		"constitution": 5,
 	}
 
 

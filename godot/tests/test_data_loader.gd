@@ -34,7 +34,7 @@ func test_martial_with_four_counters_is_error() -> void:
 
 func test_minion_with_three_types_is_error() -> void:
 	var json := '[{"id":"bandit","name":"马匪","tier":"minion",' \
-			+ '"stats":{"power":5,"speed":8,"defense":3,"recovery":1,"skill":3,"mechanism":1},' \
+			+ '"stats":{"power":5,"speed":8,"defense":3,"recovery":1,"skill":3,"constitution":1},' \
 			+ '"max_hp":40,"toughness":2,"stun_turns":1,"moves":[' \
 			+ '{"id":"m1","name":"横扫","type":"sweep","threat":12,"power":8},' \
 			+ '{"id":"m2","name":"重劈","type":"heavy","threat":14,"power":10},' \
@@ -48,7 +48,7 @@ func test_minion_with_three_types_is_error() -> void:
 
 func test_boss_with_two_types_is_error() -> void:
 	var json := '[{"id":"ma_youwei","name":"马匪头子","tier":"boss",' \
-			+ '"stats":{"power":20,"speed":12,"defense":8,"recovery":6,"skill":10,"mechanism":4},' \
+			+ '"stats":{"power":20,"speed":12,"defense":8,"recovery":6,"skill":10,"constitution":4},' \
 			+ '"max_hp":300,"toughness":8,"stun_turns":2,"moves":[' \
 			+ '{"id":"m1","name":"开山","type":"heavy","threat":18,"power":25},' \
 			+ '{"id":"m2","name":"乱刀横扫","type":"sweep","threat":14,"power":16}],' \
@@ -61,7 +61,7 @@ func test_boss_with_two_types_is_error() -> void:
 
 func test_valid_boss_loads() -> void:
 	var json := '[{"id":"ma_youwei","name":"马匪头子","tier":"boss",' \
-			+ '"stats":{"power":20,"speed":12,"defense":8,"recovery":6,"skill":10,"mechanism":4},' \
+			+ '"stats":{"power":20,"speed":12,"defense":8,"recovery":6,"skill":10,"constitution":4},' \
 			+ '"max_hp":300,"toughness":8,"stun_turns":2,"moves":[' \
 			+ '{"id":"m1","name":"开山","type":"heavy","threat":18,"power":25},' \
 			+ '{"id":"m2","name":"乱刀横扫","type":"sweep","threat":14,"power":16},' \
@@ -79,7 +79,7 @@ func test_valid_boss_loads() -> void:
 
 func test_weak_move_must_exist() -> void:
 	var json := '[{"id":"ma_youwei","name":"马匪头子","tier":"boss",' \
-			+ '"stats":{"power":20,"speed":12,"defense":8,"recovery":6,"skill":10,"mechanism":4},' \
+			+ '"stats":{"power":20,"speed":12,"defense":8,"recovery":6,"skill":10,"constitution":4},' \
 			+ '"max_hp":300,"toughness":8,"stun_turns":2,"moves":[' \
 			+ '{"id":"m1","name":"开山","type":"heavy","threat":18,"power":25},' \
 			+ '{"id":"m2","name":"乱刀横扫","type":"sweep","threat":14,"power":16},' \
@@ -94,7 +94,7 @@ func test_weak_move_must_exist() -> void:
 
 func test_top_keys_returns_all_ties() -> void:
 	assert_eq(
-		Stats.top_keys({"power": 10, "speed": 10, "defense": 5, "recovery": 5, "skill": 5, "mechanism": 5}),
+		Stats.top_keys({"power": 10, "speed": 10, "defense": 5, "recovery": 5, "skill": 5, "constitution": 5}),
 		["power", "speed"],
 		"ties are returned in KEYS order"
 	)
@@ -102,7 +102,7 @@ func test_top_keys_returns_all_ties() -> void:
 
 func test_top_keys_single() -> void:
 	assert_eq(
-		Stats.top_keys({"power": 3, "speed": 9, "defense": 1, "recovery": 4, "skill": 2, "mechanism": 0}),
+		Stats.top_keys({"power": 3, "speed": 9, "defense": 1, "recovery": 4, "skill": 2, "constitution": 0}),
 		["speed"],
 		"single top key"
 	)
@@ -130,7 +130,7 @@ func test_shipped_forest_enemies_load() -> void:
 
 func test_enemy_sprite_defaults_to_id() -> void:
 	var json := '[{"id":"bandit","name":"马匪","tier":"minion",' \
-			+ '"stats":{"power":5,"speed":8,"defense":3,"recovery":1,"skill":3,"mechanism":1},' \
+			+ '"stats":{"power":5,"speed":8,"defense":3,"recovery":1,"skill":3,"constitution":1},' \
 			+ '"max_hp":40,"toughness":2,"stun_turns":1,"moves":[' \
 			+ '{"id":"m1","name":"乱砍","type":"sweep","threat":12,"power":8}],' \
 			+ '"weak_moves":[]}]'
@@ -142,7 +142,7 @@ func test_enemy_sprite_defaults_to_id() -> void:
 func test_enemy_sprite_field_is_read() -> void:
 	var json := '[{"id":"bandit_scout","name":"马匪探子","sprite":"bandit",' \
 			+ '"tier":"minion",' \
-			+ '"stats":{"power":5,"speed":12,"defense":2,"recovery":1,"skill":3,"mechanism":1},' \
+			+ '"stats":{"power":5,"speed":12,"defense":2,"recovery":1,"skill":3,"constitution":1},' \
 			+ '"max_hp":36,"toughness":2,"stun_turns":1,"moves":[' \
 			+ '{"id":"m1","name":"突刺","type":"thrust","threat":11,"power":7}],' \
 			+ '"weak_moves":[]}]'

@@ -4,9 +4,11 @@ const Balance = preload("res://core/balance.gd")
 const Battle = preload("res://core/battle.gd")
 const Counter = preload("res://core/counter.gd")
 const DataLoader = preload("res://core/data_loader.gd")
+const GameState = preload("res://core/game_state.gd")
 const Jianyi = preload("res://core/jianyi.gd")
 const Mastery = preload("res://core/mastery.gd")
 const Progression = preload("res://core/progression.gd")
+const Realms = preload("res://core/realms.gd")
 const Unit = preload("res://core/unit.gd")
 
 const PLAYER_PATH := "res://data/player.json"
@@ -119,19 +121,29 @@ static func _make_battle(
 	stats_override: Dictionary
 ) -> Variant:
 	var stats: Dictionary = {}
+	var player_realm := str(GameState.realm_id)
+	var max_hp := 0
 	if not stats_override.is_empty():
 		stats = stats_override.duplicate()
+		max_hp = Realms.max_hp_for(int(stats.get("constitution", 0)), player_realm)
 	else:
+		var base_stats: Dictionary = {}
 		var raw_stats: Variant = player_data.get("stats", {})
 		if raw_stats is Dictionary:
-			var base_stats: Dictionary = raw_stats
+			base_stats = raw_stats
 			stats = Progression.final_stats(base_stats)
+		# 本轮 player.json 仍带显式 max_hp；没有时才用体质公式。
+		if player_data.has("max_hp"):
+			max_hp = int(player_data.get("max_hp", 0))
+		else:
+			max_hp = Progression.max_hp(base_stats)
 	var player: Variant = Unit.make_player(
 		str(player_data.get("name", "")),
 		stats,
-		int(player_data.get("max_hp", 0)),
+		max_hp,
 		int(player_data.get("jianyi_max", 0)),
-		int(player_data.get("foresight_max", 0))
+		int(player_data.get("foresight_max", 0)),
+		player_realm
 	)
 	var enemies: Array = []
 	for i in range(enemy_count):

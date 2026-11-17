@@ -6,6 +6,7 @@ var id: String = ""
 var name: String = ""
 var sprite: String = ""
 var tier: String = ""
+var realm: String = "lianti"
 var stats: Dictionary = {}
 var max_hp: int = 0
 var toughness: int = 0
@@ -22,6 +23,7 @@ static func from_dict(d: Dictionary) -> RefCounted:
 	e.name = str(d.get("name", ""))
 	e.sprite = str(d.get("sprite", e.id))
 	e.tier = str(d.get("tier", ""))
+	e.realm = str(d.get("realm", "lianti"))
 	e.stats = _int_stats(d.get("stats", {}))
 	e.max_hp = int(d.get("max_hp", 0))
 	e.toughness = int(d.get("toughness", 0))

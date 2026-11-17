@@ -1,6 +1,7 @@
 extends RefCounted
 
 const MoveTypes = preload("res://core/move_types.gd")
+const Realms = preload("res://core/realms.gd")
 const Stats = preload("res://core/stats.gd")
 const MartialDef = preload("res://core/martial_def.gd")
 const EnemyDef = preload("res://core/enemy_def.gd")
@@ -117,6 +118,9 @@ static func _validate_martial(def) -> Array[String]:
 static func _validate_enemy(def) -> Array[String]:
 	var errors: Array[String] = []
 	var def_id: String = def.id
+	var realm_id := str(def.realm)
+	if str(Realms.get_realm(realm_id).get("id", "")) != realm_id:
+		errors.append("enemy '%s': unknown realm '%s'" % [def_id, realm_id])
 
 	var move_ids := {}
 	var seen_types := {}

@@ -5,6 +5,7 @@ const Counter = preload("res://core/counter.gd")
 const Damage = preload("res://core/damage.gd")
 const Jianyi = preload("res://core/jianyi.gd")
 const EnemyAi = preload("res://core/enemy_ai.gd")
+const Realms = preload("res://core/realms.gd")
 
 enum State { ONGOING, WON, LOST, TIMEOUT }
 
@@ -212,6 +213,8 @@ func _settle(action: Dictionary) -> void:
 				_enemy_step(int(actor["index"]))
 		if state() != State.ONGOING:
 			finished = true
+	if not finished:
+		_regen_player()
 	for i in range(enemies.size()):
 		var enemy: Variant = enemies[i]
 		if i < _stunned_at_start.size() and _stunned_at_start[i] and not enemy.is_dead():
@@ -258,7 +261,7 @@ func _player_step(action: Dictionary) -> void:
 	if kind == "martial":
 		var id: String = str(action.get("id", ""))
 		var martial: Variant = martials[id]
-		var dealt: int = Damage.hit(martial.power, mastery.damage_multiplier(id), player.stats, target)
+		var dealt: int = Damage.hit(martial.power, mastery.damage_multiplier(id), player.stats, target, player.realm)
 		mastery.add_exp(id, 1)
 		_log("R%d act:player martial %s -> e%d dmg %d" % [round, id, target_index, dealt])
 	elif kind == "jianyi":
@@ -284,6 +287,18 @@ func _do_foresight() -> void:
 	_log("R%d act:player foresight" % round)
 
 
+func _regen_player() -> void:
+	if player.is_dead():
+		return
+	var recovery := int(player.stats.get("recovery", 0))
+	var amount: int = floori(recovery * Balance.REGEN_PER_RECOVERY * Realms.scale(str(player.realm)))
+	if amount <= 0:
+		return
+	var healed: int = player.heal(amount)
+	if healed > 0:
+		_log("R%d regen:player %d" % [round, healed])
+
+
 func _enemy_step(index: int) -> void:
 	var enemy: Variant = enemies[index]
 	if enemy.is_dead():
@@ -291,14 +306,21 @@ func _enemy_step(index: int) -> void:
 	if index < _stunned_at_start.size() and _stunned_at_start[index]:
 		_log("R%d skip:e%d stunned" % [round, index])
 		return
-	var healed: int = enemy.heal(int(enemy.stats["recovery"]) * Balance.REGEN_PER_RECOVERY)
+	var enemy_scale := Realms.scale(str(enemy.realm))
+	var player_scale := Realms.scale(str(player.realm))
+	var healed: int = enemy.heal(
+		floori(int(enemy.stats["recovery"]) * Balance.REGEN_PER_RECOVERY * enemy_scale)
+	)
 	var intent: Dictionary = {}
 	if index < intents.size():
 		intent = intents[index]
 	if not intent.is_empty():
 		_mark_known(index, str(intent.get("id", "")))
 	var power: int = int(intent.get("power", 0))
-	var base_damage: int = maxi(1, power - int(player.stats["defense"]))
+	var base_damage: int = maxi(
+		1,
+		floori(power * enemy_scale) - floori(int(player.stats["defense"]) * player_scale)
+	)
 
 	var counter_id: String = ""
 	var counter_martial: Variant = null
@@ -342,7 +364,7 @@ func _enemy_step(index: int) -> void:
 			Jianyi.restore(player)
 		mastery.add_exp(counter_id, 2)
 		if perfect:
-			Damage.hit(counter_martial.power, mastery.damage_multiplier(counter_id), player.stats, enemy)
+			Damage.hit(counter_martial.power, mastery.damage_multiplier(counter_id), player.stats, enemy, player.realm)
 			player.foresight_points = mini(int(player.foresight_max), int(player.foresight_points) + 1)
 		if verdict == Counter.Verdict.ADVANTAGE:
 			for raw_effect in counter_martial.effects:

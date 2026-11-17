@@ -1,8 +1,11 @@
 extends RefCounted
 
+const Realms = preload("res://core/realms.gd")
+
 var id: String = ""
 var name: String = ""
 var is_player: bool = false
+var realm: String = "lianti"
 var stats: Dictionary = {}
 var max_hp: int = 0
 var hp: int = 0
@@ -21,12 +24,13 @@ var def: Variant = null
 var incorporeal: bool = false
 
 
-static func make_player(name: String, stats: Dictionary, max_hp: int, jianyi_max: int, p_foresight_max: int = 0) -> Variant:
+static func make_player(name: String, stats: Dictionary, max_hp: int, jianyi_max: int, p_foresight_max: int = 0, realm: String = "lianti") -> Variant:
 	var script: Variant = load("res://core/unit.gd")
 	var u: Variant = script.new()
 	u.id = "player"
 	u.name = name
 	u.is_player = true
+	u.realm = realm
 	u.stats = stats
 	u.max_hp = max_hp
 	u.hp = max_hp
@@ -43,8 +47,12 @@ static func from_enemy(d) -> Variant:
 	u.id = str(d.id)
 	u.name = str(d.name)
 	u.is_player = false
+	u.realm = str(d.realm)
 	u.stats = d.stats
-	u.max_hp = int(d.max_hp)
+	var declared_max_hp := int(d.max_hp)
+	if declared_max_hp <= 0:
+		declared_max_hp = Realms.max_hp_for(int(d.stats.get("constitution", 0)), u.realm)
+	u.max_hp = declared_max_hp
 	u.hp = u.max_hp
 	u.toughness_max = int(d.toughness)
 	u.toughness_left = float(d.toughness)

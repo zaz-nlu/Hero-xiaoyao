@@ -11,14 +11,14 @@ const CharacterPanel = preload("res://ui/character_panel.gd")
 
 const MARTIALS_PATH := "res://data/martials.json"
 
-const STAT_KEYS: Array[String] = ["power", "speed", "defense", "recovery", "skill", "mechanism"]
+const STAT_KEYS: Array[String] = ["power", "speed", "defense", "recovery", "skill", "constitution"]
 const STAT_NAMES := {
 	"power": "力量",
 	"speed": "速度",
 	"defense": "防御",
 	"recovery": "恢复",
 	"skill": "技巧",
-	"mechanism": "机关",
+	"constitution": "体质",
 }
 
 const PANEL_WIDTH := 640.0

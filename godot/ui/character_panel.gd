@@ -32,14 +32,14 @@ const TAB_STEP := 108.0
 const TAB_HEIGHT := 32.0
 const FADE_TIME := 0.12
 
-const STAT_KEYS: Array[String] = ["power", "speed", "defense", "recovery", "skill", "mechanism"]
+const STAT_KEYS: Array[String] = ["power", "speed", "defense", "recovery", "skill", "constitution"]
 const STAT_NAMES := {
 	"power": "力量",
 	"speed": "速度",
 	"defense": "防御",
 	"recovery": "恢复",
 	"skill": "技巧",
-	"mechanism": "机关",
+	"constitution": "体质",
 }
 const STAT_COLORS := {
 	"power": Color(0.8, 0.34, 0.3),
@@ -47,7 +47,7 @@ const STAT_COLORS := {
 	"defense": Color(0.45, 0.56, 0.76),
 	"recovery": Color(0.4, 0.7, 0.45),
 	"skill": Color(0.86, 0.76, 0.42),
-	"mechanism": Color(0.62, 0.5, 0.72),
+	"constitution": Color(0.62, 0.5, 0.72),
 }
 const STAT_DESC := {
 	"power": "力量：提高武学伤害",
@@ -55,7 +55,7 @@ const STAT_DESC := {
 	"defense": "防御：减少受到的伤害",
 	"recovery": "恢复：每回合自然恢复气血",
 	"skill": "技巧：决定反制是否来得及",
-	"mechanism": "机关：预留",
+	"constitution": "体质：决定气血上限（气血 = 40 + 体质 × 每点气血）",
 }
 const SLOT_KEYS: Array[String] = ["weapon", "armor", "accessory"]
 const SLOT_NAMES := {

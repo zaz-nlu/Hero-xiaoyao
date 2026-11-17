@@ -1,6 +1,6 @@
 extends RefCounted
 
-const KEYS: Array[String] = ["power", "speed", "defense", "recovery", "skill", "mechanism"]
+const KEYS: Array[String] = ["power", "speed", "defense", "recovery", "skill", "constitution"]
 
 
 static func top_keys(stats: Dictionary) -> Array[String]:

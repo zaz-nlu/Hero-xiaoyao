@@ -1,0 +1,11 @@
+{
+	"age_start": 9,
+	"age_milestones": [
+		{"age": 14, "constitution": 3},
+		{"age": 17, "constitution": 3},
+		{"age": 22, "constitution": 3},
+		{"age": 25, "constitution": 3},
+		{"age": 27, "constitution": 3},
+		{"age": 33, "constitution": 3}
+	]
+}

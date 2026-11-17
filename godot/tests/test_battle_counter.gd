@@ -15,7 +15,7 @@ func _stats() -> Dictionary:
 		"defense": 0,
 		"recovery": 0,
 		"skill": 20,
-		"mechanism": 0,
+		"constitution": 0,
 	}
 
 
@@ -41,7 +41,7 @@ func _make_enemy(speed := 10, defense := 0, move_type := "heavy", toughness := 2
 			"defense": defense,
 			"recovery": 0,
 			"skill": 0,
-			"mechanism": 0,
+			"constitution": 0,
 		},
 		"max_hp": 1000,
 		"toughness": toughness,

@@ -2,10 +2,12 @@ extends RefCounted
 
 const DataLoader = preload("res://core/data_loader.gd")
 const GameState = preload("res://core/game_state.gd")
+const Realms = preload("res://core/realms.gd")
 const Stats = preload("res://core/stats.gd")
 
 const ITEMS_PATH := "res://data/items.json"
 const PLAYER_PATH := "res://data/player.json"
+const PROGRESSION_PATH := "res://data/progression.json"
 const STAT_CAP := 50
 const EQUIP_SLOTS: Array[String] = ["weapon", "armor", "accessory"]
 const STAT_NAMES := {
@@ -14,7 +16,7 @@ const STAT_NAMES := {
 	"defense": "防御",
 	"recovery": "恢复",
 	"skill": "技巧",
-	"mechanism": "机关",
+	"constitution": "体质",
 }
 
 static var _items: Dictionary = {}
@@ -59,6 +61,38 @@ static func final_stats(base: Dictionary) -> Dictionary:
 				continue
 			result[key] = int(result[key]) + int(bonus_dict[key])
 	return result
+
+
+# 年龄轴：达到剧情年龄点时自动增加的体质（data/progression.json）。
+static func age_bonus_constitution() -> int:
+	var total := 0
+	for raw in _age_milestones():
+		var milestone: Dictionary = raw
+		if GameState.age >= int(milestone.get("age", 0)):
+			total += int(milestone.get("constitution", 0))
+	return total
+
+
+# 气血上限 = 基础气血 + 体质 × 每点气血（含加点、装备与年龄加成）。
+static func max_hp(base_stats: Dictionary) -> int:
+	var stats: Dictionary = final_stats(base_stats)
+	var constitution := int(stats.get("constitution", 0)) + age_bonus_constitution()
+	return Realms.max_hp_for(constitution, GameState.realm_id)
+
+
+static func _age_milestones() -> Array:
+	var text := FileAccess.get_file_as_string(PROGRESSION_PATH)
+	if text == "":
+		return []
+	var parsed = JSON.parse_string(text)
+	if not (parsed is Dictionary):
+		return []
+	var data: Dictionary = parsed
+	var raw: Variant = data.get("age_milestones", [])
+	if raw is Array:
+		var milestones: Array = raw
+		return milestones
+	return []
 
 
 static func add_stat(stat: String, amount: int) -> void:

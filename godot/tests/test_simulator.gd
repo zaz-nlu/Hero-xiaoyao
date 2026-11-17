@@ -70,7 +70,7 @@ func test_stalemate_reports_timeout_not_hang() -> void:
 			"defense": 0,
 			"recovery": 100,
 			"skill": 0,
-			"mechanism": 0,
+			"constitution": 0,
 		},
 		"max_hp": 100000,
 		"toughness": 99,

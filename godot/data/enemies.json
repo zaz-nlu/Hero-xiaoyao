@@ -10,7 +10,7 @@
 			"defense": 3,
 			"recovery": 1,
 			"skill": 3,
-			"mechanism": 1
+			"constitution": 1
 		},
 		"max_hp": 40,
 		"toughness": 2,
@@ -32,7 +32,7 @@
 			"defense": 8,
 			"recovery": 6,
 			"skill": 10,
-			"mechanism": 4
+			"constitution": 4
 		},
 		"max_hp": 300,
 		"toughness": 8,
@@ -55,7 +55,7 @@
 			"defense": 2,
 			"recovery": 1,
 			"skill": 3,
-			"mechanism": 1
+			"constitution": 1
 		},
 		"max_hp": 36,
 		"toughness": 2,
@@ -77,7 +77,7 @@
 			"defense": 4,
 			"recovery": 2,
 			"skill": 8,
-			"mechanism": 1
+			"constitution": 1
 		},
 		"max_hp": 60,
 		"toughness": 3,

@@ -17,6 +17,9 @@ static var mastery_total: Dictionary = {}
 static var unspent_points: int = INITIAL_POINTS
 static var toasts: Array = []
 static var dialogue_counters: Dictionary = {}
+static var realm_id: String = "lianti"
+static var realm_stage: int = 1
+static var age: int = 9
 
 
 static func set_flag(key: String, value: bool = true) -> void:
@@ -43,3 +46,6 @@ static func reset() -> void:
 	unspent_points = INITIAL_POINTS
 	toasts.clear()
 	dialogue_counters.clear()
+	realm_id = "lianti"
+	realm_stage = 1
+	age = 9
