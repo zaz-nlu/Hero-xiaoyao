@@ -4,7 +4,7 @@ const Texgen = preload("res://world/texgen.gd")
 const TownData = preload("res://world/town_data.gd")
 
 const TOWN_PATH := "res://data/town.json"
-const CAMERA_OFFSET := Vector3(0.0, 32.5, 42.5)
+const CAMERA_OFFSET := Vector3(0.0, 16.7, 37.5)
 
 
 func _new_town():

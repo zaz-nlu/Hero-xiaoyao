@@ -5,7 +5,9 @@ signal encounter_requested(enemy_id: String, count: int, first_strike: bool)
 const TOWN_PATH := "res://data/town.json"
 const NPC_DIALOGUES_PATH := "res://data/npc_dialogues.json"
 const SPEAKERS_PATH := "res://data/speakers.json"
-const CAMERA_OFFSET := Vector3(0.0, 32.5, 42.5)
+const CAMERA_OFFSET := Vector3(0.0, 16.7, 37.5)
+# Look slightly north of the player so the characters sit in the lower half of the frame.
+const LOOK_AHEAD := Vector3(0.0, 1.0, -4.0)
 const DEFEATED_NPC_IDS: Array[String] = ["ma_youwei", "bandit_1", "bandit_2"]
 const DECOR_FILES := {
 	"shrub": "prop_shrub.png",
@@ -1387,7 +1389,7 @@ func _camera_attributes() -> CameraAttributesPractical:
 	attributes.dof_blur_far_distance = dist + 14.0
 	attributes.dof_blur_far_transition = 22.0
 	attributes.dof_blur_near_enabled = true
-	attributes.dof_blur_near_distance = dist - 12.0
+	attributes.dof_blur_near_distance = dist - 9.0
 	attributes.dof_blur_near_transition = 8.0
 	attributes.dof_blur_amount = 0.08
 	return attributes
@@ -1408,7 +1410,7 @@ func update_camera(delta: float) -> void:
 	var weight: float = 1.0 - exp(-8.0 * delta)
 	_focus = _focus.lerp(target_pos, weight)
 	camera.position = camera.position.lerp(target_pos + CAMERA_OFFSET, weight)
-	camera.look_at_from_position(camera.position, _focus, Vector3.UP)
+	camera.look_at_from_position(camera.position, _focus + LOOK_AHEAD, Vector3.UP)
 
 
 func snap_camera() -> void:
@@ -1417,7 +1419,7 @@ func snap_camera() -> void:
 	var target_pos := _follow_position()
 	_focus = target_pos
 	camera.position = target_pos + CAMERA_OFFSET
-	camera.look_at_from_position(camera.position, _focus, Vector3.UP)
+	camera.look_at_from_position(camera.position, _focus + LOOK_AHEAD, Vector3.UP)
 
 
 func _spawn_position() -> Vector3:
