@@ -88,6 +88,13 @@ func test_list_by_state_in_json_order() -> void:
 	_reset()
 	Quests.start("scout")
 	assert_eq(Quests.list_by_state("active"), ["scout"], "active list holds the started quest")
-	assert_eq(Quests.list_by_state("none"), ["herbs", "spar"], "none list keeps the JSON order")
+	assert_eq(
+		Quests.list_by_state("none"),
+		[
+			"herbs", "spar", "smith_whet", "hunter_hunt", "fisher_box",
+			"woman_pin", "peddler_deliver", "herb_order",
+		],
+		"none list keeps the JSON order"
+	)
 	assert_eq(Quests.list_by_state("done"), [], "nothing is done yet")
 	GameState.reset()

@@ -5,9 +5,18 @@
 		"giver": "bun_vendor",
 		"summary": "包子摊老板托你去林子里采三株草药。",
 		"objectives": [
-			{"kind": "item", "key": "herb", "count": 3, "text": "采草药"}
+			{
+				"kind": "item",
+				"key": "herb",
+				"count": 3,
+				"text": "采草药"
+			}
 		],
-		"rewards": {"stats": {"recovery": 2}},
+		"rewards": {
+			"stats": {
+				"recovery": 2
+			}
+		},
 		"dialogue": {
 			"offer": "res://data/dialogues/quest_herbs_offer.json",
 			"active": "res://data/dialogues/quest_herbs_active.json",
@@ -20,11 +29,24 @@
 		"name": "试招",
 		"giver": "disciple",
 		"summary": "紫霞弟子想和你切磋一场，点到为止。",
-		"active_encounter": {"enemy": "disciple_spar", "count": 1, "first_strike": false},
+		"active_encounter": {
+			"enemy": "disciple_spar",
+			"count": 1,
+			"first_strike": false
+		},
 		"objectives": [
-			{"kind": "defeat", "key": "disciple_spar", "count": 1, "text": "与紫霞派弟子切磋"}
+			{
+				"kind": "defeat",
+				"key": "disciple_spar",
+				"count": 1,
+				"text": "与紫霞派弟子切磋"
+			}
 		],
-		"rewards": {"stats": {"skill": 2}},
+		"rewards": {
+			"stats": {
+				"skill": 2
+			}
+		},
 		"dialogue": {
 			"offer": "res://data/dialogues/quest_spar_offer.json",
 			"active": "res://data/dialogues/quest_spar_active.json",
@@ -39,14 +61,190 @@
 		"requires": "spar",
 		"summary": "林子里有个马匪探子，紫霞派弟子请你去解决他。",
 		"objectives": [
-			{"kind": "defeat", "key": "bandit_scout", "count": 1, "text": "解决马匪探子"}
+			{
+				"kind": "defeat",
+				"key": "bandit_scout",
+				"count": 1,
+				"text": "解决马匪探子"
+			}
 		],
-		"rewards": {"stats": {"power": 1, "defense": 1}, "items": {"yangyuan_pill": 1}},
+		"rewards": {
+			"stats": {
+				"power": 1,
+				"defense": 1
+			},
+			"items": {
+				"yangyuan_pill": 1
+			}
+		},
 		"dialogue": {
 			"offer": "res://data/dialogues/quest_scout_offer.json",
 			"active": "res://data/dialogues/quest_scout_active.json",
 			"ready": "res://data/dialogues/quest_scout_ready.json",
 			"done": "res://data/dialogues/quest_scout_done.json"
+		}
+	},
+	{
+		"id": "smith_whet",
+		"name": "砺剑",
+		"giver": "smith",
+		"summary": "铁匠缺铁矿石，请你到紫霞林采三块。",
+		"objectives": [
+			{
+				"kind": "item",
+				"key": "iron_ore",
+				"count": 3,
+				"text": "采集铁矿石"
+			}
+		],
+		"rewards": {
+			"mastery_exp": {
+				"basic_sword": 6
+			},
+			"items": {
+				"herb": 2
+			}
+		},
+		"dialogue": {
+			"offer": "res://data/dialogues/quest_smith_whet_offer.json",
+			"active": "res://data/dialogues/quest_smith_whet_active.json",
+			"ready": "res://data/dialogues/quest_smith_whet_ready.json"
+		}
+	},
+	{
+		"id": "hunter_hunt",
+		"name": "猎户的请求",
+		"giver": "hunter",
+		"summary": "猎户请你击退四名马匪。",
+		"objectives": [
+			{
+				"kind": "defeat",
+				"key": "bandit",
+				"count": 4,
+				"text": "击退马匪"
+			}
+		],
+		"rewards": {
+			"mastery_exp": {
+				"sidestep": 6
+			},
+			"items": {
+				"herb": 3
+			}
+		},
+		"dialogue": {
+			"offer": "res://data/dialogues/quest_hunter_hunt_offer.json",
+			"active": "res://data/dialogues/quest_hunter_hunt_active.json",
+			"ready": "res://data/dialogues/quest_hunter_hunt_ready.json"
+		}
+	},
+	{
+		"id": "fisher_box",
+		"name": "河中木匣",
+		"giver": "fisherman",
+		"summary": "渔夫丢了木匣，请你到南岸河边找回来。",
+		"objectives": [
+			{
+				"kind": "item",
+				"key": "old_box",
+				"count": 1,
+				"text": "找到木匣"
+			}
+		],
+		"rewards": {
+			"items": {
+				"herb": 2
+			},
+			"mastery_exp": {
+				"sidestep": 6
+			}
+		},
+		"dialogue": {
+			"offer": "res://data/dialogues/quest_fisher_box_offer.json",
+			"active": "res://data/dialogues/quest_fisher_box_active.json",
+			"ready": "res://data/dialogues/quest_fisher_box_ready.json"
+		}
+	},
+	{
+		"id": "woman_pin",
+		"name": "遗落的发簪",
+		"giver": "townswoman",
+		"summary": "村妇的发簪掉在林子里了。",
+		"objectives": [
+			{
+				"kind": "item",
+				"key": "jade_hairpin",
+				"count": 1,
+				"text": "找回发簪"
+			}
+		],
+		"rewards": {
+			"items": {
+				"herb": 2
+			},
+			"mastery_exp": {
+				"huifeng": 6
+			}
+		},
+		"dialogue": {
+			"offer": "res://data/dialogues/quest_woman_pin_offer.json",
+			"active": "res://data/dialogues/quest_woman_pin_active.json",
+			"ready": "res://data/dialogues/quest_woman_pin_ready.json"
+		}
+	},
+	{
+		"id": "peddler_deliver",
+		"name": "送货",
+		"giver": "peddler",
+		"summary": "货郎请你给酒馆伙计捎一句话。",
+		"objectives": [
+			{
+				"kind": "talk",
+				"key": "waiter",
+				"count": 1,
+				"text": "把话带给酒馆伙计"
+			}
+		],
+		"talk_dialogues": {
+			"waiter": "res://data/dialogues/quest_peddler_deliver_talk_waiter.json"
+		},
+		"rewards": {
+			"items": {
+				"herb": 3
+			},
+			"mastery_exp": {
+				"taiji": 6
+			}
+		},
+		"dialogue": {
+			"offer": "res://data/dialogues/quest_peddler_deliver_offer.json",
+			"active": "res://data/dialogues/quest_peddler_deliver_active.json",
+			"ready": "res://data/dialogues/quest_peddler_deliver_ready.json"
+		}
+	},
+	{
+		"id": "herb_order",
+		"name": "药铺的订单",
+		"giver": "herbalist",
+		"summary": "药铺掌柜要两株林中的人参。",
+		"objectives": [
+			{
+				"kind": "item",
+				"key": "ginseng",
+				"count": 2,
+				"text": "采集人参"
+			}
+		],
+		"rewards": {
+			"items": {
+				"yangyuan_pill": 1,
+				"herb": 2
+			}
+		},
+		"dialogue": {
+			"offer": "res://data/dialogues/quest_herb_order_offer.json",
+			"active": "res://data/dialogues/quest_herb_order_active.json",
+			"ready": "res://data/dialogues/quest_herb_order_ready.json"
 		}
 	}
 ]

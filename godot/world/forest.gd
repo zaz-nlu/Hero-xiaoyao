@@ -61,6 +61,7 @@ const AiAssets = preload("res://world/ai_assets.gd")
 const CharacterSprite = preload("res://world/character_sprite.gd")
 const PlayerMotion = preload("res://world/player_motion.gd")
 const Stealth = preload("res://world/stealth.gd")
+const Pickups = preload("res://world/pickups.gd")
 const GameState = preload("res://core/game_state.gd")
 const Progression = preload("res://core/progression.gd")
 
@@ -280,20 +281,7 @@ func _read_exits() -> void:
 
 
 func _read_pickups() -> void:
-	var pickup_data: Array = data.get("pickups", [])
-	for i in range(pickup_data.size()):
-		var pickup_value: Variant = pickup_data[i]
-		if not (pickup_value is Dictionary):
-			continue
-		var pickup: Dictionary = pickup_value
-		pickups.append({
-			"id": int(pickup.get("id", i + 1)),
-			"kind": str(pickup.get("kind", "herb")),
-			"item": str(pickup.get("item", "")),
-			"flag": str(pickup.get("flag", "")),
-			"pos": Vector2(float(pickup.get("x", 0.0)), float(pickup.get("z", 0.0))),
-			"node": null,
-		})
+	pickups = Pickups.parse_entries(data.get("pickups", []))
 
 
 func _read_hide_spots() -> void:
@@ -1044,37 +1032,9 @@ func _build_pickups() -> void:
 	var root := _pickup_root()
 	for pickup_value in pickups:
 		var pickup: Dictionary = pickup_value
-		if str(pickup.get("kind", "herb")) == "chest":
+		if str(pickup.get("kind", "")) == "chest":
 			continue
-		var flag := str(pickup.get("flag", ""))
-		if flag != "" and GameState.has_flag(flag):
-			continue
-		var pos_value: Variant = pickup.get("pos", Vector2.ZERO)
-		if not (pos_value is Vector2):
-			continue
-		var pos: Vector2 = pos_value
-		var node := Node3D.new()
-		node.name = "Herb_%d" % int(pickup.get("id", 1))
-		node.position = Vector3(pos.x, 0.0, pos.y)
-		var sprite := AiAssets.make_sprite(
-			"herb_white.png", 0.75, Vector3.ZERO, "HerbSprite"
-		)
-		if sprite == null:
-			sprite = AiAssets.make_sprite("prop_grass.png", 0.5, Vector3.ZERO, "HerbSprite")
-		if sprite != null:
-			node.add_child(sprite)
-		var glow := MeshInstance3D.new()
-		glow.name = "HerbGlow"
-		var sphere := SphereMesh.new()
-		sphere.radius = 0.07
-		sphere.height = 0.14
-		glow.mesh = sphere
-		glow.material_override = _emissive_material(Color("#d8e878"), 1.6)
-		glow.position = Vector3(0.0, 0.45, 0.0)
-		glow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		node.add_child(glow)
-		root.add_child(node)
-		pickup["node"] = node
+		Pickups.spawn(root, pickup)
 	_generate_deco_herbs(root)
 
 
@@ -1112,6 +1072,21 @@ func _generate_deco_herbs(root: Node3D) -> void:
 		if not _in_bounds(point):
 			continue
 		if _road_distance(point) < 1.0:
+			continue
+		# 采集点周围留出空地，避免装饰草药与可采集的人参/矿石叠在一起。
+		var pickup_hit := false
+		for collectable_value in pickups:
+			var collectable: Dictionary = collectable_value
+			if str(collectable.get("kind", "")) == "chest":
+				continue
+			var pos_value: Variant = collectable.get("pos", Vector2.ZERO)
+			if not (pos_value is Vector2):
+				continue
+			var pickup_pos: Vector2 = pos_value
+			if point.distance_to(pickup_pos) < HERB_CLEARANCE:
+				pickup_hit = true
+				break
+		if pickup_hit:
 			continue
 		var file: String = files[rng.randi_range(0, files.size() - 1)]
 		var height := rng.randf_range(0.6, 0.8)
@@ -1244,25 +1219,7 @@ func _collect(pickup: Dictionary) -> void:
 		_chest_anim_t = 0.0
 		_chest_swapped = false
 		return
-	if flag != "":
-		GameState.set_flag(flag)
-	Progression.give_item(str(pickup.get("item", "")))
-	_remove_pickup_node(pickup)
-
-
-func _remove_pickup_node(pickup: Dictionary) -> void:
-	var node_value: Variant = pickup.get("node", null)
-	pickup["node"] = null
-	if not (node_value is Node):
-		return
-	var node: Node = node_value
-	var parent: Node = node.get_parent()
-	if parent != null:
-		parent.remove_child(node)
-	if node.is_inside_tree():
-		node.queue_free()
-	else:
-		node.free()
+	Pickups.collect(pickup)
 
 
 func advance_chest(delta: float) -> void:
@@ -2220,7 +2177,7 @@ func update_prompt() -> void:
 		if str(pickup.get("kind", "")) == "chest":
 			prompt_label.text = "按 E 打开 宝箱"
 		else:
-			prompt_label.text = "按 E 采集 草药"
+			prompt_label.text = Pickups.prompt_text(pickup)
 		prompt_label.visible = true
 		return
 	var place := exit_at(player_pos)

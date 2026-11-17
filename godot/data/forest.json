@@ -21,9 +21,15 @@
     "wasteland": {"rect": [4, -23.8, 8, -22.2], "prompt": "按 E 前往荒山"}
   },
   "pickups": [
-    {"id": 1, "kind": "herb", "item": "herb", "x": 2.5, "z": 11.0, "flag": "herb_picked_1"},
-    {"id": 2, "kind": "herb", "item": "herb", "x": 12.5, "z": 5.5, "flag": "herb_picked_2"},
-    {"id": 3, "kind": "herb", "item": "herb", "x": -6.5, "z": -3.5, "flag": "herb_picked_3"},
+    {"id": 1, "kind": "herb", "item": "herb", "count": 1, "name": "草药", "sprite": "herb_white.png", "height": 0.75, "x": 2.5, "z": 11.0, "flag": "herb_picked_1", "glint": true},
+    {"id": 2, "kind": "herb", "item": "herb", "count": 1, "name": "草药", "sprite": "herb_white.png", "height": 0.75, "x": 12.5, "z": 5.5, "flag": "herb_picked_2", "glint": true},
+    {"id": 3, "kind": "herb", "item": "herb", "count": 1, "name": "草药", "sprite": "herb_white.png", "height": 0.75, "x": -6.5, "z": -3.5, "flag": "herb_picked_3", "glint": true},
+    {"id": 4, "kind": "pickup", "item": "iron_ore", "count": 1, "name": "铁矿石", "sprite": "prop_stones.png", "height": 0.55, "x": -7.0, "z": 2.0, "flag": "iron_ore_picked_1", "glint": true, "tint": [0.75, 0.9, 1.25]},
+    {"id": 5, "kind": "pickup", "item": "iron_ore", "count": 1, "name": "铁矿石", "sprite": "prop_stones.png", "height": 0.55, "x": 11.0, "z": 8.5, "flag": "iron_ore_picked_2", "glint": true, "tint": [0.75, 0.9, 1.25]},
+    {"id": 6, "kind": "pickup", "item": "iron_ore", "count": 1, "name": "铁矿石", "sprite": "prop_stones.png", "height": 0.55, "x": 1.0, "z": -14.0, "flag": "iron_ore_picked_3", "glint": true, "tint": [0.75, 0.9, 1.25]},
+    {"id": 7, "kind": "pickup", "item": "jade_hairpin", "count": 1, "name": "青玉发簪", "sprite": "spark", "height": 0.35, "x": 3.0, "z": 15.5, "flag": "hairpin_picked", "glint": true, "tint": [0.55, 1.0, 0.85]},
+    {"id": 8, "kind": "pickup", "item": "ginseng", "count": 1, "name": "人参", "sprite": "herb_ginseng.png", "height": 0.7, "x": -9.0, "z": -8.0, "flag": "ginseng_picked_1", "glint": true},
+    {"id": 9, "kind": "pickup", "item": "ginseng", "count": 1, "name": "人参", "sprite": "herb_ginseng.png", "height": 0.7, "x": 12.5, "z": -15.0, "flag": "ginseng_picked_2", "glint": true},
     {"id": 1, "kind": "chest", "item": "plain_sword", "x": 8.0, "z": -21.0, "flag": "chest_plain_sword_opened"}
   ],
   "hide_spots": [

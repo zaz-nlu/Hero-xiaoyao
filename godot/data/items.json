@@ -31,5 +31,25 @@
 		"kind": "consumable",
 		"desc": "调养元气的丹药，服下后体质永久 +1。",
 		"perm": {"constitution": 1}
+	},
+	"iron_ore": {
+		"name": "铁矿石",
+		"kind": "material",
+		"desc": "泛着青光的铁矿石，沉甸甸的。"
+	},
+	"old_box": {
+		"name": "木匣",
+		"kind": "material",
+		"desc": "渔夫丢失的旧木匣，里面有渔具和一块手帕。"
+	},
+	"jade_hairpin": {
+		"name": "青玉发簪",
+		"kind": "material",
+		"desc": "一支青玉发簪，簪头刻着小小的兰花。"
+	},
+	"ginseng": {
+		"name": "人参",
+		"kind": "material",
+		"desc": "红果子的野人参，须根完整。"
 	}
 }

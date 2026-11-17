@@ -46,6 +46,7 @@ const GameState = preload("res://core/game_state.gd")
 const Quests = preload("res://core/quests.gd")
 const Quest_flow = preload("res://core/quest_flow.gd")
 const Interaction = preload("res://world/interaction.gd")
+const Pickups = preload("res://world/pickups.gd")
 
 const QUEST_MARKER_HEIGHT := 3.0
 const QUEST_MARKER_INTERVAL := 0.5
@@ -65,6 +66,7 @@ void fragment() {
 
 var data: Dictionary = {}
 var blockers: Array = []
+var pickups: Array = []
 var npc_nodes: Dictionary = {}
 var npc_wander: Dictionary = {}
 var npc_dialogues: Dictionary = {}
@@ -140,6 +142,7 @@ func build() -> void:
 		push_warning("town: %s" % str(error_text))
 	blockers = TownData.footprints(data)
 	bounds_rect = _read_bounds()
+	_read_pickups()
 	_tavern_door_point = _tavern_entrance(0.8)
 	_tavern_return_point = _tavern_entrance(1.5)
 	_build_ground()
@@ -153,6 +156,7 @@ func build() -> void:
 	npc_dialogues = Interaction.load_npc_dialogues(NPC_DIALOGUES_PATH)
 	if not skip_actors:
 		_build_npcs()
+		_build_pickups()
 		_build_player()
 		snap_camera()
 	_refresh_quest_markers()
@@ -1756,6 +1760,25 @@ func _read_bounds() -> Rect2:
 	return Rect2(x0, z0, x1 - x0, z1 - z0)
 
 
+func _read_pickups() -> void:
+	pickups = Pickups.parse_entries(data.get("pickups", []))
+
+
+func _build_pickups() -> void:
+	var root := Node3D.new()
+	root.name = "Pickups"
+	add_child(root)
+	for pickup_value in pickups:
+		if not (pickup_value is Dictionary):
+			continue
+		var pickup: Dictionary = pickup_value
+		Pickups.spawn(root, pickup)
+
+
+func _nearest_pickup() -> Dictionary:
+	return Pickups.nearest(pickups, player_pos)
+
+
 # Point just outside the tavern door, `offset` world units in front of the facade.
 func _tavern_entrance(offset: float) -> Vector2:
 	var buildings: Array = data.get("buildings", [])
@@ -1875,6 +1898,10 @@ func try_interact() -> bool:
 		return false
 	var npc_id: String = nearby_npc()
 	if npc_id == "" or not npc_dialogues.has(npc_id):
+		var pickup := _nearest_pickup()
+		if not pickup.is_empty():
+			Pickups.collect(pickup)
+			return true
 		if _try_enter_tavern():
 			return true
 		return _try_enter_forest()
@@ -1971,6 +1998,11 @@ func update_prompt() -> void:
 		return
 	var npc_id: String = nearby_npc()
 	if npc_id == "":
+		var pickup := _nearest_pickup()
+		if not pickup.is_empty():
+			prompt_label.text = Pickups.prompt_text(pickup)
+			prompt_label.visible = true
+			return
 		if _near_tavern_door():
 			prompt_label.text = "按 E 进入酒馆"
 			prompt_label.visible = true
@@ -2036,6 +2068,8 @@ func _apply_quest_after(after: Dictionary) -> void:
 			Quests.start(quest_id)
 		"turn_in":
 			Quests.turn_in(quest_id)
+		"talk":
+			Quests.notify("talk", str(after.get("key", "")), 1)
 		"encounter":
 			var encounter_value: Variant = after.get("encounter", {})
 			if not (encounter_value is Dictionary):

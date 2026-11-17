@@ -90,7 +90,7 @@ func test_forest_data_loads() -> void:
 	assert_eq(float(bounds.get("z0", 0.0)), -24.0, "north bound")
 	assert_eq(float(bounds.get("z1", 0.0)), 24.0, "south bound")
 	var pickups: Array = data.get("pickups", [])
-	assert_eq(pickups.size(), 4, "three herbs and one chest")
+	assert_eq(pickups.size(), 10, "three herbs, three ores, a hairpin, two ginseng and a chest")
 	var hide_spots: Array = data.get("hide_spots", [])
 	assert_eq(hide_spots.size(), 25, "twenty-five grass hide spots")
 	var road_spots := 0

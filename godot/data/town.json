@@ -151,6 +151,9 @@
     {"kind": "grass_tuft", "x": -31.2, "z": 20.0},
     {"kind": "chrysanthemum", "x": -27.0, "z": 18.6}
   ],
+  "pickups": [
+    {"id": "old_box", "kind": "pickup", "item": "old_box", "count": 1, "name": "木匣", "sprite": "camp_crate.png", "height": 0.5, "x": 11.5, "z": 13.6, "flag": "old_box_picked", "glint": true}
+  ],
   "npcs": [
     {"id": "bun_vendor", "sprite": "vendor", "name": "包子摊老板", "x": 18.0, "z": 0.6, "facing": "down"},
     {"id": "disciple", "sprite": "zixia_disciple", "name": "紫霞派弟子", "x": 22.5, "z": 1.0, "facing": "left"},
