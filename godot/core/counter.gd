@@ -10,14 +10,15 @@ static func evaluate(
 	user_stats: Dictionary,
 	enemy_speed: int,
 	move: Dictionary,
-	first_strike: bool
+	first_strike: bool,
+	extra_counter: int = 0
 ) -> int:
 	if not martial.counters.has(str(move.get("type", ""))):
 		return Verdict.IMPOSSIBLE
 
 	var speed_delta: float = (int(user_stats["speed"]) - enemy_speed) / 5.0
 	var speed_mod: int = clampi(floori(speed_delta), -3, 3)
-	var counter_power: int = int(user_stats["skill"]) + int(martial.counter_level) + speed_mod
+	var counter_power: int = int(user_stats["skill"]) + int(martial.counter_level) + speed_mod + extra_counter
 	var gap: int = counter_power - int(move.get("threat", 0))
 	if gap < -5:
 		return Verdict.IMPOSSIBLE

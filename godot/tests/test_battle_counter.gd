@@ -188,12 +188,14 @@ func test_mastery_exp_gained() -> void:
 	var player: Variant = _make_player()
 	var enemy: Variant = _make_enemy(10, 0, "heavy", 99)
 	var b: Variant = _setup(player, enemy)
-	# learn() 后经验为 5；每次使用武学 +1、反制成功再 +2，共 +3/回合。
-	for i in range(3):
+	# learn() 后经验为 100；每次使用武学 +1、优势反制再 +1，共 +2/回合。
+	for i in range(49):
 		b.submit({"kind": "martial", "id": "m", "target": 0})
-	assert_eq(b.mastery.level("m"), 1, "14 exp is still level 1")
+	assert_eq(b.mastery.exp_of("m"), 198, "49 actions add 98 exp")
+	assert_eq(b.mastery.level("m"), 1, "198 exp is still level 1")
 	b.submit({"kind": "martial", "id": "m", "target": 0})
-	assert_eq(b.mastery.level("m"), 2, "17 exp reaches level 2")
+	assert_eq(b.mastery.exp_of("m"), 200, "the 50th action reaches 200 exp")
+	assert_eq(b.mastery.level("m"), 2, "200 exp reaches level 2")
 
 
 func test_preview_matches_resolution() -> void:

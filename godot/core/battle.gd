@@ -5,6 +5,7 @@ const Counter = preload("res://core/counter.gd")
 const Damage = preload("res://core/damage.gd")
 const Jianyi = preload("res://core/jianyi.gd")
 const EnemyAi = preload("res://core/enemy_ai.gd")
+const Mastery = preload("res://core/mastery.gd")
 const Realms = preload("res://core/realms.gd")
 
 enum State { ONGOING, WON, LOST, TIMEOUT }
@@ -19,12 +20,15 @@ var round: int = 1
 var intents: Array = []
 var known_moves: Dictionary = {}
 var log: Array[String] = []
+var uses: Dictionary = {}
+var pending_exp: int = 0
 
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _stunned_at_start: Array[bool] = []
 var _intent_from_queue: Array[bool] = []
 var _queues: Array = []
 var _current_action: Dictionary = {}
+var _settled: bool = false
 
 
 func _init(p_player, p_enemies: Array, p_loadout: Array, p_mastery, p_martials: Dictionary, p_seed: int, p_first_strike: bool) -> void:
@@ -105,12 +109,16 @@ func preview(martial_id: String, target: int) -> int:
 	var intent: Dictionary = intents[target]
 	if intent.is_empty():
 		return Counter.Verdict.IMPOSSIBLE
+	var extra_counter := 0
+	if mastery != null:
+		extra_counter = int(mastery.counter_bonus(martial_id))
 	return Counter.evaluate(
 		martials[martial_id],
 		player.stats,
 		int(enemy.stats["speed"]),
 		intent,
-		first_strike and round == 1
+		first_strike and round == 1,
+		extra_counter
 	)
 
 
@@ -203,6 +211,9 @@ func _validate(action: Dictionary) -> Dictionary:
 
 func _settle(action: Dictionary) -> void:
 	_current_action = action.duplicate()
+	var alive_before: Array[bool] = []
+	for enemy in enemies:
+		alive_before.append(not enemy.is_dead())
 	var order: Array = _actor_order()
 	var finished := false
 	for actor in order:
@@ -217,9 +228,83 @@ func _settle(action: Dictionary) -> void:
 		_regen_player()
 	for i in range(enemies.size()):
 		var enemy: Variant = enemies[i]
+		if i < alive_before.size() and alive_before[i] and enemy.is_dead():
+			_register_kill(i)
 		if i < _stunned_at_start.size() and _stunned_at_start[i] and not enemy.is_dead():
 			enemy.tick_stun()
 	_current_action = {}
+
+
+func _register_kill(index: int) -> void:
+	if index < 0 or index >= enemies.size():
+		return
+	var enemy: Variant = enemies[index]
+	if enemy.def == null:
+		return
+	pending_exp += maxi(0, int(enemy.def.exp))
+
+
+# 胜利后把本场击杀经验按武学使用次数分配；只生效一次，失败/超时不发放。
+func settle_exp() -> Dictionary:
+	if state() != State.WON or _settled:
+		return {}
+	_settled = true
+	var gained: Dictionary = {}
+	if pending_exp <= 0 or mastery == null:
+		return gained
+
+	var ids: Array[String] = []
+	var total_uses := 0
+	for raw_id in uses.keys():
+		var id := str(raw_id)
+		var count := int(uses[raw_id])
+		if count <= 0:
+			continue
+		ids.append(id)
+		total_uses += count
+	if total_uses <= 0:
+		return gained
+
+	ids.sort_custom(func(a: String, b: String) -> bool:
+		var uses_a := int(uses[a])
+		var uses_b := int(uses[b])
+		if uses_a != uses_b:
+			return uses_a > uses_b
+		return a < b
+	)
+
+	var shares: Dictionary = {}
+	var assigned := 0
+	for id in ids:
+		var share := roundi(float(pending_exp) * float(int(uses[id])) / float(total_uses))
+		shares[id] = share
+		assigned += share
+
+	var remainder := pending_exp - assigned
+	if remainder > 0:
+		var cursor := 0
+		while remainder > 0:
+			var id: String = ids[cursor % ids.size()]
+			shares[id] = int(shares[id]) + 1
+			remainder -= 1
+			cursor += 1
+	elif remainder < 0:
+		var overflow := -remainder
+		for id in ids:
+			if overflow <= 0:
+				break
+			var trimmed: int = mini(int(shares[id]), overflow)
+			shares[id] = int(shares[id]) - trimmed
+			overflow -= trimmed
+
+	for id in ids:
+		var amount := int(shares.get(id, 0))
+		if amount <= 0:
+			continue
+		mastery.add_exp(id, amount)
+		gained[id] = amount
+		_log("R%d exp %s +%d" % [round, id, amount])
+	return gained
 
 
 func _actor_order() -> Array:
@@ -263,6 +348,7 @@ func _player_step(action: Dictionary) -> void:
 		var martial: Variant = martials[id]
 		var dealt: int = Damage.hit(martial.power, mastery.damage_multiplier(id), player.stats, target, player.realm)
 		mastery.add_exp(id, 1)
+		uses[id] = int(uses.get(id, 0)) + 1
 		_log("R%d act:player martial %s -> e%d dmg %d" % [round, id, target_index, dealt])
 	elif kind == "jianyi":
 		var dealt: int = Jianyi.strike(player, target)
@@ -334,12 +420,16 @@ func _enemy_step(index: int) -> void:
 	var verdict: int = Counter.Verdict.IMPOSSIBLE
 	var perfect: bool = false
 	if counter_martial != null:
+		var extra_counter := 0
+		if mastery != null:
+			extra_counter = int(mastery.counter_bonus(counter_id))
 		verdict = Counter.evaluate(
 			counter_martial,
 			player.stats,
 			int(enemy.stats["speed"]),
 			intent,
-			first_strike and round == 1
+			first_strike and round == 1,
+			extra_counter
 		)
 		perfect = Counter.is_perfect(
 			verdict,
@@ -362,7 +452,12 @@ func _enemy_step(index: int) -> void:
 		stunned_now = enemy.apply_toughness(cost)
 		if verdict == Counter.Verdict.ADVANTAGE:
 			Jianyi.restore(player)
-		mastery.add_exp(counter_id, 2)
+		var counter_kind := "barely"
+		if verdict == Counter.Verdict.ADVANTAGE:
+			counter_kind = "perfect" if perfect else "advantage"
+		var counter_gain: int = Mastery.counter_exp(counter_kind)
+		if counter_gain > 0:
+			mastery.add_exp(counter_id, counter_gain)
 		if perfect:
 			Damage.hit(counter_martial.power, mastery.damage_multiplier(counter_id), player.stats, enemy, player.realm)
 			player.foresight_points = mini(int(player.foresight_max), int(player.foresight_points) + 1)

@@ -1,0 +1,13 @@
+{
+	"grades": {
+		"common": {"name": "普通", "color": "#e8e4d8", "exp_per_level": 100},
+		"fine": {"name": "精良", "color": "#7ccf6b", "exp_per_level": 150},
+		"rare": {"name": "稀有", "color": "#5da9ff", "exp_per_level": 200},
+		"epic": {"name": "史诗", "color": "#b783ff", "exp_per_level": 250},
+		"legendary": {"name": "传说", "color": "#ff9a3c", "exp_per_level": 300}
+	},
+	"damage_bonus_per_level": 0.04,
+	"counter_bonus_every": 3,
+	"counter_bonus_max": 3,
+	"counter_exp": {"advantage": 1, "perfect": 2, "barely": 0}
+}

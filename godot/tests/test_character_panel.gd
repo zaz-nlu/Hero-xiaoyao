@@ -1,6 +1,7 @@
 extends "res://tests/test_case.gd"
 
 const GameState = preload("res://core/game_state.gd")
+const Mastery = preload("res://core/mastery.gd")
 const Progression = preload("res://core/progression.gd")
 const StatusOverlay = preload("res://ui/status_overlay.gd")
 
@@ -131,16 +132,50 @@ func test_skills_tab_shows_slots_and_detail() -> void:
 	assert_true(advantage.contains("优势属性"), "the detail shows the advantage stat: %s" % advantage)
 	assert_true(advantage.contains("你的最强属性"), "skill matches the player's top stat")
 
-	GameState.mastery_total["basic_sword"] = 25
+	GameState.mastery_total["basic_sword"] = 250
 	overlay.refresh()
 	level_text = _text_of(overlay.character_panel, "DetailLevel")
 	assert_true(level_text.contains("Lv.2"), "stored mastery exp raises the level: %s" % level_text)
+	assert_true(level_text.contains("普通"), "the detail names the martial grade: %s" % level_text)
 	var exp_text: String = _text_of(overlay.character_panel, "DetailExp")
-	assert_true(exp_text.contains("10"), "the current level progress is shown: %s" % exp_text)
+	assert_true(exp_text.contains("50"), "the current level progress is shown: %s" % exp_text)
 
 	_press_button(overlay.character_panel, "MartialLearned_taiji")
 	var effect: String = _text_of(overlay.character_panel, "DetailEffect")
 	assert_true(effect.contains("反震"), "reflect effects are listed: %s" % effect)
+	overlay.free()
+	GameState.reset()
+
+
+func test_skills_show_grade_color_and_realm_cap() -> void:
+	var overlay: Variant = _open()
+	overlay.character_panel.select_tab(1)
+	_press_button(overlay.character_panel, "MartialLearned_basic_sword")
+	var name_node: Node = overlay.character_panel.find_child("DetailName", true, false)
+	assert_true(name_node is Label, "the detail name label exists")
+	if name_node is Label:
+		var name_label: Label = name_node
+		assert_eq(
+			name_label.get_theme_color("font_color"),
+			Mastery.grade_color("common"),
+			"the martial name uses its grade colour"
+		)
+	var grade_label: Node = overlay.character_panel.find_child("MartialGrade_basic_sword", true, false)
+	assert_true(grade_label != null, "the learned row shows its grade")
+	if grade_label != null:
+		assert_eq(str(grade_label.get("text")), "普通", "the grade name is shown next to the martial")
+
+	GameState.mastery_total["basic_sword"] = 500
+	overlay.refresh()
+	var exp_text: String = _text_of(overlay.character_panel, "DetailExp")
+	assert_true(
+		exp_text.contains("已达当前境界上限（Lv.5）"),
+		"a martial at the realm cap explains the cap: %s" % exp_text
+	)
+	var counter_text: String = _text_of(overlay.character_panel, "DetailCounterBonus")
+	assert_true(counter_text.contains("+1"), "level five adds one counter strength: %s" % counter_text)
+	var bonus_text: String = _text_of(overlay.character_panel, "DetailBonus")
+	assert_true(bonus_text.contains("+20%"), "level five adds twenty percent damage: %s" % bonus_text)
 	overlay.free()
 	GameState.reset()
 

@@ -1,11 +1,11 @@
 {
 	"realms": [
-		{"id": "lianti", "name": "炼体", "scale": 1.0, "hp_per_con": 15},
-		{"id": "renjie", "name": "人杰", "scale": 2.0, "hp_per_con": 30},
-		{"id": "diling", "name": "地灵", "scale": 3.5, "hp_per_con": 50},
-		{"id": "tianwang", "name": "天王", "scale": 5.0, "hp_per_con": 70},
-		{"id": "jiyi", "name": "极意", "scale": 6.5, "hp_per_con": 90},
-		{"id": "banshen", "name": "半神", "scale": 8.0, "hp_per_con": 105}
+		{"id": "lianti", "name": "炼体", "scale": 1.0, "hp_per_con": 15, "mastery_cap": 5},
+		{"id": "renjie", "name": "人杰", "scale": 2.0, "hp_per_con": 30, "mastery_cap": 7},
+		{"id": "diling", "name": "地灵", "scale": 3.5, "hp_per_con": 50, "mastery_cap": 8},
+		{"id": "tianwang", "name": "天王", "scale": 5.0, "hp_per_con": 70, "mastery_cap": 9},
+		{"id": "jiyi", "name": "极意", "scale": 6.5, "hp_per_con": 90, "mastery_cap": 10},
+		{"id": "banshen", "name": "半神", "scale": 8.0, "hp_per_con": 105, "mastery_cap": 10}
 	],
 	"stages": ["初期", "中期", "高期", "巅峰"],
 	"base_hp": 40

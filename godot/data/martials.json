@@ -2,6 +2,7 @@
 	{
 		"id": "basic_sword",
 		"name": "基础剑术",
+		"grade": "common",
 		"power": 10,
 		"counters": ["thrust"],
 		"initiative": 0,
@@ -12,6 +13,7 @@
 	{
 		"id": "parry",
 		"name": "格挡",
+		"grade": "common",
 		"power": 4,
 		"counters": ["sweep", "combo"],
 		"initiative": 0,
@@ -22,6 +24,7 @@
 	{
 		"id": "sidestep",
 		"name": "闪身",
+		"grade": "common",
 		"power": 3,
 		"counters": ["charge", "ranged"],
 		"initiative": 5,
@@ -32,6 +35,7 @@
 	{
 		"id": "taiji",
 		"name": "太极缠劲",
+		"grade": "rare",
 		"power": 5,
 		"counters": ["heavy"],
 		"initiative": 0,
@@ -42,6 +46,7 @@
 	{
 		"id": "qingyun",
 		"name": "青云剑法",
+		"grade": "fine",
 		"power": 12,
 		"counters": ["thrust"],
 		"initiative": 2,
@@ -52,6 +57,7 @@
 	{
 		"id": "huifeng",
 		"name": "回风剑",
+		"grade": "fine",
 		"power": 9,
 		"counters": ["sweep"],
 		"initiative": 2,
@@ -62,6 +68,7 @@
 	{
 		"id": "lianhuan",
 		"name": "连环快剑",
+		"grade": "fine",
 		"power": 8,
 		"counters": ["combo"],
 		"initiative": 6,
@@ -72,6 +79,7 @@
 	{
 		"id": "duanshi",
 		"name": "断势一击",
+		"grade": "rare",
 		"power": 14,
 		"counters": ["charge"],
 		"initiative": 0,
@@ -82,6 +90,7 @@
 	{
 		"id": "liuxing",
 		"name": "流星诀",
+		"grade": "rare",
 		"power": 8,
 		"counters": ["ranged"],
 		"initiative": 4,
@@ -92,6 +101,7 @@
 	{
 		"id": "jueshi",
 		"name": "绝世剑术",
+		"grade": "legendary",
 		"power": 18,
 		"counters": ["thrust", "combo"],
 		"initiative": 3,

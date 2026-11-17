@@ -2,6 +2,7 @@ extends RefCounted
 
 var id: String = ""
 var name: String = ""
+var grade: String = "common"
 var power: int = 0
 var counters: Array[String] = []
 var initiative: int = 0
@@ -15,6 +16,7 @@ static func from_dict(d: Dictionary) -> RefCounted:
 	var m: Variant = script.new()
 	m.id = str(d.get("id", ""))
 	m.name = str(d.get("name", ""))
+	m.grade = str(d.get("grade", "common"))
 	m.power = int(d.get("power", 0))
 	m.counters = _string_array(d.get("counters", []))
 	m.initiative = int(d.get("initiative", 0))

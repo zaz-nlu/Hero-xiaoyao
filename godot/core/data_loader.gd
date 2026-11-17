@@ -6,6 +6,8 @@ const Stats = preload("res://core/stats.gd")
 const MartialDef = preload("res://core/martial_def.gd")
 const EnemyDef = preload("res://core/enemy_def.gd")
 
+const MARTIAL_GRADES: Array[String] = ["common", "fine", "rare", "epic", "legendary"]
+
 
 static func parse_martials(json_text: String) -> Dictionary:
 	var defs := {}
@@ -112,6 +114,8 @@ static func _validate_martial(def) -> Array[String]:
 			errors.append("martial '%s': unknown counter type '%s'" % [def_id, str(counter_type)])
 	if not Stats.KEYS.has(def.advantage_stat):
 		errors.append("martial '%s': unknown advantage_stat '%s'" % [def_id, def.advantage_stat])
+	if not MARTIAL_GRADES.has(str(def.grade)):
+		errors.append("martial '%s': unknown grade '%s'" % [def_id, str(def.grade)])
 	return errors
 
 

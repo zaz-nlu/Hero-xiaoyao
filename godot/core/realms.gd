@@ -9,13 +9,14 @@ const DEFAULT_SCALE := 1.0
 const DEFAULT_HP_PER_CON := 15
 const DEFAULT_BASE_HP := 40
 const DEFAULT_STAGE_NAMES: Array[String] = ["初期", "中期", "高期", "巅峰"]
+const DEFAULT_MASTERY_CAP := 10
 const DEFAULT_REALMS: Array = [
-	{"id": "lianti", "name": "炼体", "scale": 1.0, "hp_per_con": 15},
-	{"id": "renjie", "name": "人杰", "scale": 2.0, "hp_per_con": 30},
-	{"id": "diling", "name": "地灵", "scale": 3.5, "hp_per_con": 50},
-	{"id": "tianwang", "name": "天王", "scale": 5.0, "hp_per_con": 70},
-	{"id": "jiyi", "name": "极意", "scale": 6.5, "hp_per_con": 90},
-	{"id": "banshen", "name": "半神", "scale": 8.0, "hp_per_con": 105},
+	{"id": "lianti", "name": "炼体", "scale": 1.0, "hp_per_con": 15, "mastery_cap": 5},
+	{"id": "renjie", "name": "人杰", "scale": 2.0, "hp_per_con": 30, "mastery_cap": 7},
+	{"id": "diling", "name": "地灵", "scale": 3.5, "hp_per_con": 50, "mastery_cap": 8},
+	{"id": "tianwang", "name": "天王", "scale": 5.0, "hp_per_con": 70, "mastery_cap": 9},
+	{"id": "jiyi", "name": "极意", "scale": 6.5, "hp_per_con": 90, "mastery_cap": 10},
+	{"id": "banshen", "name": "半神", "scale": 8.0, "hp_per_con": 105, "mastery_cap": 10},
 ]
 
 static var _realms: Dictionary = {}
@@ -44,6 +45,10 @@ static func scale(id: String) -> float:
 
 static func hp_per_con(id: String) -> int:
 	return int(get_realm(id).get("hp_per_con", DEFAULT_HP_PER_CON))
+
+
+static func mastery_cap(id: String) -> int:
+	return int(get_realm(id).get("mastery_cap", DEFAULT_MASTERY_CAP))
 
 
 static func base_hp() -> int:
@@ -94,15 +99,19 @@ static func _load_from_file() -> void:
 				continue
 			var realm_scale := float(entry.get("scale", DEFAULT_SCALE))
 			var realm_hp := int(entry.get("hp_per_con", DEFAULT_HP_PER_CON))
+			var realm_mastery_cap := int(entry.get("mastery_cap", DEFAULT_MASTERY_CAP))
 			if realm_scale <= 0.0:
 				realm_scale = DEFAULT_SCALE
 			if realm_hp <= 0:
 				realm_hp = DEFAULT_HP_PER_CON
+			if realm_mastery_cap <= 0:
+				realm_mastery_cap = DEFAULT_MASTERY_CAP
 			_realms[realm_id] = {
 				"id": realm_id,
 				"name": str(entry.get("name", realm_id)),
 				"scale": realm_scale,
 				"hp_per_con": realm_hp,
+				"mastery_cap": realm_mastery_cap,
 			}
 	var raw_stages: Variant = data.get("stages", [])
 	if raw_stages is Array:
@@ -124,6 +133,7 @@ static func _apply_defaults() -> void:
 			"name": str(entry.get("name", realm_id)),
 			"scale": float(entry.get("scale", DEFAULT_SCALE)),
 			"hp_per_con": int(entry.get("hp_per_con", DEFAULT_HP_PER_CON)),
+			"mastery_cap": int(entry.get("mastery_cap", DEFAULT_MASTERY_CAP)),
 		}
 	if _stages.is_empty():
 		var fallback: Array[String] = []

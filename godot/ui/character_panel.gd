@@ -467,6 +467,20 @@ func _build_skills_tab() -> void:
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.focus_mode = Control.FOCUS_NONE
 		_style_list_button(button, martial_id == _selected_martial)
+		var grade := _martial_grade(martial_id)
+		var grade_color := Mastery.grade_color(grade)
+		button.add_theme_color_override("font_color", grade_color)
+		button.add_theme_color_override("font_hover_color", grade_color.lightened(0.25))
+		var grade_label := _make_label(
+			button,
+			"MartialGrade_%s" % martial_id,
+			Vector2(150.0, 4.0),
+			Vector2(56.0, 18.0),
+			11,
+			grade_color
+		)
+		grade_label.text = Mastery.grade_name(grade)
+		grade_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		button.pressed.connect(_on_martial_selected.bind(martial_id))
 		_content_root.add_child(button)
 
@@ -501,6 +515,10 @@ func _build_martial_slot_card(index: int, martial_id: String) -> Control:
 
 	var name_label := _make_label(card, "SlotName_%d" % index, Vector2(4.0, 72.0), Vector2(96.0, 24.0), 13, Hud.TEXT)
 	name_label.text = "空" if martial_id == "" else _martial_name(martial_id)
+	if martial_id != "":
+		name_label.add_theme_color_override(
+			"font_color", Mastery.grade_color(_martial_grade(martial_id))
+		)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	return card
@@ -522,17 +540,22 @@ func _build_martial_detail(martial_id: String) -> void:
 		_make_label(panel, "DetailEmpty", Vector2(14.0, 14.0), Vector2(320.0, 24.0), 15, Hud.MUTED).text = "未习得任何武学"
 		return
 
-	var name_label := _make_label(panel, "DetailName", Vector2(14.0, 10.0), Vector2(328.0, 26.0), 20, Hud.GOLD_BRIGHT)
+	var grade := str(def.grade)
+	var grade_color := Mastery.grade_color(grade)
+	var name_label := _make_label(panel, "DetailName", Vector2(14.0, 10.0), Vector2(328.0, 26.0), 20, grade_color)
 	name_label.text = str(def.name)
 
-	var exp := maxi(int(GameState.mastery_total.get(martial_id, 0)), Mastery.exp_to_reach(1))
-	var progress: Dictionary = Mastery.progress_in_level(exp)
+	var per_level := Mastery.grade_per_level(grade)
+	var cap := mini(Realms.mastery_cap(GameState.realm_id), Balance.MAX_LEVEL)
+	var exp := maxi(int(GameState.mastery_total.get(martial_id, 0)), per_level)
+	var progress: Dictionary = Mastery.progress_in_level(exp, grade, cap)
 	var level := int(progress.get("level", 0))
 	var into := int(progress.get("into", 0))
 	var need := int(progress.get("need", 0))
+	var capped := bool(progress.get("capped", false))
 
 	_make_label(panel, "DetailLevel", Vector2(14.0, 40.0), Vector2(220.0, 20.0), 15, Hud.FORESIGHT_CYAN).text = \
-		"熟练度 Lv.%d" % level
+		"熟练度 Lv.%d（%s）" % [level, Mastery.grade_name(grade)]
 
 	var bar := ProgressBar.new()
 	bar.name = "DetailExpBar"
@@ -547,7 +570,9 @@ func _build_martial_detail(martial_id: String) -> void:
 	panel.add_child(bar)
 
 	var exp_label := _make_label(panel, "DetailExp", Vector2(14.0, 78.0), Vector2(328.0, 18.0), 12, Hud.MUTED)
-	if need <= 0:
+	if capped:
+		exp_label.text = "已达当前境界上限（Lv.%d），突破后可继续" % level
+	elif need <= 0:
 		exp_label.text = "已满级"
 	else:
 		exp_label.text = "%d / %d" % [into, need]
@@ -580,15 +605,18 @@ func _build_martial_detail(martial_id: String) -> void:
 	_make_label(panel, "DetailCounterLevel", Vector2(14.0, 196.0), Vector2(328.0, 20.0), 14, Hud.TEXT).text = \
 		"反制等级：%d" % int(def.counter_level)
 
-	var y := 220.0
+	_make_label(panel, "DetailCounterBonus", Vector2(14.0, 220.0), Vector2(328.0, 20.0), 14, BONUS_COLOR).text = \
+		"反制强度 +%d" % Mastery.counter_bonus_at_level(level)
+
+	var y := 244.0
 	var effect_text := _effect_text(def)
 	if effect_text != "":
 		_make_label(panel, "DetailEffect", Vector2(14.0, y), Vector2(328.0, 20.0), 14, WARN_COLOR).text = effect_text
 		y += 24.0
 
-	var bonus_percent := int(roundf(Balance.LEVEL_BONUS * float(level) * 100.0))
+	var bonus_percent := int(roundf(Mastery.damage_bonus_at_level(level) * 100.0))
 	_make_label(panel, "DetailBonus", Vector2(14.0, y), Vector2(328.0, 20.0), 14, BONUS_COLOR).text = \
-		"当前伤害加成：+%d%%" % bonus_percent
+		"伤害加成 +%d%%" % bonus_percent
 
 
 func _on_martial_selected(martial_id: String) -> void:
@@ -912,6 +940,13 @@ func _martial_name(martial_id: String) -> String:
 	if def != null:
 		return str(def.name)
 	return martial_id
+
+
+func _martial_grade(martial_id: String) -> String:
+	var def: Variant = _martial_def(martial_id)
+	if def != null:
+		return str(def.grade)
+	return "common"
 
 
 func _martial_glyph(martial_id: String) -> String:

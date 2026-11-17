@@ -70,6 +70,7 @@ var dialogue_view: Variant = null
 
 var _current_enemy_id: String = ""
 var _win_dialogue_played: bool = false
+var _exp_settled: bool = false
 var _log_seen: int = 0
 var _last_hp_player: int = 0
 var _last_hp_enemies: Array = []
@@ -172,6 +173,7 @@ func start(
 	for i in range(enemy_count):
 		enemies.append(Unit.from_enemy(enemy_def))
 	var mastery: Variant = Mastery.new()
+	mastery.set_grades(_martial_grades(martials))
 	mastery.import_exp(GameState.mastery_total)
 	for raw_learned_id in learned:
 		mastery.learn(str(raw_learned_id))
@@ -188,6 +190,7 @@ func start(
 	last_error = ""
 	_current_enemy_id = enemy_id
 	_win_dialogue_played = false
+	_exp_settled = false
 	_reset_stage_state()
 	_rebuild_enemy_groups()
 	_rebuild_martial_buttons()
@@ -252,7 +255,45 @@ func refresh() -> void:
 	_process_new_log()
 	_maybe_play_win_dialogue()
 	_refresh_return_button()
+	_settle_mastery_exp()
 	_sync_mastery_total()
+
+
+func _martial_grades(martials: Dictionary) -> Dictionary:
+	var grades := {}
+	for raw_id in martials.keys():
+		var id := str(raw_id)
+		grades[id] = str(martials[raw_id].grade)
+	return grades
+
+
+func _settle_mastery_exp() -> void:
+	if _exp_settled or battle == null:
+		return
+	if battle.state() != Battle.State.WON:
+		return
+	_exp_settled = true
+	var levels_before := {}
+	for id in battle.martials.keys():
+		levels_before[str(id)] = int(battle.mastery.level(str(id)))
+	var gained: Dictionary = battle.settle_exp()
+	if gained.is_empty():
+		return
+	var parts := PackedStringArray()
+	for raw_id in gained.keys():
+		var id := str(raw_id)
+		parts.append("%s +%d" % [_martial_name(id), int(gained[raw_id])])
+	if not parts.is_empty():
+		Progression.push_toast("熟练度 " + "、".join(parts))
+	var upgrades := PackedStringArray()
+	for raw_id in gained.keys():
+		var id := str(raw_id)
+		var after := int(battle.mastery.level(id))
+		var before := int(levels_before.get(id, after))
+		if after > before:
+			upgrades.append("%s 升至 Lv.%d" % [_martial_name(id), after])
+	if not upgrades.is_empty():
+		Progression.push_toast("、".join(upgrades))
 
 
 func _sync_mastery_total() -> void:
@@ -1570,6 +1611,10 @@ func _martial_tooltip(id: String) -> String:
 	var martial: Variant = battle.martials[id]
 	var lines := PackedStringArray()
 	lines.append(str(martial.name))
+	var mastery_level := 0
+	if battle.mastery != null:
+		mastery_level = int(battle.mastery.level(id))
+	lines.append("品阶：%s · Lv.%d" % [Mastery.grade_name(str(martial.grade)), mastery_level])
 	lines.append("伤害 %d · 先手 %d" % [int(martial.power), int(martial.initiative)])
 	var counters := PackedStringArray()
 	for raw_counter_id in martial.counters:

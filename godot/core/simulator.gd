@@ -78,6 +78,8 @@ static func run(config: Dictionary) -> Dictionary:
 			stats_override
 		)
 		_run_battle(battle, bot, bot_rng)
+		if battle.state() == Battle.State.WON:
+			battle.settle_exp()
 		total_rounds += int(battle.round)
 		var max_hp := float(battle.player.max_hp)
 		if max_hp > 0.0:
@@ -149,11 +151,20 @@ static func _make_battle(
 	for i in range(enemy_count):
 		enemies.append(Unit.from_enemy(enemy_def))
 	var mastery: Variant = Mastery.new()
+	mastery.set_grades(_martial_grades(martials))
 	for raw_learned in learned:
 		mastery.learn(str(raw_learned))
 	for raw_id in loadout:
 		mastery.learn(str(raw_id))
 	return Battle.new(player, enemies, loadout, mastery, martials, seed_value, first_strike)
+
+
+static func _martial_grades(martials: Dictionary) -> Dictionary:
+	var grades := {}
+	for raw_id in martials.keys():
+		var id := str(raw_id)
+		grades[id] = str(martials[raw_id].grade)
+	return grades
 
 
 static func _run_battle(battle: Variant, bot: String, rng: RandomNumberGenerator) -> void:
