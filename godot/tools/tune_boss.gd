@@ -43,7 +43,8 @@ func _init() -> void:
 		boss.stats["defense"] = int(cfg[7])
 		boss.max_hp = int(cfg[8])
 		boss.toughness = int(cfg[9])
-		boss.weak_moves = [str(cfg[10])]
+		var weak: Array[String] = [str(cfg[10])]
+		boss.weak_moves = weak
 		var line := "k%d/%d l%d/%d c%d/%d rec%d def%d hp%d tough%d weak=%s :" % cfg
 		for label in ["init", "grown"]:
 			for bot in ["human", "smart"]:

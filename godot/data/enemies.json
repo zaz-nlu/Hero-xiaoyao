@@ -28,19 +28,19 @@
 		"stats": {
 			"power": 9,
 			"speed": 7,
-			"defense": 7,
-			"recovery": 3,
+			"defense": 6,
+			"recovery": 1,
 			"skill": 8,
 			"constitution": 17
 		},
 		"toughness": 8,
 		"stun_turns": 2,
 		"moves": [
-			{"id": "kaishan", "name": "开山", "type": "heavy", "threat": 22, "power": 16},
-			{"id": "luandao", "name": "乱刀横扫", "type": "sweep", "threat": 18, "power": 11},
-			{"id": "cihou", "name": "刺喉", "type": "thrust", "threat": 20, "power": 13}
+			{"id": "kaishan", "name": "开山", "type": "heavy", "threat": 22, "power": 20},
+			{"id": "luandao", "name": "乱刀横扫", "type": "sweep", "threat": 21, "power": 16},
+			{"id": "cihou", "name": "刺喉", "type": "thrust", "threat": 19, "power": 16}
 		],
-		"weak_moves": ["kaishan"]
+		"weak_moves": ["cihou"]
 	},
 	{
 		"id": "bandit_scout",

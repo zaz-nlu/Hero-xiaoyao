@@ -91,7 +91,7 @@ func test_probe_reveals_weak_in_ui() -> void:
 		view.dialogue_view.advance()
 		guard += 1
 	view.press_action({"kind": "probe", "target": 0})
-	assert_true(view.weak_labels[0].text.contains("开山"), "weakness is revealed after probing")
+	assert_true(view.weak_labels[0].text.contains("刺喉"), "weakness is revealed after probing")
 	view.free()
 
 

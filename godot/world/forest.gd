@@ -2052,8 +2052,9 @@ func _build_player() -> void:
 	var return_value: Variant = GameState.forest_return_pos
 	if return_value is Vector2:
 		var return_pos: Vector2 = return_value
-		px = return_pos.x
-		pz = return_pos.y
+		if _spawn_walkable(return_pos):
+			px = return_pos.x
+			pz = return_pos.y
 	var character := CharacterSprite.new()
 	character.name = "Player"
 	character.setup("ren_xiaoyao")
@@ -2063,6 +2064,13 @@ func _build_player() -> void:
 	player = character
 	player_pos = Vector2(px, pz)
 	follow_target = player
+
+
+func _spawn_walkable(point: Vector2) -> bool:
+	if bounds_rect.size != Vector2.ZERO \
+			and not bounds_rect.grow(-PlayerMotion.RADIUS).has_point(point):
+		return false
+	return not PlayerMotion.blocked(point, blockers)
 
 
 func set_input_override(v: Variant) -> void:

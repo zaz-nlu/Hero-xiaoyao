@@ -1711,8 +1711,9 @@ func _build_player() -> void:
 	var return_value: Variant = GameState.town_return_pos
 	if return_value is Vector2:
 		var return_pos: Vector2 = return_value
-		px = return_pos.x
-		pz = return_pos.y
+		if _spawn_walkable(return_pos):
+			px = return_pos.x
+			pz = return_pos.y
 	var start_y: float = TownData.ground_height(data, px, pz)
 	var character := CharacterSprite.new()
 	character.name = "Player"
@@ -1732,6 +1733,15 @@ func _spawn_data() -> Dictionary:
 		var spawn: Dictionary = spawn_value
 		return spawn
 	return {}
+
+
+func _spawn_walkable(point: Vector2) -> bool:
+	if bounds_rect.size != Vector2.ZERO \
+			and not bounds_rect.grow(-PlayerMotion.RADIUS).has_point(point):
+		return false
+	var all_blockers: Array = blockers.duplicate()
+	all_blockers.append_array(TownData.extra_blockers(data))
+	return not PlayerMotion.blocked(point, all_blockers)
 
 
 func _read_bounds() -> Rect2:

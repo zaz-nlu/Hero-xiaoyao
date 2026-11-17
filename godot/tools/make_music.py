@@ -527,6 +527,37 @@ def make_battle_boss():
     return tr.finish(0.125)
 
 
+def make_title():
+    root, steps = 57, MINOR_PENT
+    tr = Track(16, 66)
+    rng = np.random.default_rng(83)
+    prog = [0, 0, 3, 3, 2, 2, 1, 0, 0, 0, 3, 3, 4, 3, 1, 0]
+    tr.place(gong(88.0, 4.5), 0.0, 0.8)
+    tr.place(gong(88.0, 4.5), tr.at(8, 0), 0.7)
+    for b, c in enumerate(prog):
+        tr.place(pad(hz(note_midi(root, steps, c - 5)), 4 * tr.spb * 1.1, b), tr.at(b, 0), 1.0)
+        tr.place(pad(hz(note_midi(root, steps, c)), 4 * tr.spb * 1.1, b + 4), tr.at(b, 0), 0.6)
+        for j in range(4):
+            idx = c + 5 + [0, 2, 4, 2][j]
+            tr.place(pluck(hz(note_midi(root, steps, idx)), 2.6, 0.62, 1.6, b * 4 + j), tr.at(b, j), 0.36)
+        if b >= 8:
+            tr.place(taiko(1.0, 58, 0.8, b), tr.at(b, 0), 0.55)
+            tr.place(taiko(0.8, 66, 0.5, b + 1), tr.at(b, 2), 0.4)
+    for p in range(4):
+        events = melody_bars(rng, prog[p * 4:(p + 1) * 4], 6, 11, rhythms=[[4], [2, 2], [3, 1], [2, 1, 1]], rest_prob=0.0, start=8)
+        for q, evs in enumerate(events):
+            bar = p * 4 + q
+            for beat, idx, d in evs:
+                m = note_midi(root, steps, idx + 5)
+                tr.place(erhu(hz(m), d * tr.spb * 0.99, slide_from=0.95, attack=0.14, release=0.3, seed=bar), tr.at(bar, beat), 0.4)
+                if p >= 2:
+                    tr.place(flute(hz(m + 12), d * tr.spb * 0.95, breath=0.12, attack=0.1, release=0.3, seed=bar + 50), tr.at(bar, beat), 0.28)
+    for b in (3, 7, 11, 15):
+        gliss(tr, b, 3.0, root, steps, 5 + prog[b], 7, 0.3, step=0.06, seed=b)
+    tr.reverb(2.8, 0.38, seed=29, damp=4000)
+    return tr.finish(0.11)
+
+
 def stinger(notes, instrument, total, gap, **kw):
     tr = Track(1, 60)
     tr.n = int(total * SR)
@@ -638,6 +669,7 @@ TRACKS = {
     "music_tavern_brawl": make_tavern_brawl,
     "music_forest": make_forest,
     "amb_forest_birds": make_forest_birds,
+    "music_title": make_title,
     "music_battle": make_battle,
     "music_battle_boss": make_battle_boss,
     "jingle_victory": make_victory,

@@ -4,28 +4,37 @@ const GameState = preload("res://core/game_state.gd")
 const Quests = preload("res://core/quests.gd")
 const Progression = preload("res://core/progression.gd")
 const AudioManager = preload("res://ui/audio_manager.gd")
+const SaveSystem = preload("res://core/save_system.gd")
 
 const TOWN_SCENE := "res://world/town.gd"
 const TAVERN_SCENE := "res://world/tavern.gd"
 const FOREST_SCENE := "res://world/forest.gd"
 const BATTLE_SCENE := "res://ui/battle_view.gd"
 const STATUS_OVERLAY_SCENE := "res://ui/status_overlay.gd"
+const PAUSE_MENU_SCENE := "res://ui/pause_menu.gd"
 const BOSS_ENEMY_ID := "ma_youwei"
+const AUTOSAVE_INTERVAL := 120.0
+const SAVE_KINDS: Array[String] = ["town", "tavern", "forest"]
 
 var current: Node = null
 var current_kind: String = ""
 var overlay: Variant = null
 var audio: Variant = null
+var pause_menu: Variant = null
+var save_dir: String = SaveSystem.SAVE_DIR
 
 var _battle_enemy: String = ""
 var _battle_count: int = 0
 var _battle_origin: String = ""
 var _panel_was_open: bool = false
 var _seen_toasts: Array = []
+var _loading_slot: bool = false
+var _autosave_timer: float = 0.0
 
 
 func _ready() -> void:
 	_ensure_overlay()
+	_ensure_pause_menu()
 	show_town()
 	if not GameState.has_flag("intro_hint_shown"):
 		GameState.set_flag("intro_hint_shown")
@@ -35,6 +44,7 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	_process_toast_sfx()
+	_tick_playtime(_delta)
 	if overlay == null or current == null:
 		return
 	var panel_open: bool = overlay.is_panel_open()
@@ -70,11 +80,143 @@ func _toast_text(node: Node) -> String:
 	return ""
 
 
+func _tick_playtime(delta: float) -> void:
+	if current == null or not SAVE_KINDS.has(current_kind):
+		return
+	var tree := get_tree()
+	if tree != null and tree.paused:
+		return
+	GameState.playtime += maxf(0.0, delta)
+	_autosave_timer += maxf(0.0, delta)
+	if _autosave_timer >= AUTOSAVE_INTERVAL:
+		_autosave_timer = 0.0
+		_autosave_now()
+
+
+func _schedule_autosave() -> void:
+	if _loading_slot:
+		return
+	if is_inside_tree():
+		call_deferred("_autosave_now")
+	else:
+		_autosave_now()
+
+
+func _autosave_now() -> void:
+	if _loading_slot or not can_save():
+		return
+	save_to_slot("auto", true)
+
+
+func can_save() -> bool:
+	if current == null:
+		return false
+	if not SAVE_KINDS.has(current_kind):
+		return false
+	if current.has_method("is_dialogue_active") and bool(current.call("is_dialogue_active")):
+		return false
+	if current_kind == "tavern" and current.has_method("is_cutscene_running") \
+			and bool(current.call("is_cutscene_running")):
+		return false
+	if overlay != null and overlay.is_panel_open():
+		return false
+	return true
+
+
+func current_location() -> Dictionary:
+	var pos := Vector2.ZERO
+	if current != null:
+		var value: Variant = current.get("player_pos")
+		if value is Vector2:
+			pos = value
+	return {"kind": current_kind, "pos": [pos.x, pos.y]}
+
+
+func save_to_slot(slot: String, silent: bool = false) -> bool:
+	if not can_save():
+		if not silent:
+			Progression.push_toast("现在无法存档")
+		return false
+	var ok := SaveSystem.save(slot, current_location(), {}, save_dir)
+	if ok:
+		if not silent:
+			Progression.push_toast("已存档")
+			_play_sfx("sfx_confirm")
+		if pause_menu != null:
+			pause_menu.refresh_slots()
+	elif not silent:
+		Progression.push_toast("存档失败")
+	return ok
+
+
+func load_from_slot(slot: String) -> bool:
+	var data := SaveSystem.load_slot(slot, save_dir)
+	if data.is_empty():
+		Progression.push_toast("存档已损坏")
+		return false
+	var state: Variant = data.get("state", {})
+	if not (state is Dictionary):
+		Progression.push_toast("存档已损坏")
+		return false
+	_loading_slot = true
+	_autosave_timer = 0.0
+	GameState.from_dict(state)
+	var location: Variant = data.get("location", {})
+	var kind := "town"
+	var pos: Variant = null
+	if location is Dictionary:
+		kind = str((location as Dictionary).get("kind", "town"))
+		pos = _read_location_pos((location as Dictionary).get("pos", null))
+	match kind:
+		"tavern":
+			if pos is Vector2:
+				GameState.tavern_return_pos = pos
+			show_tavern()
+		"forest":
+			if pos is Vector2:
+				GameState.forest_return_pos = pos
+			show_forest()
+		_:
+			if pos is Vector2:
+				GameState.town_return_pos = pos
+			show_town()
+	_loading_slot = false
+	if pause_menu != null:
+		pause_menu.close()
+	Progression.push_toast("读档完成")
+	return true
+
+
+func _read_location_pos(value: Variant) -> Variant:
+	if value is Vector2:
+		return value
+	if value is Array and (value as Array).size() >= 2:
+		var array: Array = value
+		return Vector2(float(array[0]), float(array[1]))
+	return null
+
+
+func go_to_title() -> void:
+	if pause_menu != null:
+		pause_menu.close()
+	push_warning("go_to_title: 标题页尚未实现")
+
+
+func _ensure_pause_menu() -> void:
+	if pause_menu != null:
+		return
+	pause_menu = load(PAUSE_MENU_SCENE).new()
+	pause_menu.name = "PauseMenu"
+	pause_menu.game = self
+	add_child(pause_menu)
+
+
 func _ensure_audio() -> void:
 	if audio != null:
 		return
 	audio = AudioManager.new()
 	audio.name = "Audio"
+	audio.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(audio)
 
 
@@ -122,6 +264,7 @@ func show_town() -> void:
 	overlay.enabled = true
 	_play_music("music_town")
 	_play_ambience("")
+	_schedule_autosave()
 
 
 func show_tavern() -> void:
@@ -141,6 +284,7 @@ func show_tavern() -> void:
 	overlay.enabled = true
 	_play_tavern_music(str(tavern.current_state()))
 	_play_ambience("")
+	_schedule_autosave()
 
 
 func show_forest() -> void:
@@ -159,6 +303,7 @@ func show_forest() -> void:
 	overlay.enabled = true
 	_play_music("music_forest")
 	_play_ambience("amb_forest_birds")
+	_schedule_autosave()
 
 
 func _on_tavern_state_changed(new_state: String) -> void:

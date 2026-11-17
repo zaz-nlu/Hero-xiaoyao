@@ -52,6 +52,7 @@ var current_npc_id: String = ""
 var state: String = "normal"
 var skip_actors: bool = false
 var input_blocked: bool = false
+var cutscene_running: bool = false
 var exit_rect: Rect2 = Rect2()
 var exit_prompt: String = "按 E 走出酒馆"
 
@@ -1381,6 +1382,13 @@ func _build_player() -> void:
 		px = float(spawn.get("x", px))
 		pz = float(spawn.get("z", pz))
 		facing = str(spawn.get("facing", facing))
+	var override_value: Variant = GameState.tavern_return_pos
+	if override_value is Vector2:
+		var override_pos: Vector2 = override_value
+		GameState.tavern_return_pos = null
+		if _spawn_walkable(override_pos):
+			px = override_pos.x
+			pz = override_pos.y
 	var character := CharacterSprite.new()
 	character.name = "Player"
 	character.setup("ren_xiaoyao")
@@ -1390,6 +1398,17 @@ func _build_player() -> void:
 	player = character
 	player_pos = Vector2(px, pz)
 	follow_target = player
+
+
+func _spawn_walkable(point: Vector2) -> bool:
+	if bounds_rect.size != Vector2.ZERO \
+			and not bounds_rect.grow(-PlayerMotion.RADIUS).has_point(point):
+		return false
+	return not PlayerMotion.blocked(point, blockers)
+
+
+func is_cutscene_running() -> bool:
+	return cutscene_running
 
 
 func set_input_override(v: Variant) -> void:
