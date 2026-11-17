@@ -528,6 +528,10 @@ func _on_battle_finished(result: String) -> void:
 			GameState.forest_return_pos = null
 		show_forest()
 	elif origin == "tavern":
+		if result != "won" and not GameState.has_flag("defeat_hint_shown"):
+			# First loss in the tavern: nudge the player towards preparing (forest, side quests).
+			GameState.set_flag("defeat_hint_shown")
+			Progression.push_toast("也许该先去紫霞林历练一番，再来对付他们")
 		show_tavern()
 	else:
 		show_town()

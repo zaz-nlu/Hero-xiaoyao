@@ -16,8 +16,8 @@
 		"toughness": 2,
 		"stun_turns": 1,
 		"moves": [
-			{"id": "bandit_sweep", "name": "乱砍", "type": "sweep", "threat": 11, "power": 9},
-			{"id": "bandit_heavy", "name": "力劈", "type": "heavy", "threat": 12, "power": 11}
+			{"id": "bandit_sweep", "name": "乱砍", "type": "sweep", "threat": 11, "power": 12},
+			{"id": "bandit_heavy", "name": "力劈", "type": "heavy", "threat": 12, "power": 14}
 		],
 		"weak_moves": []
 	},
