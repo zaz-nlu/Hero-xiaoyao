@@ -12,9 +12,11 @@ func _new_game() -> Variant:
 	return game
 
 
-func _enter_boss_battle(game: Variant) -> void:
-	var town: Variant = game.current
-	town.encounter_requested.emit("ma_youwei", 1, false)
+func _enter_tavern_battle(game: Variant) -> void:
+	GameState.set_flag("bandits_entered")
+	game.show_tavern()
+	var tavern: Variant = game.current
+	tavern.encounter_requested.emit("ma_youwei", 1, false)
 
 
 func _finish_dialogue(view: Variant) -> void:
@@ -33,78 +35,91 @@ func test_show_town_creates_town() -> void:
 	var game: Variant = _new_game()
 	assert_eq(str(game.current_kind), "town", "the game starts in the town")
 	var town: Variant = game.current
-	assert_eq(int(town.npc_nodes.size()), 24, "all twenty-four npcs are built")
+	assert_eq(int(town.npc_nodes.size()), 21, "all twenty-one npcs are built")
 	game.free()
 
 
 func test_encounter_switches_to_battle() -> void:
 	GameState.reset()
 	var game: Variant = _new_game()
-	_enter_boss_battle(game)
+	_enter_tavern_battle(game)
 	assert_eq(str(game.current_kind), "battle", "the encounter switches to the battle view")
 	var view: Variant = game.current
 	assert_eq(str(view.battle.enemies[0].id), "ma_youwei", "the boss is the enemy")
 	assert_true(
 		not bool(view.dialogue_view.is_active()),
-		"the intro already played in the town, so it does not replay"
+		"the intro already played in the tavern, so it does not replay"
 	)
 	game.free()
 
 
-func test_encounter_saves_return_position() -> void:
+func test_tavern_encounter_uses_tavern_backdrop() -> void:
 	GameState.reset()
 	var game: Variant = _new_game()
-	var town: Variant = game.current
-	town.player_pos = Vector2(7.0, 2.5)
-	_enter_boss_battle(game)
-	assert_eq(
-		GameState.town_return_pos, Vector2(7.0, 2.5),
-		"the player position is saved before the battle"
-	)
+	_enter_tavern_battle(game)
+	assert_eq(str(GameState.battle_backdrop), "tavern", "the battle uses the tavern backdrop")
 	game.free()
 
 
-func test_battle_won_returns_to_town_and_removes_bandits() -> void:
+func test_town_encounter_still_returns_to_town() -> void:
 	GameState.reset()
 	var game: Variant = _new_game()
 	var town: Variant = game.current
 	town.player_pos = Vector2(7.0, 2.5)
-	_enter_boss_battle(game)
+	town.encounter_requested.emit("bandit", 1, false)
+	var view: Variant = game.current
+	view.battle.player.hp = 0
+	view.refresh()
+	view.press_return()
+	assert_eq(str(game.current_kind), "town", "a town encounter still returns to the town")
+	var back: Variant = game.current
+	assert_eq(back.player_pos, Vector2(7.0, 2.5), "the player returns to the saved position")
+	game.free()
+
+
+func test_battle_won_returns_to_tavern_aftermath() -> void:
+	GameState.reset()
+	var game: Variant = _new_game()
+	_enter_tavern_battle(game)
 	var view: Variant = game.current
 	view.battle.enemies[0].hp = 10
 	view.press_action({"kind": "jianyi", "target": 0})
 	_finish_dialogue(view)
 	assert_true(bool(view.return_button.visible), "the return button shows once the battle is over")
 	view.press_return()
-	assert_eq(str(game.current_kind), "town", "returning goes back to the town")
+	assert_eq(str(game.current_kind), "tavern", "returning goes back to the tavern")
 	assert_true(GameState.has_flag("boss_defeated"), "winning sets the boss_defeated flag")
 	var back: Variant = game.current
-	assert_eq(int(back.npc_nodes.size()), 21, "the boss and the two bandits are gone")
-	assert_eq(back.player_pos, Vector2(7.0, 2.5), "the player returns to the saved position")
+	assert_eq(str(back.current_state()), "aftermath", "the tavern is in the aftermath")
+	assert_true(not back.npc_nodes.has("ma_youwei"), "the boss is gone")
+	assert_true(not back.npc_nodes.has("bandit_1"), "the bandits are gone")
 	game.free()
+	GameState.reset()
 
 
-func test_battle_lost_returns_to_town_without_flag() -> void:
+func test_battle_lost_returns_to_tavern_brawl() -> void:
 	GameState.reset()
 	var game: Variant = _new_game()
-	_enter_boss_battle(game)
+	_enter_tavern_battle(game)
 	var view: Variant = game.current
 	view.battle.player.hp = 0
 	view.refresh()
 	assert_true(bool(view.return_button.visible), "the return button shows after a loss")
 	view.press_return()
-	assert_eq(str(game.current_kind), "town", "a loss returns to the town")
+	assert_eq(str(game.current_kind), "tavern", "a loss returns to the tavern")
 	assert_true(not GameState.has_flag("boss_defeated"), "a loss does not set the boss flag")
 	var back: Variant = game.current
-	assert_eq(int(back.npc_nodes.size()), 24, "every npc is still in the town")
+	assert_eq(str(back.current_state()), "brawl", "the tavern is still in the brawl")
+	assert_eq(int(back.bandit_count()), 5, "all five bandits are still there")
 	game.free()
+	GameState.reset()
 
 
 func test_return_button_hidden_while_battle_ongoing() -> void:
 	GameState.reset()
 	battle_finished_count = 0
 	var game: Variant = _new_game()
-	_enter_boss_battle(game)
+	_enter_tavern_battle(game)
 	var view: Variant = game.current
 	view.connect("battle_finished", Callable(self, "_on_battle_finished_counted"))
 	assert_true(
@@ -114,6 +129,7 @@ func test_return_button_hidden_while_battle_ongoing() -> void:
 	view.press_return()
 	assert_eq(battle_finished_count, 0, "pressing return during the battle emits nothing")
 	game.free()
+	GameState.reset()
 
 
 func test_start_three_args_still_plays_intro() -> void:

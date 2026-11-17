@@ -73,18 +73,15 @@ func test_nearest_npc() -> void:
 func test_town_has_all_npcs_initially() -> void:
 	GameState.reset()
 	var town: Variant = _new_town()
-	assert_eq(town.npc_nodes.size(), 24, "all twenty-four npcs are built")
+	assert_eq(town.npc_nodes.size(), 21, "all twenty-one npcs are built")
 	town.free()
 
 
-func test_defeated_npcs_are_removed() -> void:
+func test_town_has_no_bandits_any_more() -> void:
 	GameState.reset()
-	GameState.set_flag("boss_defeated")
 	var town: Variant = _new_town()
-	assert_eq(town.npc_nodes.size(), 21, "the boss and the two bandits are gone")
-	assert_true(town.npc_nodes.has("bun_vendor"), "the bun vendor remains")
-	assert_true(town.npc_nodes.has("disciple"), "the disciple remains")
-	assert_true(not town.npc_nodes.has("ma_youwei"), "the boss is gone")
+	for id in ["ma_youwei", "bandit_1", "bandit_2"]:
+		assert_true(not town.npc_nodes.has(id), "%s is not in the town" % id)
 	town.free()
 	GameState.reset()
 
@@ -146,29 +143,6 @@ func test_ordinary_npc_does_not_emit_encounter() -> void:
 	assert_true(town.try_interact(), "interaction starts")
 	_finish_dialogue(town)
 	assert_eq(encounter_count, 0, "an ordinary npc never requests an encounter")
-	town.free()
-
-
-func test_boss_dialogue_emits_encounter_after_finish() -> void:
-	GameState.reset()
-	_reset_encounter()
-	var town: Variant = _new_town()
-	town.connect("encounter_requested", Callable(self, "_on_encounter"))
-	town.player_pos = BOSS_PLAYER_POS
-	assert_true(town.try_interact(), "the boss dialogue starts")
-	assert_true(town.is_dialogue_active(), "the dialogue is active")
-	assert_eq(encounter_count, 0, "no encounter while the dialogue is running")
-	for i in range(60):
-		if not bool(town.dialogue_view.is_active()):
-			break
-		assert_eq(encounter_count, 0, "no encounter before the dialogue ends")
-		town.dialogue_view.advance()
-	assert_eq(encounter_count, 1, "the encounter is requested exactly once")
-	assert_eq(encounter_args.size(), 3, "the signal carries three arguments")
-	if encounter_args.size() == 3:
-		assert_eq(str(encounter_args[0]), "ma_youwei", "the enemy is ma_youwei")
-		assert_eq(int(encounter_args[1]), 1, "one enemy")
-		assert_eq(bool(encounter_args[2]), false, "the player does not strike first")
 	town.free()
 
 

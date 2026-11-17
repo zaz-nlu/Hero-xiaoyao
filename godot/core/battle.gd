@@ -6,6 +6,7 @@ const Damage = preload("res://core/damage.gd")
 const Jianyi = preload("res://core/jianyi.gd")
 const EnemyAi = preload("res://core/enemy_ai.gd")
 const Mastery = preload("res://core/mastery.gd")
+const Progression = preload("res://core/progression.gd")
 const Realms = preload("res://core/realms.gd")
 
 enum State { ONGOING, WON, LOST, TIMEOUT }
@@ -19,6 +20,8 @@ var first_strike: bool = false
 var round: int = 1
 var intents: Array = []
 var known_moves: Dictionary = {}
+# item id -> 数量。BattleView 指向 GameState.inventory，模拟器使用自己的字典。
+var inventory: Dictionary = {}
 var log: Array[String] = []
 var uses: Dictionary = {}
 var pending_exp: int = 0
@@ -181,8 +184,11 @@ func _validate(action: Dictionary) -> Dictionary:
 	if state() != State.ONGOING:
 		return {"ok": false, "error": "battle is over"}
 	var kind: String = str(action.get("kind", ""))
-	if kind != "martial" and kind != "jianyi" and kind != "probe" and kind != "foresight":
+	if kind != "martial" and kind != "jianyi" and kind != "probe" and kind != "foresight" \
+			and kind != "item":
 		return {"ok": false, "error": "unknown action kind: %s" % kind}
+	if kind == "item":
+		return _validate_item(action)
 	if kind == "foresight":
 		if int(player.foresight_points) <= 0:
 			return {"ok": false, "error": "no foresight points left"}
@@ -206,6 +212,22 @@ func _validate(action: Dictionary) -> Dictionary:
 	elif kind == "jianyi":
 		if not Jianyi.can_strike(player, target):
 			return {"ok": false, "error": "cannot use jianyi now"}
+	return {"ok": true, "error": ""}
+
+
+func _validate_item(action: Dictionary) -> Dictionary:
+	var id: String = str(action.get("id", ""))
+	if int(inventory.get(id, 0)) <= 0:
+		return {"ok": false, "error": "no item left: %s" % id}
+	var item: Dictionary = Progression.item_def(id)
+	var consumable_value: Variant = item.get("consumable", null)
+	if not (consumable_value is Dictionary):
+		return {"ok": false, "error": "item is not consumable: %s" % id}
+	var consumable: Dictionary = consumable_value
+	if int(consumable.get("heal", 0)) <= 0:
+		return {"ok": false, "error": "item has no heal: %s" % id}
+	if int(player.hp) >= int(player.max_hp) - int(player.wound):
+		return {"ok": false, "error": "hp is already full"}
 	return {"ok": true, "error": ""}
 
 
@@ -342,6 +364,9 @@ func _player_step(action: Dictionary) -> void:
 	if kind == "foresight":
 		_do_foresight()
 		return
+	if kind == "item":
+		_use_item(action)
+		return
 	var target: Variant = enemies[target_index]
 	if kind == "martial":
 		var id: String = str(action.get("id", ""))
@@ -356,6 +381,22 @@ func _player_step(action: Dictionary) -> void:
 	elif kind == "probe":
 		target.probe()
 		_log("R%d act:player probe -> e%d" % [round, target_index])
+
+
+func _use_item(action: Dictionary) -> void:
+	var id: String = str(action.get("id", ""))
+	inventory[id] = maxi(0, int(inventory.get(id, 0)) - 1)
+	var item: Dictionary = Progression.item_def(id)
+	var heal_value := 0
+	var consumable_value: Variant = item.get("consumable", null)
+	if consumable_value is Dictionary:
+		var consumable: Dictionary = consumable_value
+		heal_value = int(consumable.get("heal", 0))
+	var amount: int = Balance.heal_amount(
+		heal_value, int(player.stats.get("recovery", 0)), Realms.scale(str(player.realm))
+	)
+	var healed: int = player.heal(amount)
+	_log("R%d act:player item %s heal %d" % [round, id, healed])
 
 
 func _do_foresight() -> void:

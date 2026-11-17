@@ -36,48 +36,60 @@ func _init() -> void:
 		"constitution": 6,
 	}
 
-	var stat_sets: Array = [
-		{"label": "初始属性", "stats": initial},
-		{"label": "养成后属性", "stats": grown},
-	]
 	var scenarios: Array = [
-		{"label": "酒馆遭遇（马匪头子 ×1）", "enemy_id": "ma_youwei", "count": 1},
-		{"label": "两个马匪（马匪 ×2）", "enemy_id": "bandit", "count": 2},
+		{
+			"label": "酒馆战（未准备）",
+			"stats": "初始属性",
+			"stats_override": initial,
+			"enemies": [
+				{"id": "ma_youwei", "count": 1},
+				{"id": "bandit", "count": 5},
+			],
+			"herbs": 0,
+		},
+		{
+			"label": "酒馆战（准备好）",
+			"stats": "养成后属性",
+			"stats_override": grown,
+			"enemies": [
+				{"id": "ma_youwei", "count": 1},
+				{"id": "bandit", "count": 2},
+			],
+			"herbs": 3,
+		},
 	]
 	var bots: Array[String] = ["random", "human", "smart"]
 
 	var rows: Array = []
 	for scenario_value in scenarios:
 		var scenario: Dictionary = scenario_value
-		for stat_set_value in stat_sets:
-			var stat_set: Dictionary = stat_set_value
-			for bot in bots:
-				var result: Dictionary = Simulator.run({
-					"enemy_id": str(scenario["enemy_id"]),
-					"enemy_count": int(scenario["count"]),
-					"battles": BATTLES,
-					"seed": SEED,
-					"bot": bot,
-					"first_strike": false,
-					"stats_override": stat_set["stats"],
-				})
-				var row := {
-					"scenario": str(scenario["label"]),
-					"stats": str(stat_set["label"]),
-					"bot": bot,
-					"win_rate": float(result["win_rate"]),
-					"avg_rounds": float(result["avg_rounds"]),
-					"avg_hp_pct": float(result["avg_hp_pct"]),
-				}
-				rows.append(row)
-				print("%s | %s | %s | 胜率 %.1f%% | 平均回合 %.1f | 剩余 HP %.1f%%" % [
-					row["scenario"],
-					row["stats"],
-					row["bot"],
-					float(row["win_rate"]) * 100.0,
-					float(row["avg_rounds"]),
-					float(row["avg_hp_pct"]) * 100.0,
-				])
+		for bot in bots:
+			var result: Dictionary = Simulator.run({
+				"enemies": scenario["enemies"],
+				"herbs": int(scenario["herbs"]),
+				"battles": BATTLES,
+				"seed": SEED,
+				"bot": bot,
+				"first_strike": false,
+				"stats_override": scenario["stats_override"],
+			})
+			var row := {
+				"scenario": str(scenario["label"]),
+				"stats": str(scenario["stats"]),
+				"bot": bot,
+				"win_rate": float(result["win_rate"]),
+				"avg_rounds": float(result["avg_rounds"]),
+				"avg_hp_pct": float(result["avg_hp_pct"]),
+			}
+			rows.append(row)
+			print("%s | %s | %s | 胜率 %.1f%% | 平均回合 %.1f | 剩余 HP %.1f%%" % [
+				row["scenario"],
+				row["stats"],
+				row["bot"],
+				float(row["win_rate"]) * 100.0,
+				float(row["avg_rounds"]),
+				float(row["avg_hp_pct"]) * 100.0,
+			])
 
 	var section := _build_section(rows)
 	_append_to_doc(section)
@@ -101,7 +113,7 @@ func _build_section(rows: Array) -> String:
 	var lines: Array[String] = []
 	lines.append("## 11. 模拟结果")
 	lines.append("")
-	lines.append("每格 400 局，`first_strike=false`，由 `tools/difficulty_report.gd` 生成。数值为第一章炼体（s=1，h=15）的当前数值：初始六维合计 37（另有 3 个自由点），养成后取文档 §7 的 50 点参考线。")
+	lines.append("每格 400 局，`first_strike=false`，由 `tools/difficulty_report.gd` 生成。数值为第一章炼体（s=1，h=15）的当前数值。未准备：初始属性、马匪头子 ×1 + 马匪 ×5、无草药；准备好：文档 §7 的 50 点参考线、马匪头子 ×1 + 马匪 ×2、草药 ×3。")
 	lines.append("")
 	lines.append("| 遭遇 | 属性 | bot | 胜率 | 平均回合 | 玩家平均剩余 HP |")
 	lines.append("| --- | --- | --- | ---: | ---: | ---: |")
@@ -118,9 +130,9 @@ func _build_section(rows: Array) -> String:
 	lines.append("")
 	lines.append("bot 说明：random 乱出招；human 只用界面上看得到的信息（未知招靠猜，有预判点数先预判，已识别的招精确反制）；smart 能直接看到所有出招（上限）。目标：human 在初始属性下打马匪头子胜率 10%~30%，养成后 65%~85%（真人比 human 更容易失误，所以养成后偏高是预期的）。")
 
-	var boss_scenario := "酒馆遭遇（马匪头子 ×1）"
+	var boss_scenario := "酒馆战（未准备）"
 	var initial_row := _find_row(rows, boss_scenario, "初始属性", "human")
-	var grown_row := _find_row(rows, boss_scenario, "养成后属性", "human")
+	var grown_row := _find_row(rows, "酒馆战（准备好）", "养成后属性", "human")
 	if not initial_row.is_empty() and not grown_row.is_empty():
 		var initial_rate := float(initial_row["win_rate"]) * 100.0
 		var grown_rate := float(grown_row["win_rate"]) * 100.0

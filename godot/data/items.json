@@ -23,7 +23,8 @@
 	"herb": {
 		"name": "草药",
 		"kind": "material",
-		"desc": "林间采来的草药，味苦，据说能调理气息。"
+		"desc": "林间采来的草药，味苦，据说能调理气息。",
+		"consumable": {"heal": 30}
 	},
 	"yangyuan_pill": {
 		"name": "养元丹",

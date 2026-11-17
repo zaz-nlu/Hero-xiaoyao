@@ -6,9 +6,13 @@ signal state_changed(new_state: String)
 
 const TAVERN_PATH := "res://data/tavern.json"
 const SPEAKERS_PATH := "res://data/speakers.json"
+const AMBUSH_OPEN_PATH := "res://data/dialogues/tavern_ambush_open.json"
+const AMBUSH_MANY_PATH := "res://data/dialogues/tavern_ambush_many.json"
+const AMBUSH_FEW_PATH := "res://data/dialogues/tavern_ambush_few.json"
 const CAMERA_OFFSET := Vector3(0.0, 13.0, 30.0)
 const LOOK_AHEAD := Vector3(0.0, 1.5, -7.5)
 const ANIM_DURATION := 1.2
+const ENTRANCE_STAGGER := 0.25
 const STATES: Array[String] = ["normal", "brawl", "aftermath"]
 
 const Texgen = preload("res://world/texgen.gd")
@@ -51,10 +55,14 @@ var pending_encounter: Dictionary = {}
 var current_npc_id: String = ""
 var state: String = "normal"
 var skip_actors: bool = false
+var force_state: String = ""
 var input_blocked: bool = false
 var cutscene_running: bool = false
 var exit_rect: Rect2 = Rect2()
 var exit_prompt: String = "按 E 走出酒馆"
+var ambush_rect: Rect2 = Rect2()
+var ambush_timeout: float = 14.0
+var arena_origin: Vector3 = Vector3.ZERO
 
 var _npc_entries: Dictionary = {}
 var _npc_root: Node3D = null
@@ -69,6 +77,10 @@ var _anim_active: bool = false
 var _anim_t: float = 0.0
 var _anim_furniture: Array = []
 var _anim_npcs: Array = []
+var _ambush_triggered: bool = false
+var _ambush_elapsed: float = 0.0
+var _ambush_stage: String = ""
+var _stagger_entrance: bool = false
 
 
 func _ready() -> void:
@@ -106,7 +118,8 @@ func build() -> void:
 		return
 	_built = true
 	_load_data()
-	state = _initial_state()
+	state = force_state if force_state != "" else _initial_state()
+	_ambush_elapsed = 0.0
 	_build_room()
 	_build_beams()
 	_build_wall_decor()
@@ -127,6 +140,7 @@ func build() -> void:
 func _process(delta: float) -> void:
 	tick_player(delta)
 	advance(delta)
+	check_story(delta)
 	update_prompt()
 	if not is_dialogue_active() and InputMap.has_action("interact") \
 			and Input.is_action_just_pressed("interact"):
@@ -159,6 +173,8 @@ func _load_data() -> void:
 	bounds_rect = _read_bounds()
 	exit_rect = _read_exit_rect()
 	exit_prompt = str(_exit_data().get("prompt", exit_prompt))
+	arena_origin = _read_arena_origin()
+	_read_ambush()
 	var furniture: Array = data.get("furniture", [])
 	for i in range(furniture.size()):
 		var entry_value: Variant = furniture[i]
@@ -225,6 +241,37 @@ func _read_exit_rect() -> Rect2:
 	return Rect2(x0, z0, x1 - x0, z1 - z0)
 
 
+func _read_arena_origin() -> Vector3:
+	var arena_value: Variant = data.get("arena", null)
+	if not (arena_value is Dictionary):
+		return Vector3.ZERO
+	var arena: Dictionary = arena_value
+	var origin_value: Variant = arena.get("origin", null)
+	if origin_value is Array:
+		var origin: Array = origin_value
+		if origin.size() >= 3:
+			return Vector3(float(origin[0]), float(origin[1]), float(origin[2]))
+	return Vector3.ZERO
+
+
+func _read_ambush() -> void:
+	var ambush_value: Variant = data.get("ambush", null)
+	if not (ambush_value is Dictionary):
+		return
+	var ambush: Dictionary = ambush_value
+	var rect_value: Variant = ambush.get("rect", null)
+	if rect_value is Array:
+		var rect: Array = rect_value
+		if rect.size() >= 4:
+			var x0 := float(rect[0])
+			var z0 := float(rect[1])
+			var x1 := float(rect[2])
+			var z1 := float(rect[3])
+			if x1 > x0 and z1 > z0:
+				ambush_rect = Rect2(x0, z0, x1 - x0, z1 - z0)
+	ambush_timeout = float(ambush.get("timeout", ambush_timeout))
+
+
 func _initial_state() -> String:
 	if GameState.has_flag("boss_defeated"):
 		return "aftermath"
@@ -254,6 +301,111 @@ func _cycle_state() -> void:
 	elif state == "brawl":
 		next = "aftermath"
 	set_state(next, true)
+
+
+# ---------------------------------------------------------------- ambush story
+
+# 酒馆里还剩几个马匪：森林里打倒得越多，头子带的人越少（最少 2 个）。
+func bandit_count() -> int:
+	return clampi(5 - int(GameState.forest_bandits_killed), 2, 5)
+
+
+func check_story(delta: float) -> void:
+	if skip_actors or _ambush_triggered:
+		return
+	if state != "normal" or cutscene_running:
+		return
+	if is_dialogue_active():
+		return
+	_ambush_elapsed += maxf(0.0, delta)
+	var in_zone: bool = ambush_rect.size != Vector2.ZERO and ambush_rect.has_point(player_pos)
+	if in_zone or _ambush_elapsed >= ambush_timeout:
+		_trigger_ambush()
+
+
+func _trigger_ambush() -> void:
+	if _ambush_triggered:
+		return
+	_ambush_triggered = true
+	GameState.set_flag("bandits_entered")
+	input_blocked = true
+	cutscene_running = true
+	_ambush_stage = "open"
+	if not _play_story_dialogue(AMBUSH_OPEN_PATH):
+		_finish_ambush_open()
+
+
+func _finish_ambush_open() -> void:
+	_ambush_stage = "animating"
+	_stagger_entrance = true
+	set_state("brawl", true)
+	_stagger_entrance = false
+	if not _anim_active:
+		_begin_ambush_dialogue()
+
+
+func _begin_ambush_dialogue() -> void:
+	_ambush_stage = "ambush"
+	var path: String = AMBUSH_MANY_PATH if bandit_count() >= 4 else AMBUSH_FEW_PATH
+	if not _play_story_dialogue(path):
+		_finish_ambush_encounter()
+
+
+func _finish_ambush_encounter() -> void:
+	_ambush_stage = ""
+	input_blocked = false
+	cutscene_running = false
+	current_npc_id = ""
+	_emit_ambush_encounter()
+
+
+func _emit_ambush_encounter() -> void:
+	var count: int = bandit_count()
+	GameState.encounter_group = [
+		{"id": "ma_youwei", "count": 1},
+		{"id": "bandit", "count": count},
+	]
+	emit_signal("encounter_requested", "ma_youwei", 1, false)
+
+
+func _start_boss_challenge() -> bool:
+	if dialogue_view == null:
+		build_hud()
+	if dialogue_view == null:
+		return false
+	current_npc_id = "ma_youwei"
+	_face_player("ma_youwei")
+	pending_encounter = {}
+	var path: String = AMBUSH_MANY_PATH if bandit_count() >= 4 else AMBUSH_FEW_PATH
+	_ambush_stage = "challenge"
+	if not _play_story_dialogue(path):
+		_ambush_stage = ""
+		current_npc_id = ""
+		return false
+	if prompt_label != null:
+		prompt_label.visible = false
+	return true
+
+
+func _play_story_dialogue(path: String) -> bool:
+	if dialogue_view == null:
+		build_hud()
+	if dialogue_view == null:
+		return false
+	var speakers: Dictionary = Dialogue.load_speakers(SPEAKERS_PATH).get("defs", {})
+	var loaded: Dictionary = Dialogue.load_file(path, speakers)
+	var errors: Array = loaded.get("errors", [])
+	if not errors.is_empty():
+		for error_text in errors:
+			push_warning("tavern story dialogue: %s" % str(error_text))
+		return false
+	var lines: Array = loaded.get("lines", [])
+	if lines.is_empty():
+		return false
+	dialogue_view.call("start", lines)
+	if prompt_label != null:
+		prompt_label.visible = false
+	return true
 
 
 # ---------------------------------------------------------------- helpers
@@ -1168,6 +1320,15 @@ func advance(delta: float) -> void:
 	if not _anim_active:
 		return
 	_anim_t += delta
+	var total: float = ANIM_DURATION
+	for record_value in _anim_npcs:
+		if not (record_value is Dictionary):
+			continue
+		var record: Dictionary = record_value
+		total = maxf(total, ANIM_DURATION + float(record.get("delay", 0.0)))
+	if _anim_t >= total:
+		_finish_animation()
+		return
 	var weight := clampf(_anim_t / ANIM_DURATION, 0.0, 1.0)
 	for record_value in _anim_furniture:
 		if not (record_value is Dictionary):
@@ -1193,9 +1354,9 @@ func advance(delta: float) -> void:
 		var node: Node3D = node_value
 		var from: Vector3 = record.get("from", Vector3.ZERO)
 		var to: Vector3 = record.get("to", Vector3.ZERO)
-		node.position = from.lerp(to, weight)
-	if weight >= 1.0:
-		_finish_animation()
+		var delay: float = float(record.get("delay", 0.0))
+		var npc_weight := clampf((_anim_t - delay) / ANIM_DURATION, 0.0, 1.0)
+		node.position = from.lerp(to, npc_weight)
 
 
 func _finish_animation() -> void:
@@ -1217,11 +1378,15 @@ func _finish_animation() -> void:
 	_anim_npcs.clear()
 	_anim_active = false
 	_anim_t = 0.0
+	if _ambush_stage == "animating":
+		_begin_ambush_dialogue()
 
 
 # ---------------------------------------------------------------- npcs
 
 func _sync_npcs(new_state: String, animate: bool) -> void:
+	if skip_actors:
+		return
 	if _npc_root == null:
 		_npc_root = Node3D.new()
 		_npc_root.name = "NPCs"
@@ -1230,12 +1395,13 @@ func _sync_npcs(new_state: String, animate: bool) -> void:
 		var entry_value: Variant = _npc_entries.get(id, null)
 		var present := false
 		if entry_value is Dictionary:
-			present = _npc_present(entry_value, new_state)
+			present = _npc_present(str(id), entry_value, new_state)
 		if not present:
 			_remove_npc(str(id))
+	var entrance_index := 0
 	for id in _npc_entries.keys():
 		var entry: Dictionary = _npc_entries[id]
-		if not _npc_present(entry, new_state):
+		if not _npc_present(str(id), entry, new_state):
 			continue
 		var target: Vector3 = _npc_position(entry, new_state)
 		if npc_nodes.has(id):
@@ -1257,10 +1423,15 @@ func _sync_npcs(new_state: String, animate: bool) -> void:
 			if animate:
 				character.position = _entrance_position()
 				character.call("set_moving", true)
+				var delay := 0.0
+				if _stagger_entrance:
+					delay = ENTRANCE_STAGGER * float(entrance_index)
+					entrance_index += 1
 				_anim_npcs.append({
 					"node": character,
 					"from": character.position,
 					"to": target,
+					"delay": delay,
 				})
 			else:
 				character.position = target
@@ -1283,11 +1454,15 @@ func _remove_npc(id: String) -> void:
 		node.free()
 
 
-func _npc_present(entry: Dictionary, s: String) -> bool:
+func _npc_present(id: String, entry: Dictionary, s: String) -> bool:
 	var states_value: Variant = entry.get("states", STATES)
 	if states_value is Array:
 		var states: Array = states_value
-		return states.has(s)
+		if not states.has(s):
+			return false
+	if s == "brawl" and id.begins_with("bandit_"):
+		var index := int(id.trim_prefix("bandit_"))
+		return index >= 1 and index <= bandit_count()
 	return true
 
 
@@ -1702,6 +1877,8 @@ func try_interact() -> bool:
 		return false
 	var npc_id: String = nearby_npc()
 	if npc_id != "" and not _npc_entry(npc_id).is_empty():
+		if state == "brawl" and npc_id == "ma_youwei":
+			return _start_boss_challenge()
 		var path := _npc_dialogue_path(npc_id, state)
 		if path != "":
 			return _start_npc_dialogue(npc_id, path)
@@ -1784,6 +1961,17 @@ func _face_player(npc_id: String) -> void:
 
 
 func _on_dialogue_finished() -> void:
+	if _ambush_stage == "open":
+		_finish_ambush_open()
+		return
+	if _ambush_stage == "ambush":
+		_finish_ambush_encounter()
+		return
+	if _ambush_stage == "challenge":
+		_ambush_stage = ""
+		current_npc_id = ""
+		_emit_ambush_encounter()
+		return
 	if not pending_encounter.is_empty():
 		var encounter: Dictionary = pending_encounter
 		pending_encounter = {}

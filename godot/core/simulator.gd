@@ -23,6 +23,11 @@ static func run(config: Dictionary) -> Dictionary:
 	var first_strike: bool = bool(config.get("first_strike", false))
 	var enemy_count: int = int(config.get("enemy_count", 1))
 	var enemy_id: String = str(config.get("enemy_id", ""))
+	var herbs: int = int(config.get("herbs", 0))
+	var enemies_spec: Array = []
+	var raw_enemies: Variant = config.get("enemies", [])
+	if raw_enemies is Array:
+		enemies_spec = raw_enemies
 	var stats_override: Dictionary = {}
 	var raw_stats_override: Variant = config.get("stats_override", {})
 	if raw_stats_override is Dictionary:
@@ -54,8 +59,20 @@ static func run(config: Dictionary) -> Dictionary:
 	if battle_count <= 0:
 		return totals
 	var enemy_def: Variant = enemy_defs.get(enemy_id, null)
-	if enemy_def == null:
-		return totals
+	if enemies_spec.is_empty():
+		if enemy_def == null:
+			return totals
+	else:
+		var has_enemy := false
+		for raw_entry in enemies_spec:
+			if not (raw_entry is Dictionary):
+				continue
+			var entry: Dictionary = raw_entry
+			if enemy_defs.has(str(entry.get("id", ""))):
+				has_enemy = true
+				break
+		if not has_enemy:
+			return totals
 
 	var bot_rng := RandomNumberGenerator.new()
 	bot_rng.seed = seed_value
@@ -69,6 +86,8 @@ static func run(config: Dictionary) -> Dictionary:
 		var battle: Variant = _make_battle(
 			player_data,
 			enemy_def,
+			enemy_defs,
+			enemies_spec,
 			enemy_count,
 			loadout,
 			learned,
@@ -77,6 +96,7 @@ static func run(config: Dictionary) -> Dictionary:
 			first_strike,
 			stats_override
 		)
+		battle.inventory["herb"] = herbs
 		_run_battle(battle, bot, bot_rng)
 		if battle.state() == Battle.State.WON:
 			battle.settle_exp()
@@ -114,6 +134,8 @@ static func _enemy_defs(config: Dictionary) -> Dictionary:
 static func _make_battle(
 	player_data: Dictionary,
 	enemy_def: Variant,
+	enemy_defs: Dictionary,
+	enemies_spec: Array,
 	enemy_count: int,
 	loadout: Array,
 	learned: Array,
@@ -148,8 +170,20 @@ static func _make_battle(
 		player_realm
 	)
 	var enemies: Array = []
-	for i in range(enemy_count):
-		enemies.append(Unit.from_enemy(enemy_def))
+	if enemies_spec.is_empty():
+		for i in range(enemy_count):
+			enemies.append(Unit.from_enemy(enemy_def))
+	else:
+		for raw_entry in enemies_spec:
+			if not (raw_entry is Dictionary):
+				continue
+			var entry: Dictionary = raw_entry
+			var def: Variant = enemy_defs.get(str(entry.get("id", "")), null)
+			if def == null:
+				continue
+			var count: int = maxi(0, int(entry.get("count", 1)))
+			for i in range(count):
+				enemies.append(Unit.from_enemy(def))
 	var mastery: Variant = Mastery.new()
 	mastery.set_grades(_martial_grades(martials))
 	for raw_learned in learned:
@@ -195,6 +229,9 @@ static func _choose_action(battle: Variant, bot: String, rng: RandomNumberGenera
 # after it was executed or foreseen. Known moves are countered exactly; unknown ones are
 # guessed (a random martial); foresight is spent whenever the target's move is unknown.
 static func _human_action(battle: Variant, rng: RandomNumberGenerator) -> Dictionary:
+	var heal: Dictionary = _herb_action(battle)
+	if not heal.is_empty():
+		return heal
 	var target_index: int = _first_alive(battle.enemies)
 	if target_index < 0:
 		return {}
@@ -237,6 +274,9 @@ static func _legal_actions(battle: Variant) -> Array:
 
 
 static func _smart_action(battle: Variant) -> Dictionary:
+	var heal: Dictionary = _herb_action(battle)
+	if not heal.is_empty():
+		return heal
 	var enemies: Array = battle.enemies
 	var target_index: int = _first_alive(enemies)
 	if target_index < 0:
@@ -279,6 +319,19 @@ static func _smart_action(battle: Variant) -> Dictionary:
 	if best_id == "":
 		return {}
 	return {"kind": "martial", "id": best_id, "target": target_index}
+
+
+static func _herb_action(battle: Variant) -> Dictionary:
+	if int(battle.inventory.get("herb", 0)) <= 0:
+		return {}
+	var max_hp: int = int(battle.player.max_hp)
+	if max_hp <= 0:
+		return {}
+	if int(battle.player.hp) >= max_hp - int(battle.player.wound):
+		return {}
+	if float(battle.player.hp) / float(max_hp) >= 0.45:
+		return {}
+	return {"kind": "item", "id": "herb"}
 
 
 static func _fallback_action(battle: Variant) -> Dictionary:

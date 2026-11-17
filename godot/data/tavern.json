@@ -8,6 +8,8 @@
     "wall_thickness": 0.3
   },
   "spawn": {"x": 11, "z": 3.5, "facing": "up"},
+  "arena": {"origin": [1.5, 0.0, -1.0]},
+  "ambush": {"rect": [7.0, -4.5, 15.0, 1.0], "timeout": 14.0},
   "bounds": {"x0": 0.6, "x1": 21.4, "z0": -11.4, "z1": 5.4},
   "entrance": {"x": 11, "z": 5.5},
   "exit": {"rect": [9, 4.6, 13, 6.0], "prompt": "按 E 走出酒馆"},
@@ -320,6 +322,33 @@
       "facing": "down",
       "states": ["brawl"],
       "positions": {"brawl": [13.5, -1.5]},
+      "dialogues": {"brawl": "res://data/dialogues/npc_bandit_2.json"}
+    },
+    {
+      "id": "bandit_3",
+      "sprite": "bandit",
+      "name": "马匪",
+      "facing": "down",
+      "states": ["brawl"],
+      "positions": {"brawl": [7.0, -4.6]},
+      "dialogues": {"brawl": "res://data/dialogues/npc_bandit_2.json"}
+    },
+    {
+      "id": "bandit_4",
+      "sprite": "bandit",
+      "name": "马匪",
+      "facing": "down",
+      "states": ["brawl"],
+      "positions": {"brawl": [15.0, -4.6]},
+      "dialogues": {"brawl": "res://data/dialogues/npc_bandit_2.json"}
+    },
+    {
+      "id": "bandit_5",
+      "sprite": "bandit",
+      "name": "马匪",
+      "facing": "down",
+      "states": ["brawl"],
+      "positions": {"brawl": [11.0, -6.4]},
       "dialogues": {"brawl": "res://data/dialogues/npc_bandit_2.json"}
     }
   ],

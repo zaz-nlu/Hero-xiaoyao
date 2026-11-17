@@ -7,6 +7,10 @@ static var town_return_pos: Variant = null
 static var forest_return_pos: Variant = null
 static var tavern_return_pos: Variant = null
 static var pending_forest_encounter: Variant = null
+# 混编敌人组：[{"id": 敌人 id, "count": 数量}]；BattleView.start 读取后立即清空。
+static var encounter_group: Array = []
+# 森林里已经打倒的马匪数量（bandit / bandit_scout），决定酒馆闯入的马匪人数。
+static var forest_bandits_killed: int = 0
 static var battle_backdrop: String = "town"
 static var known_moves: Dictionary = {}
 static var stat_bonus: Dictionary = {}
@@ -38,6 +42,8 @@ static func reset() -> void:
 	forest_return_pos = null
 	tavern_return_pos = null
 	pending_forest_encounter = null
+	encounter_group.clear()
+	forest_bandits_killed = 0
 	battle_backdrop = "town"
 	known_moves.clear()
 	stat_bonus.clear()

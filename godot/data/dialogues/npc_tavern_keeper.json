@@ -1,7 +1,5 @@
 [
-  {"speaker": "vendor", "name": "掌柜", "text": "客官里边请。这醉仙楼开了三十年，酒是自家酿的。"},
-  {"speaker": "ren_xiaoyao", "text": "一壶酒，两个小菜。"},
-  {"speaker": "vendor", "name": "掌柜", "text": "好嘞。靠窗那桌清静，只是最近城外不太平。"},
-  {"speaker": "ren_xiaoyao", "text": "不太平才好，太平了哪有热闹看。"},
-  {"speaker": "vendor", "name": "掌柜", "text": "年轻人，热闹看多了，是要还的。"}
+  {"speaker": "vendor", "name": "掌柜", "text": "客官里边坐。……最近镇上不太平，马匪三天两头来，酒钱都收不上来。"},
+  {"speaker": "ren_xiaoyao", "text": "他们头儿叫什么？"},
+  {"speaker": "vendor", "name": "掌柜", "text": "没人知道。只晓得他一进来，连酒坛子都要躲着走。"}
 ]

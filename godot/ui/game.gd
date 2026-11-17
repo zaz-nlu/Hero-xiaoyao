@@ -62,7 +62,11 @@ func _process(_delta: float) -> void:
 		_play_sfx("sfx_select")
 	_panel_was_open = panel_open
 	if current_kind == "town" or current_kind == "tavern" or current_kind == "forest":
-		current.set("input_blocked", panel_open)
+		var blocked: bool = panel_open
+		if current_kind == "tavern" and current.has_method("is_cutscene_running") \
+				and bool(current.call("is_cutscene_running")):
+			blocked = true
+		current.set("input_blocked", blocked)
 
 
 func _process_toast_sfx() -> void:
@@ -460,7 +464,7 @@ func _on_encounter_requested(enemy_id: String, count: int, first_strike: bool) -
 				GameState.battle_backdrop = "town"
 			"tavern":
 				_battle_origin = "tavern"
-				GameState.battle_backdrop = "town"
+				GameState.battle_backdrop = "tavern"
 			"forest":
 				GameState.forest_return_pos = origin.player_pos
 				_battle_origin = "forest"
@@ -505,6 +509,9 @@ func _on_battle_finished(result: String) -> void:
 		Quests.notify("defeat", _battle_enemy, _battle_count)
 		if _battle_enemy == BOSS_ENEMY_ID:
 			GameState.set_flag("boss_defeated")
+		if origin == "forest" \
+				and (_battle_enemy == "bandit" or _battle_enemy == "bandit_scout"):
+			GameState.forest_bandits_killed += _battle_count
 		if origin == "forest" and pending is Dictionary:
 			var encounter: Dictionary = pending
 			var kind := str(encounter.get("kind", ""))
@@ -520,6 +527,8 @@ func _on_battle_finished(result: String) -> void:
 			# A loss drops the player back at the forest spawn; the patrol resets.
 			GameState.forest_return_pos = null
 		show_forest()
+	elif origin == "tavern":
+		show_tavern()
 	else:
 		show_town()
 

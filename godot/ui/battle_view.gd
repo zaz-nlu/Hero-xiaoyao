@@ -37,6 +37,8 @@ const ADVANTAGE_POPUP_COLOR := Color(0.5, 1.0, 0.7)
 const BARELY_POPUP_COLOR := Color(0.85, 0.85, 0.85)
 const STUN_POPUP_COLOR := Color(0.6, 0.8, 1.0)
 const FORESIGHT_POPUP_COLOR := Color(0.3, 0.85, 0.9)
+const HERB_COLOR := Color(0.45, 0.8, 0.4)
+const HERB_HEAL_BASE := 30
 const LOG_LINES := 8
 
 const CARD_WIDTH := 82.0
@@ -45,7 +47,9 @@ const HUD_HEIGHT := 172.0
 const SPECIAL_SLOT_JIANYI := 4
 const SPECIAL_SLOT_PROBE := 5
 const SPECIAL_SLOT_FORESIGHT := 6
+const SPECIAL_SLOT_HERB := 7
 const HEAD_WIDTH := 138.0
+const COMPACT_HEAD_WIDTH := 104.0
 const HEAD_HEIGHT := 56.0
 const HEAD_WORLD_OFFSET := 2.6
 const HEAD_SCREEN_GAP := 10.0
@@ -71,6 +75,7 @@ var dialogue_view: Variant = null
 var _current_enemy_id: String = ""
 var _win_dialogue_played: bool = false
 var _exp_settled: bool = false
+var _compact_heads: bool = false
 var _log_seen: int = 0
 var _last_hp_player: int = 0
 var _last_hp_enemies: Array = []
@@ -103,9 +108,11 @@ var martial_badges: Array = []
 var jianyi_button: Button = null
 var probe_button: Button = null
 var foresight_button: Button = null
+var herb_button: Button = null
 var jianyi_badge: Label = null
 var probe_badge: Label = null
 var foresight_badge: Label = null
+var herb_badge: Label = null
 var result_label: Label = null
 var return_button: Button = null
 var log_label: RichTextLabel = null
@@ -113,7 +120,11 @@ var log_label: RichTextLabel = null
 
 func _ready() -> void:
 	build_ui()
-	start("bandit", 1, true)
+	# A standalone run of this scene (debug) starts a default fight. When Game owns the view it
+	# calls start() itself, and an extra start() here would swallow GameState.encounter_group.
+	var parent := get_parent()
+	if parent == null or parent == get_tree().root:
+		start("bandit", 1, true)
 
 
 func build_ui() -> void:
@@ -135,10 +146,12 @@ func start(
 	var martials: Dictionary = loaded_martials.get("defs", {})
 	var loaded_enemies: Dictionary = DataLoader.load_enemies(ENEMIES_PATH)
 	var enemy_defs: Dictionary = loaded_enemies.get("defs", {})
-	var enemy_def: Variant = enemy_defs.get(enemy_id, null)
-	if enemy_def == null:
-		last_error = "未知敌人：%s" % enemy_id
-		return
+	# 混编敌人组优先于 enemy_id / enemy_count；读取后立即清空。
+	var raw_group: Variant = GameState.encounter_group
+	var group: Array = []
+	if raw_group is Array and not (raw_group as Array).is_empty():
+		group = raw_group
+		GameState.encounter_group = []
 
 	var loadout: Array = []
 	var raw_loadout: Variant = player_data.get("loadout", [])
@@ -170,8 +183,18 @@ func start(
 		player_realm
 	)
 	var enemies: Array = []
-	for i in range(enemy_count):
-		enemies.append(Unit.from_enemy(enemy_def))
+	if not group.is_empty():
+		enemies = _build_group_enemies(group, enemy_defs)
+		if enemies.is_empty():
+			last_error = "未知敌人组"
+			return
+	else:
+		var enemy_def: Variant = enemy_defs.get(enemy_id, null)
+		if enemy_def == null:
+			last_error = "未知敌人：%s" % enemy_id
+			return
+		for i in range(enemy_count):
+			enemies.append(Unit.from_enemy(enemy_def))
 	var mastery: Variant = Mastery.new()
 	mastery.set_grades(_martial_grades(martials))
 	mastery.import_exp(GameState.mastery_total)
@@ -185,12 +208,15 @@ func start(
 	battle = Battle.new(player, enemies, loadout, mastery, martials, 1, first_strike)
 	# Share the persistent dictionary so recognized moves carry over between battles.
 	battle.known_moves = GameState.known_moves
+	# Share the persistent inventory so herbs eaten in a fight stay eaten.
+	battle.inventory = GameState.inventory
 
 	selected_target = 0
 	last_error = ""
 	_current_enemy_id = enemy_id
 	_win_dialogue_played = false
 	_exp_settled = false
+	_compact_heads = enemies.size() >= 4
 	_reset_stage_state()
 	_rebuild_enemy_groups()
 	_rebuild_martial_buttons()
@@ -198,6 +224,24 @@ func start(
 	if play_intro:
 		_play_intro_dialogue()
 	refresh()
+
+
+# 按列表顺序展开混编敌人组，第一个通常是头目；最多 6 个。
+func _build_group_enemies(group: Array, enemy_defs: Dictionary) -> Array:
+	var result: Array = []
+	for raw_entry in group:
+		if not (raw_entry is Dictionary):
+			continue
+		var entry: Dictionary = raw_entry
+		var def: Variant = enemy_defs.get(str(entry.get("id", "")), null)
+		if def == null:
+			continue
+		var count: int = maxi(0, int(entry.get("count", 1)))
+		for i in range(count):
+			if result.size() >= 6:
+				return result
+			result.append(Unit.from_enemy(def))
+	return result
 
 
 func press_action(action: Dictionary) -> void:
@@ -336,6 +380,10 @@ func _on_probe_pressed() -> void:
 
 func _on_foresight_pressed() -> void:
 	press_action({"kind": "foresight"})
+
+
+func _on_herb_pressed() -> void:
+	press_action({"kind": "item", "id": "herb"})
 
 
 func _on_target_pressed(index: int) -> void:
@@ -496,6 +544,19 @@ func _refresh_special_buttons() -> void:
 			"%d/%d" % [int(battle.player.foresight_points), int(battle.player.foresight_max)],
 			Hud.FORESIGHT_CYAN.lightened(0.3)
 		)
+	if herb_button != null:
+		var herb_count: int = int(battle.inventory.get("herb", 0))
+		var hp_full: bool = int(battle.player.hp) \
+				>= int(battle.player.max_hp) - int(battle.player.wound)
+		herb_button.disabled = locked or herb_count <= 0 or hp_full
+		_set_card_look(herb_button, herb_button.disabled)
+		herb_button.tooltip_text = _herb_tooltip()
+	if herb_badge != null:
+		_set_badge(
+			herb_badge,
+			"×%d" % int(battle.inventory.get("herb", 0)),
+			HERB_COLOR.lightened(0.3)
+		)
 
 
 func _target_alive() -> bool:
@@ -597,6 +658,18 @@ func _process_new_log() -> void:
 func _handle_log_line(line: String) -> void:
 	if line.contains(" dmg "):
 		_play_sfx("sfx_hit")
+	if line.contains("act:player item"):
+		# 吃药不攻击、不前冲，只在头顶弹一个绿色回血数字。
+		_play_sfx("sfx_heal")
+		var healed: int = _item_heal_from_line(line)
+		if healed > 0:
+			stage.popup(
+				"+%d" % healed,
+				stage.actor_position(stage.player_actor),
+				HERB_COLOR,
+				1.2
+			)
+		return
 	if line.contains("regen:player"):
 		_play_sfx("sfx_heal")
 	if line.contains("act:player"):
@@ -652,6 +725,17 @@ func _play_sfx(track: String, volume: float = 1.0) -> void:
 	if audio == null or not is_instance_valid(audio):
 		return
 	audio.play_sfx(track, volume)
+
+
+func _item_heal_from_line(line: String) -> int:
+	var marker := " heal "
+	var at: int = line.rfind(marker)
+	if at < 0:
+		return 0
+	var tail: String = line.substr(at + marker.length()).strip_edges()
+	if not tail.is_valid_int():
+		return 0
+	return int(tail)
 
 
 func _enemy_index_from_line(line: String) -> int:
@@ -777,6 +861,13 @@ func _foresight_tooltip() -> String:
 	if battle != null and battle.player != null:
 		left = int(battle.player.foresight_points)
 	return "料敌机先：花一回合看清所有敌人接下来两次出招（剩余 %d 次）" % left
+
+
+func _herb_tooltip() -> String:
+	var left: int = 0
+	if battle != null:
+		left = int(battle.inventory.get("herb", 0))
+	return "草药：恢复气血（药效 %d，受恢复属性加成，剩余 %d 份）" % [HERB_HEAL_BASE, left]
 
 
 func _weak_text(enemy: Variant) -> String:
@@ -1151,6 +1242,16 @@ func _build_special_cards(parent: Container) -> void:
 	parent.add_child(foresight_button)
 	foresight_badge = foresight_button.get_node("VerdictBadge")
 
+	herb_button = _build_card_button(
+		SPECIAL_SLOT_HERB, HERB_COLOR, "药", "草药",
+		"icon_item_herbs.png", HERB_COLOR
+	)
+	herb_button.name = "HerbCard"
+	herb_button.tooltip_text = _herb_tooltip()
+	herb_button.pressed.connect(_on_herb_pressed)
+	parent.add_child(herb_button)
+	herb_badge = herb_button.get_node("VerdictBadge")
+
 
 # Shown above the HUD once the fight is over.
 func _build_return_button() -> void:
@@ -1315,8 +1416,9 @@ func _build_dialogue() -> void:
 func _build_enemy_head(index: int) -> void:
 	var head := OrnatePanel.new()
 	head.name = "EnemyHead%d" % index
-	head.custom_minimum_size = Vector2(HEAD_WIDTH, HEAD_HEIGHT)
-	head.size = Vector2(HEAD_WIDTH, HEAD_HEIGHT)
+	var head_width: float = _head_width()
+	head.custom_minimum_size = Vector2(head_width, HEAD_HEIGHT)
+	head.size = Vector2(head_width, HEAD_HEIGHT)
 	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	head.add_theme_stylebox_override("panel", Hud.head_style(false, false))
 	enemies_container.add_child(head)
@@ -1341,15 +1443,16 @@ func _build_enemy_head(index: int) -> void:
 	var margin := MarginContainer.new()
 	margin.name = "HeadMargin"
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 6)
-	margin.add_theme_constant_override("margin_top", 4)
-	margin.add_theme_constant_override("margin_right", 6)
-	margin.add_theme_constant_override("margin_bottom", 6)
+	var margin_x: int = 4 if _compact_heads else 6
+	margin.add_theme_constant_override("margin_left", margin_x)
+	margin.add_theme_constant_override("margin_top", 3 if _compact_heads else 4)
+	margin.add_theme_constant_override("margin_right", margin_x)
+	margin.add_theme_constant_override("margin_bottom", 5 if _compact_heads else 6)
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	head.add_child(margin)
 
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 2)
+	box.add_theme_constant_override("separation", 1 if _compact_heads else 2)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.add_child(box)
 
@@ -1358,7 +1461,7 @@ func _build_enemy_head(index: int) -> void:
 	info_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	Hud.configure_label(info_label, 15, Hud.TEXT)
+	Hud.configure_label(info_label, _head_font(15), Hud.TEXT)
 	info_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.85))
 	info_label.add_theme_constant_override("outline_size", 4)
 	box.add_child(info_label)
@@ -1383,7 +1486,7 @@ func _build_enemy_head(index: int) -> void:
 	hp_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	Hud.configure_label(hp_label, 10, Color.WHITE)
+	Hud.configure_label(hp_label, _head_font(10), Color.WHITE)
 	hp_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.9))
 	hp_label.add_theme_constant_override("outline_size", 3)
 	hp_stack.add_child(hp_label)
@@ -1397,13 +1500,13 @@ func _build_enemy_head(index: int) -> void:
 	tough_label.name = "ToughnessLabel"
 	tough_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tough_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	Hud.configure_label(tough_label, 11, Hud.TOUGH_GOLD)
+	Hud.configure_label(tough_label, _head_font(11), Hud.TOUGH_GOLD)
 	stat_row.add_child(tough_label)
 
 	var stun_label := Label.new()
 	stun_label.name = "StunLabel"
 	stun_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	Hud.configure_label(stun_label, 11, Hud.STUN_BLUE)
+	Hud.configure_label(stun_label, _head_font(11), Hud.STUN_BLUE)
 	stun_label.visible = false
 	stat_row.add_child(stun_label)
 
@@ -1413,7 +1516,7 @@ func _build_enemy_head(index: int) -> void:
 	intent_label.clip_text = true
 	intent_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	intent_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	Hud.configure_label(intent_label, 11, Hud.TEXT)
+	Hud.configure_label(intent_label, _head_font(11), Hud.TEXT)
 	box.add_child(intent_label)
 
 	var foresight_label_node := Label.new()
@@ -1422,7 +1525,7 @@ func _build_enemy_head(index: int) -> void:
 	foresight_label_node.clip_text = true
 	foresight_label_node.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	foresight_label_node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	Hud.configure_label(foresight_label_node, 11, Hud.GOLD)
+	Hud.configure_label(foresight_label_node, _head_font(11), Hud.GOLD)
 	foresight_label_node.visible = false
 	box.add_child(foresight_label_node)
 
@@ -1431,7 +1534,7 @@ func _build_enemy_head(index: int) -> void:
 	weak_label.clip_text = true
 	weak_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	weak_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	Hud.configure_label(weak_label, 11, Hud.MUTED)
+	Hud.configure_label(weak_label, _head_font(11), Hud.MUTED)
 	weak_label.visible = false
 	box.add_child(weak_label)
 
@@ -1511,6 +1614,14 @@ func _refresh_result_banner() -> void:
 	result_label.visible = result_label.text != ""
 
 
+func _head_width() -> float:
+	return COMPACT_HEAD_WIDTH if _compact_heads else HEAD_WIDTH
+
+
+func _head_font(base_size: int) -> int:
+	return maxi(8, base_size - 1) if _compact_heads else base_size
+
+
 func _fit_enemy_head(head: Panel) -> void:
 	if head == null:
 		return
@@ -1520,7 +1631,7 @@ func _fit_enemy_head(head: Panel) -> void:
 	if margin == null:
 		return
 	var needed: float = margin.get_combined_minimum_size().y
-	head.size = Vector2(HEAD_WIDTH, maxf(HEAD_HEIGHT, needed))
+	head.size = Vector2(_head_width(), maxf(HEAD_HEIGHT, needed))
 
 
 func _update_enemy_head_positions() -> void:
@@ -1535,6 +1646,7 @@ func _update_enemy_head_positions() -> void:
 	if viewport == null:
 		return
 	var view_size: Vector2 = viewport.get_visible_rect().size
+	var placements: Array = []
 	for i in range(enemy_head_labels.size()):
 		var head: Control = enemy_head_labels[i]
 		if i >= battle.enemies.size() or i >= stage.enemy_actors.size():
@@ -1556,7 +1668,49 @@ func _update_enemy_head_positions() -> void:
 		var x: float = screen.x - head_size.x * 0.5
 		var y: float = screen.y - head_size.y - HEAD_SCREEN_GAP
 		x = clampf(x, 0.0, maxf(0.0, view_size.x - head_size.x))
-		head.position = Vector2(x, maxf(0.0, y))
+		y = maxf(0.0, y)
+		if _compact_heads:
+			y = minf(y, maxf(0.0, view_size.y - head_size.y))
+		placements.append({"index": i, "pos": Vector2(x, y), "size": head_size})
+	if _compact_heads:
+		_resolve_head_overlaps(placements, view_size)
+	for raw_entry in placements:
+		var entry: Dictionary = raw_entry
+		var head: Control = enemy_head_labels[int(entry["index"])]
+		head.position = entry["pos"]
+
+
+# 4 个以上敌人时标签更宽地铺开，容易在屏幕上叠在一起：按 x 排序后，
+# 把与已放置标签相交的后一个标签往上错开 36 像素，并保持夹在屏幕内。
+func _resolve_head_overlaps(placements: Array, view_size: Vector2) -> void:
+	placements.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		var pos_a: Vector2 = a["pos"]
+		var pos_b: Vector2 = b["pos"]
+		return pos_a.x < pos_b.x
+	)
+	var placed: Array = []
+	for raw_entry in placements:
+		var entry: Dictionary = raw_entry
+		var pos: Vector2 = entry["pos"]
+		var head_size: Vector2 = entry["size"]
+		var rect := Rect2(pos, head_size)
+		var guard := 0
+		while guard < 48:
+			guard += 1
+			var moved := false
+			for raw_prev in placed:
+				var prev: Rect2 = raw_prev
+				if rect.intersects(prev):
+					pos.y = maxf(0.0, pos.y - 36.0)
+					rect = Rect2(pos, head_size)
+					moved = true
+					break
+			if not moved:
+				break
+		pos.y = clampf(pos.y, 0.0, maxf(0.0, view_size.y - head_size.y))
+		rect = Rect2(pos, head_size)
+		entry["pos"] = pos
+		placed.append(rect)
 
 
 func _set_card_look(button: Button, dimmed: bool) -> void:
@@ -1678,6 +1832,8 @@ func _slot_for_key(code: int) -> int:
 			return 5
 		KEY_7:
 			return 6
+		KEY_8:
+			return 7
 		_:
 			return -1
 
@@ -1705,6 +1861,11 @@ func _activate_slot(slot: int) -> bool:
 		if foresight_button == null or foresight_button.disabled:
 			return false
 		_on_foresight_pressed()
+		return true
+	if slot == SPECIAL_SLOT_HERB:
+		if herb_button == null or herb_button.disabled:
+			return false
+		_on_herb_pressed()
 		return true
 	return false
 

@@ -40,19 +40,41 @@ func _process(_delta: float) -> bool:
 		if game.current_kind != "town":
 			_fail("game did not start in the town")
 			return false
-		cur.player_pos = Vector2(8.5, 3.0)
-		cur.player.position = Vector3(8.5, 0, 3.0)
+		var door: Vector2 = cur.tavern_door()
+		cur.player_pos = door
+		cur.player.position = Vector3(door.x, 0.0, door.y)
 	elif frames == 10:
 		if not cur.try_interact():
-			_fail("could not talk to Ma Youwei")
+			_fail("could not enter the tavern")
+			return false
+	elif frames == 15:
+		if game.current_kind != "tavern":
+			_fail("did not enter the tavern (kind=%s)" % game.current_kind)
+			return false
+		cur.player_pos = Vector2(11.0, -4.0)
+		cur.player.position = Vector3(11.0, 0.0, -4.0)
+		cur.check_story(0.016)
 	elif frames == 20:
+		if not cur.is_dialogue_active():
+			_fail("the ambush opening narration did not start")
+			return false
 		var guard: int = 0
 		while cur.is_dialogue_active() and guard < 60:
 			cur.dialogue_view.advance()
 			guard += 1
-	elif frames == 40:
+	elif frames == 25:
+		cur.advance(5.0)
+		if not cur.is_dialogue_active():
+			_fail("the ambush dialogue did not follow the brawl animation")
+			return false
+	elif frames == 30:
+		var guard2: int = 0
+		while cur.is_dialogue_active() and guard2 < 60:
+			cur.dialogue_view.advance()
+			guard2 += 1
+	elif frames == 45:
 		if game.current_kind != "battle":
-			_fail("did not enter the battle after the dialogue (kind=%s)" % game.current_kind)
+			_fail("did not enter the battle after the ambush (kind=%s)" % game.current_kind)
 			return false
 		var view: Control = game.current
 		var window: Vector2 = game.get_viewport().get_visible_rect().size
@@ -66,6 +88,9 @@ func _process(_delta: float) -> bool:
 			return false
 		if view.stage == null or not is_instance_valid(view.stage):
 			_fail("battle has no 3D stage")
+			return false
+		if int(view.battle.enemies.size()) != 6:
+			_fail("the ambush battle should have six enemies, got %d" % int(view.battle.enemies.size()))
 			return false
 		print("SMOKE OK")
 		quit(0)

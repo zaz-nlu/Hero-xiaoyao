@@ -9,9 +9,23 @@ const ENEMY_POSITIONS: Array = [
 	[Vector3(8.4, 0.0, 1.2)],
 	[Vector3(7.0, 0.0, 0.2), Vector3(10.8, 0.0, 2.4)],
 	[Vector3(6.8, 0.0, -0.2), Vector3(9.8, 0.0, 1.2), Vector3(12.8, 0.0, 2.6)],
+	[
+		Vector3(7.4, 0.0, -2.6), Vector3(10.8, 0.0, -2.6),
+		Vector3(9.0, 0.0, 3.0), Vector3(12.4, 0.0, 3.0),
+	],
+	[
+		Vector3(7.2, 0.0, -2.8), Vector3(10.2, 0.0, -2.8), Vector3(13.2, 0.0, -2.8),
+		Vector3(8.7, 0.0, 3.2), Vector3(11.7, 0.0, 3.2),
+	],
+	[
+		Vector3(7.2, 0.0, -2.8), Vector3(10.2, 0.0, -2.8), Vector3(13.2, 0.0, -2.8),
+		Vector3(8.7, 0.0, 3.2), Vector3(11.7, 0.0, 3.2), Vector3(14.7, 0.0, 3.2),
+	],
 ]
 const CAM_POS := Vector3(6.4, 14.0, 36.0)
 const CAM_TARGET := Vector3(6.4, 0.0, 0.0)
+const CAM_POS_TAVERN := Vector3(8.0, 13.0, 33.0)
+const CAM_TARGET_TAVERN := Vector3(8.0, 0.5, -1.0)
 const CAM_FOV := 26.0
 
 const HIT_COLOR := Color(1.0, 0.35, 0.35, 1.0)
@@ -29,6 +43,8 @@ var origin: Vector3 = Vector3.ZERO
 var _bases: Dictionary = {}
 var _flashes: Array = []
 var _lunges: Array = []
+var _cam_pos: Vector3 = CAM_POS
+var _cam_target: Vector3 = CAM_TARGET
 
 
 func _process(delta: float) -> void:
@@ -70,13 +86,26 @@ func _detach_and_free(actor: Variant) -> void:
 func _build_town() -> void:
 	if town != null and is_instance_valid(town):
 		return
-	if str(GameState.battle_backdrop) == "forest":
+	var backdrop := str(GameState.battle_backdrop)
+	_cam_pos = CAM_POS
+	_cam_target = CAM_TARGET
+	if backdrop == "forest":
 		town = load("res://world/forest.gd").new()
 		town.set("skip_actors", true)
 		add_child(town)
 		if not town.is_inside_tree():
 			town.build()
 		origin = town.arena_origin
+	elif backdrop == "tavern":
+		town = load("res://world/tavern.gd").new()
+		town.set("skip_actors", true)
+		town.set("force_state", "brawl")
+		add_child(town)
+		if not town.is_inside_tree():
+			town.build()
+		origin = town.arena_origin
+		_cam_pos = CAM_POS_TAVERN
+		_cam_target = CAM_TARGET_TAVERN
 	else:
 		town = load("res://world/town.gd").new()
 		town.set("skip_actors", true)
@@ -94,23 +123,22 @@ func _setup_camera() -> void:
 	if camera == null:
 		return
 	camera.fov = CAM_FOV
-	camera.position = origin + CAM_POS
-	_setup_dof()
+	camera.position = origin + _cam_pos
+	_setup_dof(_cam_pos.distance_to(_cam_target))
 	if camera.is_inside_tree():
-		camera.look_at(origin + CAM_TARGET, Vector3.UP)
+		camera.look_at(origin + _cam_target, Vector3.UP)
 		camera.current = true
 	else:
 		camera.transform = Transform3D(
-			Basis.looking_at(CAM_TARGET - CAM_POS, Vector3.UP), origin + CAM_POS
+			Basis.looking_at(_cam_target - _cam_pos, Vector3.UP), origin + _cam_pos
 		)
 
 
 # The town's depth of field is tuned for the close walking camera; re-centre it on the stage.
-func _setup_dof() -> void:
+func _setup_dof(dist: float) -> void:
 	var attributes: Variant = camera.attributes
 	if attributes == null:
 		return
-	var dist: float = CAM_POS.distance_to(CAM_TARGET)
 	attributes.dof_blur_far_distance = dist + 14.0
 	attributes.dof_blur_far_transition = 20.0
 	attributes.dof_blur_near_distance = dist - 12.0
@@ -130,7 +158,7 @@ func _build_player_actor() -> void:
 func _build_enemy_actors(enemy_sprite_ids: Array) -> void:
 	if enemy_sprite_ids.is_empty():
 		return
-	var slot_index: int = clampi(enemy_sprite_ids.size(), 1, 3) - 1
+	var slot_index: int = clampi(enemy_sprite_ids.size(), 1, 6) - 1
 	var slots: Array = ENEMY_POSITIONS[slot_index]
 	for i in range(enemy_sprite_ids.size()):
 		var actor: Variant = CharacterSprite.new()
