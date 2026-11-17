@@ -5,15 +5,11 @@ extends CanvasLayer
 
 const Progression = preload("res://core/progression.gd")
 const Quests = preload("res://core/quests.gd")
-const GameState = preload("res://core/game_state.gd")
 const DataLoader = preload("res://core/data_loader.gd")
-const Mastery = preload("res://core/mastery.gd")
-const ImageCache = preload("res://ui/image_cache.gd")
 const Hud = preload("res://ui/battle_hud_style.gd")
+const CharacterPanel = preload("res://ui/character_panel.gd")
 
-const PLAYER_PATH := "res://data/player.json"
 const MARTIALS_PATH := "res://data/martials.json"
-const PORTRAIT_PATH := "res://assets/portraits/ren_xiaoyao.png"
 
 const STAT_KEYS: Array[String] = ["power", "speed", "defense", "recovery", "skill", "mechanism"]
 const STAT_NAMES := {
@@ -31,23 +27,15 @@ const TOAST_MAX := 3
 const TOAST_FADE_IN := 0.15
 const TOAST_HOLD := 2.2
 const TOAST_FADE_OUT := 0.4
-# Mirrors Hud.FORESIGHT_CYAN, used for the bonus numbers.
-const BONUS_COLOR := "#4cbfcc"
 
-var character_panel: Control = null
+var character_panel: Variant = null
 var quest_panel: Control = null
 var toast_box: VBoxContainer = null
 var enabled: bool = true
 
 var _built: bool = false
 var _toasts: Array = []
-var _stat_rows: Dictionary = {}
-var _equipment_row: RichTextLabel = null
-var _martial_root: Control = null
 var _martial_defs: Dictionary = {}
-var _char_name_label: Label = null
-var _char_realm_label: Label = null
-var _char_hp_label: Label = null
 
 var _quest_list_root: Control = null
 var _quest_title: Label = null
@@ -111,6 +99,12 @@ func _unhandled_input(event: InputEvent) -> void:
 					_move_quest_selection(1)
 					_consume_input()
 					return
+			_:
+				pass
+		if character_panel != null and character_panel.visible:
+			if character_panel.handle_key(key):
+				_consume_input()
+				return
 	if is_panel_open():
 		_consume_input()
 
@@ -155,7 +149,7 @@ func is_panel_open() -> bool:
 func refresh() -> void:
 	_ensure_built()
 	if character_panel.visible:
-		_refresh_character()
+		character_panel.refresh()
 	if quest_panel.visible:
 		_refresh_quests()
 
@@ -185,6 +179,8 @@ func show_toast(text: String) -> void:
 
 
 func advance(delta: float) -> void:
+	if character_panel != null:
+		character_panel.advance(delta)
 	var i: int = _toasts.size() - 1
 	while i >= 0:
 		var record: Dictionary = _toasts[i]
@@ -226,92 +222,19 @@ func _build_toast_box() -> void:
 	toast_box.anchor_bottom = 0.0
 	toast_box.offset_left = -260.0
 	toast_box.offset_right = 260.0
-	toast_box.offset_top = 70.0
-	toast_box.offset_bottom = 220.0
+	toast_box.offset_top = 8.0
+	toast_box.offset_bottom = 158.0
 	toast_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	toast_box.add_theme_constant_override("separation", 6)
 	add_child(toast_box)
 
 
 func _build_character_panel() -> void:
-	character_panel = Panel.new()
+	character_panel = CharacterPanel.new()
 	character_panel.name = "CharacterPanel"
-	_center_panel(character_panel)
-	character_panel.add_theme_stylebox_override("panel", Hud.panel_style(0.94))
-	character_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	character_panel.visible = false
 	add_child(character_panel)
-
-	var portrait := TextureRect.new()
-	portrait.name = "Portrait"
-	portrait.position = Vector2(26.0, 70.0)
-	portrait.size = Vector2(170.0, 260.0)
-	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var texture: Texture2D = ImageCache.texture(PORTRAIT_PATH)
-	if texture != null:
-		portrait.texture = texture
-	else:
-		var fallback := ColorRect.new()
-		fallback.name = "PortraitFallback"
-		fallback.position = Vector2(26.0, 70.0)
-		fallback.size = Vector2(170.0, 260.0)
-		fallback.color = Color(0.16, 0.14, 0.2, 1.0)
-		fallback.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		character_panel.add_child(fallback)
-	character_panel.add_child(portrait)
-
-	_char_name_label = _make_label(
-		character_panel, "CharName", Vector2(224.0, 18.0), Vector2(390.0, 32.0), 24, Hud.GOLD_BRIGHT
-	)
-	_char_realm_label = _make_label(
-		character_panel, "CharRealm", Vector2(224.0, 50.0), Vector2(390.0, 22.0), 16, Hud.MUTED
-	)
-	_char_hp_label = _make_label(
-		character_panel, "CharHp", Vector2(224.0, 72.0), Vector2(390.0, 22.0), 16, Hud.TEXT
-	)
-
-	for i in range(STAT_KEYS.size()):
-		var key: String = STAT_KEYS[i]
-		var row := RichTextLabel.new()
-		row.name = "StatRow_%s" % key
-		row.position = Vector2(224.0, 102.0 + float(i) * 24.0)
-		row.size = Vector2(390.0, 22.0)
-		row.bbcode_enabled = true
-		row.scroll_active = false
-		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		row.add_theme_font_size_override("normal_font_size", 16)
-		row.add_theme_color_override("default_color", Hud.TEXT)
-		character_panel.add_child(row)
-		_stat_rows[key] = row
-
-	_equipment_row = RichTextLabel.new()
-	_equipment_row.name = "EquipmentRow"
-	_equipment_row.position = Vector2(224.0, 248.0)
-	_equipment_row.size = Vector2(390.0, 22.0)
-	_equipment_row.bbcode_enabled = true
-	_equipment_row.scroll_active = false
-	_equipment_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_equipment_row.add_theme_font_size_override("normal_font_size", 16)
-	_equipment_row.add_theme_color_override("default_color", Hud.TEXT)
-	character_panel.add_child(_equipment_row)
-
-	_make_label(
-		character_panel, "MartialHeader", Vector2(224.0, 278.0), Vector2(390.0, 22.0), 16, Hud.GOLD
-	).text = "武学"
-	_martial_root = Control.new()
-	_martial_root.name = "MartialList"
-	_martial_root.position = Vector2(224.0, 302.0)
-	_martial_root.size = Vector2(390.0, 80.0)
-	_martial_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	character_panel.add_child(_martial_root)
-
-	var hint := _make_label(
-		character_panel, "CloseHint", Vector2(0.0, 384.0), Vector2(PANEL_WIDTH, 26.0), 16, Hud.MUTED
-	)
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.text = "按 C 关闭"
+	character_panel.refresh()
 
 
 func _build_quest_panel() -> void:
@@ -382,107 +305,6 @@ func _build_quest_panel() -> void:
 	)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.text = "按 J 关闭"
-
-
-# ---------------------------------------------------------------- character data
-
-func _refresh_character() -> void:
-	var player: Dictionary = DataLoader.load_player(PLAYER_PATH)
-	var base_value: Variant = player.get("stats", {})
-	var base: Dictionary = {}
-	if base_value is Dictionary:
-		base = base_value
-	var max_hp := int(player.get("max_hp", 100))
-	_char_name_label.text = str(player.get("name", "任逍遥"))
-	_char_realm_label.text = "境界：初出茅庐"
-	_char_hp_label.text = "气血：%d / %d" % [max_hp, max_hp]
-
-	for key in STAT_KEYS:
-		var bonus: int = _stat_bonus(key)
-		var text := "%s  %d" % [str(STAT_NAMES.get(key, key)), int(base.get(key, 0))]
-		if bonus != 0:
-			text += " [color=%s](%s)[/color]" % [BONUS_COLOR, _signed(bonus)]
-		var row_value: Variant = _stat_rows.get(key, null)
-		if row_value is RichTextLabel:
-			var row: RichTextLabel = row_value
-			row.text = text
-
-	_equipment_row.text = _equipment_text()
-	_rebuild_martial_list(player)
-
-
-func _stat_bonus(key: String) -> int:
-	var total := int(GameState.stat_bonus.get(key, 0))
-	for slot in GameState.equipment:
-		var item: Dictionary = Progression.item_def(str(GameState.equipment[slot]))
-		var bonus_value: Variant = item.get("bonus", {})
-		if bonus_value is Dictionary:
-			var bonus: Dictionary = bonus_value
-			total += int(bonus.get(key, 0))
-	return total
-
-
-func _equipment_text() -> String:
-	var parts: Array = []
-	for slot in GameState.equipment:
-		var item_id := str(GameState.equipment[slot])
-		if item_id == "":
-			continue
-		var item: Dictionary = Progression.item_def(item_id)
-		var item_name := str(item.get("name", item_id))
-		var bonus_text := _item_bonus_text(item)
-		if bonus_text == "":
-			parts.append(item_name)
-		else:
-			parts.append("%s（%s）" % [item_name, bonus_text])
-	if parts.is_empty():
-		return "装备：无"
-	return "装备：" + "、".join(PackedStringArray(parts))
-
-
-func _item_bonus_text(item: Dictionary) -> String:
-	var parts: Array = []
-	var bonus_value: Variant = item.get("bonus", {})
-	if bonus_value is Dictionary:
-		var bonus: Dictionary = bonus_value
-		for key in bonus.keys():
-			var stat_key := str(key)
-			if not STAT_NAMES.has(stat_key):
-				continue
-			var amount := int(bonus[key])
-			if amount == 0:
-				continue
-			parts.append("%s%s" % [str(STAT_NAMES[stat_key]), _signed(amount)])
-	return " ".join(PackedStringArray(parts))
-
-
-func _rebuild_martial_list(player: Dictionary) -> void:
-	_clear_children(_martial_root)
-	var learned_value: Variant = player.get("learned", [])
-	if not (learned_value is Array):
-		return
-	var mastery = Mastery.new()
-	for key in GameState.mastery_exp:
-		mastery.add_exp(str(key), int(GameState.mastery_exp[key]))
-	var learned: Array = learned_value
-	var y := 0.0
-	for raw_id in learned:
-		var martial_id := str(raw_id)
-		var level: int = maxi(1, int(mastery.level(martial_id)))
-		var row := RichTextLabel.new()
-		row.name = "MartialRow_%s" % martial_id
-		row.position = Vector2(0.0, y)
-		row.size = Vector2(390.0, 18.0)
-		row.bbcode_enabled = true
-		row.scroll_active = false
-		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		row.add_theme_font_size_override("normal_font_size", 15)
-		row.add_theme_color_override("default_color", Hud.TEXT)
-		row.text = "%s  [color=%s]熟练度 Lv.%d[/color]" % [
-			_martial_name(martial_id), BONUS_COLOR, level
-		]
-		_martial_root.add_child(row)
-		y += 19.0
 
 
 # ---------------------------------------------------------------- quest data

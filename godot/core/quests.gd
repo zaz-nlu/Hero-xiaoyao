@@ -138,6 +138,9 @@ static func turn_in(id: String) -> bool:
 		for martial_id in exp_reward:
 			var key := str(martial_id)
 			GameState.mastery_exp[key] = int(GameState.mastery_exp.get(key, 0)) + int(exp_reward[martial_id])
+	var points_reward: Variant = rewards.get("points", 0)
+	if points_reward is int or points_reward is float:
+		Progression.add_points(int(points_reward))
 	return true
 
 

@@ -110,3 +110,82 @@ func test_reset_clears_growth_state() -> void:
 	assert_eq(GameState.quests, {}, "quests are cleared")
 	assert_eq(GameState.mastery_exp, {}, "mastery exp is cleared")
 	assert_eq(GameState.toasts, [], "toasts are cleared")
+
+
+func test_reset_restores_initial_points_and_clears_mastery_total() -> void:
+	GameState.reset()
+	assert_eq(GameState.unspent_points, 3, "a new game starts with the tutorial points")
+	assert_eq(GameState.mastery_total, {}, "the mastery total starts empty")
+	GameState.unspent_points = 7
+	GameState.mastery_total["basic_sword"] = 20
+	GameState.reset()
+	assert_eq(GameState.unspent_points, 3, "reset restores the tutorial points")
+	assert_eq(GameState.mastery_total, {}, "reset clears the mastery total")
+
+
+func test_add_points_accumulates_and_toasts() -> void:
+	GameState.reset()
+	Progression.add_points(2)
+	Progression.add_points(1)
+	assert_eq(GameState.unspent_points, 6, "awarded points accumulate")
+	assert_eq(
+		Progression.take_toasts(),
+		["获得 2 点属性点", "获得 1 点属性点"],
+		"each award pushes a Chinese toast"
+	)
+	GameState.reset()
+
+
+func test_spend_point_applies_bonus_without_toast() -> void:
+	GameState.reset()
+	Progression.reload_items()
+	assert_true(Progression.can_spend("power"), "power can be raised")
+	assert_true(Progression.spend_point("power"), "the first point is spent")
+	assert_true(Progression.spend_point("power"), "the second point is spent")
+	assert_eq(int(GameState.stat_bonus.get("power", 0)), 2, "each point adds one bonus")
+	assert_eq(GameState.unspent_points, 1, "each point is deducted")
+	assert_eq(Progression.take_toasts(), [], "spending points is silent")
+	GameState.reset()
+
+
+func test_can_spend_checks_points_names_and_cap() -> void:
+	GameState.reset()
+	Progression.reload_items()
+	assert_true(not Progression.can_spend("luck"), "unknown stats are rejected")
+	GameState.unspent_points = 0
+	assert_true(not Progression.can_spend("power"), "no points means no spending")
+	GameState.unspent_points = 3
+	GameState.stat_bonus["speed"] = 35
+	assert_true(not Progression.can_spend("speed"), "a stat at the cap cannot be raised")
+	assert_true(Progression.can_spend("power"), "other stats remain available")
+	assert_true(not Progression.spend_point("speed"), "spend_point honours the cap")
+	GameState.reset()
+
+
+func test_equip_and_unequip_keep_the_item_in_the_bag() -> void:
+	GameState.reset()
+	Progression.reload_items()
+	Progression.give_item("cloth_robe")
+	assert_eq(Progression.equipped("armor"), "", "armor does not auto-equip")
+	assert_true(Progression.equip("cloth_robe"), "the robe can be equipped")
+	assert_eq(Progression.equipped("armor"), "cloth_robe", "the robe fills the armor slot")
+	assert_eq(Progression.item_count("cloth_robe"), 1, "the robe stays in the bag")
+	assert_eq(
+		Progression.take_toasts(),
+		["获得 粗布衣", "已装备 粗布衣"],
+		"pickup and equip both toast"
+	)
+	Progression.unequip("armor")
+	assert_eq(Progression.equipped("armor"), "", "unequip empties the slot")
+	assert_eq(Progression.item_count("cloth_robe"), 1, "unequip keeps the item in the bag")
+	GameState.reset()
+
+
+func test_equip_rejects_materials_and_missing_items() -> void:
+	GameState.reset()
+	Progression.reload_items()
+	assert_true(not Progression.equip("jade_pendant"), "an unowned item cannot be equipped")
+	Progression.give_item("herb")
+	assert_true(not Progression.equip("herb"), "materials cannot be equipped")
+	assert_eq(GameState.equipment, {}, "no slot was filled")
+	GameState.reset()

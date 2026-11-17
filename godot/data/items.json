@@ -6,6 +6,20 @@
 		"desc": "寻常铁匠打的剑，不算锋利，但还趁手。",
 		"bonus": {"speed": 1, "power": 1}
 	},
+	"cloth_robe": {
+		"name": "粗布衣",
+		"kind": "armor",
+		"slot": "armor",
+		"desc": "洗得发白的粗布衣，聊胜于无。",
+		"bonus": {"defense": 1}
+	},
+	"jade_pendant": {
+		"name": "旧玉佩",
+		"kind": "accessory",
+		"slot": "accessory",
+		"desc": "一枚旧玉佩，温润如水。",
+		"bonus": {"recovery": 1}
+	},
 	"herb": {
 		"name": "草药",
 		"kind": "material",

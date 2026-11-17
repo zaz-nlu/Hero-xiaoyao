@@ -152,6 +152,7 @@ func start(
 	for i in range(enemy_count):
 		enemies.append(Unit.from_enemy(enemy_def))
 	var mastery: Variant = Mastery.new()
+	mastery.import_exp(GameState.mastery_total)
 	for raw_learned_id in learned:
 		mastery.learn(str(raw_learned_id))
 	for raw_id in loadout:
@@ -230,6 +231,13 @@ func refresh() -> void:
 	_process_new_log()
 	_maybe_play_win_dialogue()
 	_refresh_return_button()
+	_sync_mastery_total()
+
+
+func _sync_mastery_total() -> void:
+	if battle == null or battle.mastery == null:
+		return
+	GameState.mastery_total = battle.mastery.export_exp()
 
 
 func _process(delta: float) -> void:

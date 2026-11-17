@@ -3,6 +3,7 @@ extends "res://tests/test_case.gd"
 const Battle = preload("res://core/battle.gd")
 const DataLoader = preload("res://core/data_loader.gd")
 const GameState = preload("res://core/game_state.gd")
+const Mastery = preload("res://core/mastery.gd")
 
 
 func _make_view() -> Variant:
@@ -119,4 +120,29 @@ func test_player_stats_include_game_state_bonus() -> void:
 		"the permanent stat bonus is applied to the battle unit"
 	)
 	boosted.free()
+	GameState.reset()
+
+
+func test_mastery_carries_between_battles() -> void:
+	GameState.reset()
+	var first: Variant = _make_view()
+	first.start("bandit", 1, true)
+	first.press_action({"kind": "martial", "id": "basic_sword", "target": 0})
+	assert_true(
+		not GameState.mastery_total.is_empty(),
+		"the first battle writes the persistent mastery total"
+	)
+	var first_mastery: Variant = Mastery.new()
+	first_mastery.import_exp(GameState.mastery_total)
+	var carried_level: int = int(first_mastery.level("basic_sword"))
+	assert_true(carried_level >= 1, "the basic sword gained mastery exp")
+	first.free()
+
+	var second: Variant = _make_view()
+	second.start("bandit", 1, true)
+	assert_eq(
+		int(second.battle.mastery.level("basic_sword")), carried_level,
+		"a new battle imports the carried-over level"
+	)
+	second.free()
 	GameState.reset()

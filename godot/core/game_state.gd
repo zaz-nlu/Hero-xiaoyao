@@ -1,5 +1,7 @@
 extends RefCounted
 
+const INITIAL_POINTS := 3
+
 static var flags: Dictionary = {}
 static var town_return_pos: Variant = null
 static var forest_return_pos: Variant = null
@@ -10,6 +12,8 @@ static var equipment: Dictionary = {}
 static var inventory: Dictionary = {}
 static var quests: Dictionary = {}
 static var mastery_exp: Dictionary = {}
+static var mastery_total: Dictionary = {}
+static var unspent_points: int = INITIAL_POINTS
 static var toasts: Array = []
 
 
@@ -32,4 +36,6 @@ static func reset() -> void:
 	inventory.clear()
 	quests.clear()
 	mastery_exp.clear()
+	mastery_total.clear()
+	unspent_points = INITIAL_POINTS
 	toasts.clear()

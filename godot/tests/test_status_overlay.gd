@@ -31,20 +31,22 @@ func test_character_panel_toggle_and_stats() -> void:
 	var overlay: Variant = StatusOverlay.new()
 	_press(overlay, KEY_C)
 	assert_true(bool(overlay.is_panel_open()), "C opens the character panel")
-	var power_text: String = _text_of(overlay.character_panel, "StatRow_power")
+	assert_eq(int(overlay.character_panel.tab_index), 0, "the panel opens on the attributes tab")
+	var power_text: String = _text_of(overlay.character_panel, "AttrValue_power")
 	assert_true(power_text.contains("10"), "the power row shows its base value: %s" % power_text)
 
 	GameState.stat_bonus["speed"] = 1
 	overlay.refresh()
-	var speed_text: String = _text_of(overlay.character_panel, "StatRow_speed")
+	var speed_text: String = _text_of(overlay.character_panel, "AttrValue_speed")
 	assert_true(speed_text.contains("+1"), "the speed row shows the permanent bonus: %s" % speed_text)
 
 	Progression.give_item("plain_sword")
 	overlay.refresh()
-	var equipment_text: String = _text_of(overlay.character_panel, "EquipmentRow")
+	overlay.character_panel.select_tab(2)
+	var equipment_text: String = _text_of(overlay.character_panel, "SlotItem_weapon")
 	assert_true(
 		equipment_text.contains("普通的剑"),
-		"the equipment row names the equipped sword: %s" % equipment_text
+		"the weapon slot names the equipped sword: %s" % equipment_text
 	)
 
 	_press(overlay, KEY_C)

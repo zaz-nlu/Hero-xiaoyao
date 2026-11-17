@@ -5,6 +5,9 @@ const GameState = preload("res://core/game_state.gd")
 const Stats = preload("res://core/stats.gd")
 
 const ITEMS_PATH := "res://data/items.json"
+const PLAYER_PATH := "res://data/player.json"
+const STAT_CAP := 50
+const EQUIP_SLOTS: Array[String] = ["weapon", "armor", "accessory"]
 const STAT_NAMES := {
 	"power": "力量",
 	"speed": "速度",
@@ -63,6 +66,58 @@ static func add_stat(stat: String, amount: int) -> void:
 		return
 	GameState.stat_bonus[stat] = int(GameState.stat_bonus.get(stat, 0)) + amount
 	push_toast("%s +%d" % [STAT_NAMES[stat], amount])
+
+
+static func add_points(n: int) -> void:
+	if n <= 0:
+		return
+	GameState.unspent_points += n
+	push_toast("获得 %d 点属性点" % n)
+
+
+static func _base_stats() -> Dictionary:
+	var player: Dictionary = DataLoader.load_player(PLAYER_PATH)
+	var raw: Variant = player.get("stats", {})
+	if raw is Dictionary:
+		var stats: Dictionary = raw
+		return stats
+	return {}
+
+
+static func can_spend(stat: String) -> bool:
+	if GameState.unspent_points <= 0:
+		return false
+	if not STAT_NAMES.has(stat):
+		return false
+	var final_values: Dictionary = final_stats(_base_stats())
+	return int(final_values.get(stat, 0)) < STAT_CAP
+
+
+static func spend_point(stat: String) -> bool:
+	if not can_spend(stat):
+		return false
+	GameState.stat_bonus[stat] = int(GameState.stat_bonus.get(stat, 0)) + 1
+	GameState.unspent_points -= 1
+	return true
+
+
+static func equip(item_id: String) -> bool:
+	if item_count(item_id) <= 0:
+		return false
+	var item: Dictionary = item_def(item_id)
+	var kind := str(item.get("kind", ""))
+	if not EQUIP_SLOTS.has(kind):
+		return false
+	var slot := str(item.get("slot", kind))
+	if slot == "" or not EQUIP_SLOTS.has(slot):
+		slot = kind
+	GameState.equipment[slot] = item_id
+	push_toast("已装备 %s" % str(item.get("name", item_id)))
+	return true
+
+
+static func unequip(slot: String) -> void:
+	GameState.equipment.erase(slot)
 
 
 static func give_item(id: String, count: int = 1) -> void:
