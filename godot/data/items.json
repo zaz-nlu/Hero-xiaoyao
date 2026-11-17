@@ -1,0 +1,14 @@
+{
+	"plain_sword": {
+		"name": "普通的剑",
+		"kind": "weapon",
+		"slot": "weapon",
+		"desc": "寻常铁匠打的剑，不算锋利，但还趁手。",
+		"bonus": {"speed": 1, "power": 1}
+	},
+	"herb": {
+		"name": "草药",
+		"kind": "material",
+		"desc": "林间采来的草药，味苦，据说能调理气息。"
+	}
+}

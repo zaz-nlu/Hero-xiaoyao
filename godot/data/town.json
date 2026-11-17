@@ -97,6 +97,6 @@
     {"id": "disciple", "sprite": "zixia_disciple", "name": "紫霞派弟子", "x": 22.5, "z": 1.0, "facing": "left"},
     {"id": "bandit_1", "sprite": "bandit", "name": "马匪", "x": 4.5, "z": 0.5, "facing": "right"},
     {"id": "bandit_2", "sprite": "bandit", "name": "马匪", "x": 6.5, "z": 2.0, "facing": "down"},
-    {"id": "ma_youwei", "sprite": "ma_youwei", "name": "马友为", "x": 8.5, "z": 0.8, "facing": "left"}
+    {"id": "ma_youwei", "sprite": "ma_youwei", "name": "马匪头子", "x": 8.5, "z": 0.8, "facing": "left"}
   ]
 }

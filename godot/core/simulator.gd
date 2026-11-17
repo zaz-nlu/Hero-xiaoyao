@@ -6,6 +6,7 @@ const Counter = preload("res://core/counter.gd")
 const DataLoader = preload("res://core/data_loader.gd")
 const Jianyi = preload("res://core/jianyi.gd")
 const Mastery = preload("res://core/mastery.gd")
+const Progression = preload("res://core/progression.gd")
 const Unit = preload("res://core/unit.gd")
 
 const PLAYER_PATH := "res://data/player.json"
@@ -20,6 +21,10 @@ static func run(config: Dictionary) -> Dictionary:
 	var first_strike: bool = bool(config.get("first_strike", false))
 	var enemy_count: int = int(config.get("enemy_count", 1))
 	var enemy_id: String = str(config.get("enemy_id", ""))
+	var stats_override: Dictionary = {}
+	var raw_stats_override: Variant = config.get("stats_override", {})
+	if raw_stats_override is Dictionary:
+		stats_override = raw_stats_override
 
 	var player_data: Dictionary = DataLoader.load_player(PLAYER_PATH)
 	var loaded_martials: Dictionary = DataLoader.load_martials(MARTIALS_PATH)
@@ -65,7 +70,8 @@ static func run(config: Dictionary) -> Dictionary:
 			learned,
 			martials,
 			seed_value + n,
-			first_strike
+			first_strike,
+			stats_override
 		)
 		_run_battle(battle, bot, bot_rng)
 		total_rounds += int(battle.round)
@@ -103,12 +109,17 @@ static func _make_battle(
 	learned: Array,
 	martials: Dictionary,
 	seed_value: int,
-	first_strike: bool
+	first_strike: bool,
+	stats_override: Dictionary
 ) -> Variant:
 	var stats: Dictionary = {}
-	var raw_stats: Variant = player_data.get("stats", {})
-	if raw_stats is Dictionary:
-		stats = raw_stats.duplicate()
+	if not stats_override.is_empty():
+		stats = stats_override.duplicate()
+	else:
+		var raw_stats: Variant = player_data.get("stats", {})
+		if raw_stats is Dictionary:
+			var base_stats: Dictionary = raw_stats
+			stats = Progression.final_stats(base_stats)
 	var player: Variant = Unit.make_player(
 		str(player_data.get("name", "")),
 		stats,

@@ -297,7 +297,7 @@
     {
       "id": "ma_youwei",
       "sprite": "ma_youwei",
-      "name": "马友为",
+      "name": "马匪头子",
       "facing": "down",
       "states": ["brawl"],
       "positions": {"brawl": [11.0, -3.0]},

@@ -47,7 +47,7 @@ func test_minion_with_three_types_is_error() -> void:
 
 
 func test_boss_with_two_types_is_error() -> void:
-	var json := '[{"id":"ma_youwei","name":"马友为","tier":"boss",' \
+	var json := '[{"id":"ma_youwei","name":"马匪头子","tier":"boss",' \
 			+ '"stats":{"power":20,"speed":12,"defense":8,"recovery":6,"skill":10,"mechanism":4},' \
 			+ '"max_hp":300,"toughness":8,"stun_turns":2,"moves":[' \
 			+ '{"id":"m1","name":"开山","type":"heavy","threat":18,"power":25},' \
@@ -60,7 +60,7 @@ func test_boss_with_two_types_is_error() -> void:
 
 
 func test_valid_boss_loads() -> void:
-	var json := '[{"id":"ma_youwei","name":"马友为","tier":"boss",' \
+	var json := '[{"id":"ma_youwei","name":"马匪头子","tier":"boss",' \
 			+ '"stats":{"power":20,"speed":12,"defense":8,"recovery":6,"skill":10,"mechanism":4},' \
 			+ '"max_hp":300,"toughness":8,"stun_turns":2,"moves":[' \
 			+ '{"id":"m1","name":"开山","type":"heavy","threat":18,"power":25},' \
@@ -78,7 +78,7 @@ func test_valid_boss_loads() -> void:
 
 
 func test_weak_move_must_exist() -> void:
-	var json := '[{"id":"ma_youwei","name":"马友为","tier":"boss",' \
+	var json := '[{"id":"ma_youwei","name":"马匪头子","tier":"boss",' \
 			+ '"stats":{"power":20,"speed":12,"defense":8,"recovery":6,"skill":10,"mechanism":4},' \
 			+ '"max_hp":300,"toughness":8,"stun_turns":2,"moves":[' \
 			+ '{"id":"m1","name":"开山","type":"heavy","threat":18,"power":25},' \

@@ -1,0 +1,112 @@
+extends "res://tests/test_case.gd"
+
+const GameState = preload("res://core/game_state.gd")
+const Progression = preload("res://core/progression.gd")
+
+
+func _base() -> Dictionary:
+	return {
+		"power": 10,
+		"speed": 15,
+		"defense": 5,
+		"recovery": 5,
+		"skill": 20,
+		"mechanism": 5,
+	}
+
+
+func test_final_stats_without_growth_equals_base() -> void:
+	GameState.reset()
+	Progression.reload_items()
+	var base := _base()
+	assert_eq(Progression.final_stats(base), base, "no growth leaves the base stats unchanged")
+	GameState.reset()
+
+
+func test_final_stats_adds_stat_bonus_and_equipment() -> void:
+	GameState.reset()
+	Progression.reload_items()
+	GameState.stat_bonus["power"] = 2
+	GameState.equipment["weapon"] = "plain_sword"
+	var result: Dictionary = Progression.final_stats(_base())
+	assert_eq(int(result["power"]), 13, "base 10 + 2 permanent + 1 sword")
+	assert_eq(int(result["speed"]), 16, "base 15 + 1 sword")
+	assert_eq(int(result["defense"]), 5, "untouched stat stays at base")
+	assert_eq(int(result["skill"]), 20, "untouched stat stays at base")
+	GameState.reset()
+
+
+func test_unknown_stat_is_ignored() -> void:
+	GameState.reset()
+	Progression.reload_items()
+	GameState.stat_bonus["luck"] = 99
+	var result: Dictionary = Progression.final_stats(_base())
+	assert_eq(result, _base(), "unknown stat keys are ignored")
+	assert_true(not result.has("luck"), "unknown stat is not added to the result")
+	GameState.reset()
+
+
+func test_add_stat_accumulates_and_pushes_toast() -> void:
+	GameState.reset()
+	Progression.add_stat("power", 2)
+	Progression.add_stat("power", 1)
+	assert_eq(int(GameState.stat_bonus["power"]), 3, "stat bonus accumulates")
+	assert_eq(
+		Progression.take_toasts(),
+		["力量 +2", "力量 +1"],
+		"each add_stat pushes a Chinese stat toast"
+	)
+	assert_eq(Progression.take_toasts(), [], "take_toasts clears the queue")
+	GameState.reset()
+
+
+func test_add_stat_ignores_unknown_stat() -> void:
+	GameState.reset()
+	Progression.add_stat("luck", 5)
+	assert_eq(GameState.stat_bonus, {}, "unknown stat is not stored")
+	assert_eq(Progression.take_toasts(), [], "unknown stat pushes no toast")
+	GameState.reset()
+
+
+func test_give_item_auto_equips_weapon() -> void:
+	GameState.reset()
+	Progression.reload_items()
+	Progression.give_item("plain_sword")
+	assert_eq(Progression.item_count("plain_sword"), 1, "the sword is in the inventory")
+	assert_eq(Progression.equipped("weapon"), "plain_sword", "an empty weapon slot auto-equips")
+	assert_eq(
+		Progression.take_toasts(),
+		["获得 普通的剑", "已装备 普通的剑"],
+		"pickup and auto-equip both toast"
+	)
+	var result: Dictionary = Progression.final_stats(_base())
+	assert_eq(int(result["speed"]), 16, "equipped sword adds speed")
+	assert_eq(int(result["power"]), 11, "equipped sword adds power")
+	GameState.reset()
+
+
+func test_give_material_does_not_equip() -> void:
+	GameState.reset()
+	Progression.reload_items()
+	Progression.give_item("herb", 2)
+	assert_eq(Progression.item_count("herb"), 2, "materials stack in the inventory")
+	assert_eq(Progression.equipped("weapon"), "", "a material does not fill a weapon slot")
+	assert_eq(Progression.take_toasts(), ["获得 草药"], "only the pickup toast fires")
+	GameState.reset()
+
+
+func test_reset_clears_growth_state() -> void:
+	GameState.reset()
+	GameState.stat_bonus["power"] = 1
+	GameState.equipment["weapon"] = "plain_sword"
+	GameState.inventory["herb"] = 3
+	GameState.quests["herbs"] = {"state": "active", "progress": {"herb": 3}}
+	GameState.mastery_exp["basic_sword"] = 5
+	GameState.toasts.append("提示")
+	GameState.reset()
+	assert_eq(GameState.stat_bonus, {}, "stat bonus is cleared")
+	assert_eq(GameState.equipment, {}, "equipment is cleared")
+	assert_eq(GameState.inventory, {}, "inventory is cleared")
+	assert_eq(GameState.quests, {}, "quests are cleared")
+	assert_eq(GameState.mastery_exp, {}, "mastery exp is cleared")
+	assert_eq(GameState.toasts, [], "toasts are cleared")

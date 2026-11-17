@@ -33,7 +33,7 @@ func _advance_to_line(view: Variant, target_index: int) -> void:
 func test_first_line_shows_speaker_and_portrait() -> void:
 	var view: Variant = _make_view()
 	view.start(_boss_intro_lines())
-	assert_eq(view.name_label.text, "马友为", "the first line names ma_youwei")
+	assert_eq(view.name_label.text, "马匪头子", "the first line names ma_youwei")
 	assert_true(view.right_portrait.visible, "ma_youwei stands on the right")
 	assert_true(view.right_portrait.texture != null, "the right portrait has a texture")
 	assert_true(not view.left_portrait.visible, "the left portrait is still hidden")
@@ -49,7 +49,7 @@ func test_typewriter_then_advance() -> void:
 	assert_true(view.hint_label.visible, "the continue hint appears when typing is done")
 	view.advance()
 	assert_true(view.typing, "the next advance starts the following line typing")
-	assert_eq(view.name_label.text, "马友为", "the second line is still ma_youwei")
+	assert_eq(view.name_label.text, "马匪头子", "the second line is still ma_youwei")
 	view.free()
 
 

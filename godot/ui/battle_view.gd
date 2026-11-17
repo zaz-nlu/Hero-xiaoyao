@@ -11,6 +11,7 @@ const GameState = preload("res://core/game_state.gd")
 const Jianyi = preload("res://core/jianyi.gd")
 const Mastery = preload("res://core/mastery.gd")
 const MoveTypes = preload("res://core/move_types.gd")
+const Progression = preload("res://core/progression.gd")
 const Unit = preload("res://core/unit.gd")
 const Hud = preload("res://ui/battle_hud_style.gd")
 const ImageCache = preload("res://ui/image_cache.gd")
@@ -138,7 +139,8 @@ func start(
 	var stats: Dictionary = {}
 	var raw_stats: Variant = player_data.get("stats", {})
 	if raw_stats is Dictionary:
-		stats = raw_stats.duplicate()
+		var base_stats: Dictionary = raw_stats
+		stats = Progression.final_stats(base_stats)
 	var player: Variant = Unit.make_player(
 		str(player_data.get("name", "")),
 		stats,
@@ -154,6 +156,9 @@ func start(
 		mastery.learn(str(raw_learned_id))
 	for raw_id in loadout:
 		mastery.learn(str(raw_id))
+	for raw_martial_id in GameState.mastery_exp.keys():
+		mastery.add_exp(str(raw_martial_id), int(GameState.mastery_exp[raw_martial_id]))
+	GameState.mastery_exp.clear()
 	battle = Battle.new(player, enemies, loadout, mastery, martials, 1, first_strike)
 	# Share the persistent dictionary so recognized moves carry over between battles.
 	battle.known_moves = GameState.known_moves
@@ -767,7 +772,7 @@ func _build_top_bar() -> void:
 	top_bar.add_child(two_bandits_button)
 
 	var boss_button := Button.new()
-	boss_button.text = "打马友为"
+	boss_button.text = "打马匪头子"
 	boss_button.pressed.connect(_on_scenario_pressed.bind("ma_youwei", 1, false))
 	top_bar.add_child(boss_button)
 

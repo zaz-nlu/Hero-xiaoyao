@@ -90,6 +90,17 @@ static func load_player(path: String) -> Dictionary:
 	return data
 
 
+static func load_items(path: String) -> Dictionary:
+	var text := FileAccess.get_file_as_string(path)
+	if text == "":
+		return {}
+	var parsed = JSON.parse_string(text)
+	if not (parsed is Dictionary):
+		return {}
+	var data: Dictionary = parsed
+	return data
+
+
 static func _validate_martial(def) -> Array[String]:
 	var errors: Array[String] = []
 	var def_id: String = def.id

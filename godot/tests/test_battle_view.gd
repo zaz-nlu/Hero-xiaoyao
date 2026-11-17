@@ -1,6 +1,7 @@
 extends "res://tests/test_case.gd"
 
 const Battle = preload("res://core/battle.gd")
+const DataLoader = preload("res://core/data_loader.gd")
 const GameState = preload("res://core/game_state.gd")
 
 
@@ -96,3 +97,26 @@ func test_two_enemies_build_two_groups() -> void:
 	view.start("bandit", 2, false)
 	assert_eq(view.intent_labels.size(), 2, "each enemy gets its own intent label")
 	view.free()
+
+
+func test_player_stats_include_game_state_bonus() -> void:
+	GameState.reset()
+	var player_data: Dictionary = DataLoader.load_player("res://data/player.json")
+	var base_power := int(player_data.get("stats", {}).get("power", 0))
+	var plain: Variant = _make_view()
+	plain.start("bandit", 1, true)
+	assert_eq(
+		int(plain.battle.player.stats["power"]), base_power,
+		"without growth the player keeps the base power"
+	)
+	plain.free()
+
+	GameState.stat_bonus["power"] = 3
+	var boosted: Variant = _make_view()
+	boosted.start("bandit", 1, true)
+	assert_eq(
+		int(boosted.battle.player.stats["power"]), base_power + 3,
+		"the permanent stat bonus is applied to the battle unit"
+	)
+	boosted.free()
+	GameState.reset()

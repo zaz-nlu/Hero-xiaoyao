@@ -1,0 +1,50 @@
+[
+	{
+		"id": "herbs",
+		"name": "草药",
+		"giver": "bun_vendor",
+		"summary": "包子摊老板托你去林子里采三株草药。",
+		"objectives": [
+			{"kind": "item", "key": "herb", "count": 3, "text": "采草药"}
+		],
+		"rewards": {"stats": {"recovery": 2}, "items": {}, "mastery_exp": {}},
+		"dialogue": {
+			"offer": "res://data/dialogues/quest_herbs_offer.json",
+			"active": "res://data/dialogues/quest_herbs_active.json",
+			"ready": "res://data/dialogues/quest_herbs_ready.json",
+			"done": "res://data/dialogues/quest_herbs_done.json"
+		}
+	},
+	{
+		"id": "spar",
+		"name": "试招",
+		"giver": "disciple",
+		"summary": "紫霞派弟子想和你切磋一场。",
+		"objectives": [
+			{"kind": "defeat", "key": "disciple_spar", "count": 1, "text": "与紫霞派弟子切磋"}
+		],
+		"rewards": {"stats": {"skill": 2}, "items": {}, "mastery_exp": {}},
+		"dialogue": {
+			"offer": "res://data/dialogues/quest_spar_offer.json",
+			"active": "res://data/dialogues/quest_spar_active.json",
+			"ready": "res://data/dialogues/quest_spar_ready.json",
+			"done": "res://data/dialogues/quest_spar_done.json"
+		}
+	},
+	{
+		"id": "scout",
+		"name": "林中探子",
+		"giver": "disciple",
+		"summary": "林子里有个马匪探子，紫霞派弟子请你去解决他。",
+		"objectives": [
+			{"kind": "defeat", "key": "bandit_scout", "count": 1, "text": "解决马匪探子"}
+		],
+		"rewards": {"stats": {"power": 1, "defense": 1}, "items": {}, "mastery_exp": {}},
+		"dialogue": {
+			"offer": "res://data/dialogues/quest_scout_offer.json",
+			"active": "res://data/dialogues/quest_scout_active.json",
+			"ready": "res://data/dialogues/quest_scout_ready.json",
+			"done": "res://data/dialogues/quest_scout_done.json"
+		}
+	}
+]

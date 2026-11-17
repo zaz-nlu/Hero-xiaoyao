@@ -1,6 +1,7 @@
 extends Node
 
 const GameState = preload("res://core/game_state.gd")
+const Quests = preload("res://core/quests.gd")
 
 const TOWN_SCENE := "res://world/town.gd"
 const TAVERN_SCENE := "res://world/tavern.gd"
@@ -11,6 +12,7 @@ var current: Node = null
 var current_kind: String = ""
 
 var _battle_enemy: String = ""
+var _battle_count: int = 0
 
 
 func _ready() -> void:
@@ -78,11 +80,14 @@ func show_battle(
 	current = view
 	current_kind = "battle"
 	_battle_enemy = enemy_id
+	_battle_count = count
 
 
 func _on_battle_finished(result: String) -> void:
-	if result == "won" and _battle_enemy == BOSS_ENEMY_ID:
-		GameState.set_flag("boss_defeated")
+	if result == "won":
+		Quests.notify("defeat", _battle_enemy, _battle_count)
+		if _battle_enemy == BOSS_ENEMY_ID:
+			GameState.set_flag("boss_defeated")
 	show_town()
 
 
