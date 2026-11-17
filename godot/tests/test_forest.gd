@@ -4,6 +4,7 @@ const GameState = preload("res://core/game_state.gd")
 const Progression = preload("res://core/progression.gd")
 const DataLoader = preload("res://core/data_loader.gd")
 const PlayerMotion = preload("res://world/player_motion.gd")
+const AiAssets = preload("res://world/ai_assets.gd")
 
 const FOREST_PATH := "res://data/forest.json"
 
@@ -135,10 +136,10 @@ func test_clearings_have_no_tree_or_rock_blockers() -> void:
 		assert_true(point.distance_to(spawn) >= 3.0 - 0.001, "rock at spawn clearing")
 		assert_true(point.distance_to(arena) >= 9.0 - 0.001, "rock in the arena clearing")
 		assert_true(point.distance_to(chest) >= 2.5 - 0.001, "rock at the chest clearing")
-	assert_eq(
-		forest.blockers.size(),
-		forest.tree_positions.size() + forest.rock_positions.size(),
-		"every tree and rock contributes a blocker"
+	var base_blockers: int = forest.tree_positions.size() + forest.rock_positions.size()
+	assert_true(
+		forest.blockers.size() >= base_blockers,
+		"every tree and rock still contributes a blocker"
 	)
 	forest.free()
 
@@ -256,4 +257,63 @@ func test_road_reaches_the_chest() -> void:
 		_bfs_reaches(forest, Vector2(0.0, 21.5), Vector2(8.0, -21.0), 2.0),
 		"the winding road connects the spawn to the chest"
 	)
+	forest.free()
+
+
+func test_tree_species_variety() -> void:
+	GameState.reset()
+	var forest: Variant = _new_forest()
+	var textures: Dictionary = {}
+	for node_value in forest.find_children("*Tree_*", "", true, false):
+		if not (node_value is Sprite3D):
+			continue
+		var sprite: Sprite3D = node_value
+		if sprite.texture != null:
+			textures[sprite.texture] = true
+	assert_true(textures.size() >= 4, "at least four tree textures are in use")
+	forest.free()
+
+
+func test_forest_landmarks_exist() -> void:
+	GameState.reset()
+	var forest: Variant = _new_forest()
+	assert_true(forest.find_child("Camp", true, false) != null, "the bandit camp exists")
+	assert_true(
+		forest.find_child("ForestSignpost", true, false) != null, "the forest signpost exists"
+	)
+	assert_true(forest.find_child("FloorProps", true, false) != null, "floor props exist")
+	var deco_herbs: Array = forest.find_children("DecoHerb_*", "", true, false)
+	assert_true(deco_herbs.size() >= 10, "at least ten decorative herbs are scattered")
+	var herbs: Array = forest.find_children("Herb_*", "", true, false)
+	assert_eq(herbs.size(), 3, "the three collectable herbs remain")
+	forest.free()
+
+
+func test_chest_switches_to_open_texture() -> void:
+	GameState.reset()
+	var forest: Variant = _new_forest()
+	var sprite_value: Variant = forest.find_child("ChestSprite", true, false)
+	assert_true(sprite_value is Sprite3D, "the chest uses a closed texture sprite")
+	var open_tex: ImageTexture = AiAssets.load_texture("chest_open.png")
+	assert_true(open_tex != null, "the open chest texture loads")
+	forest.player_pos = Vector2(8.0, -21.0)
+	assert_true(forest.try_interact(), "the chest opens")
+	forest.advance_chest(0.3)
+	if sprite_value is Sprite3D and open_tex != null:
+		var sprite: Sprite3D = sprite_value
+		assert_true(sprite.texture == open_tex, "the chest swaps to the open texture")
+	forest.free()
+
+
+func test_arena_has_no_blocking_props() -> void:
+	GameState.reset()
+	var forest: Variant = _new_forest()
+	var arena := Vector2(forest.arena_origin.x, forest.arena_origin.z)
+	for value in forest.blockers:
+		var rect: Rect2 = value
+		var center := rect.get_center()
+		assert_true(
+			center.distance_to(arena) >= 9.0 - 0.001,
+			"no blocker inside the arena clearing (dist %.2f)" % center.distance_to(arena)
+		)
 	forest.free()

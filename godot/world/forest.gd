@@ -10,7 +10,12 @@ const LOOK_AHEAD := Vector3(0.0, 1.0, -4.0)
 
 const INTERACT_RANGE := 1.8
 const CHEST_OPEN_DURATION := 0.6
+const CHEST_SPRITE_DURATION := 0.5
+const CHEST_SWAP_TIME := 0.25
 const CHEST_LID_ANGLE := 70.0
+const CAMP_LIGHT_ENERGY := 1.2
+const CAMP_LIGHT_FLICKER := 0.08
+const CAMP_LIGHT_FLICKER_SPEED := 0.9
 
 const PATROL_SPEED := 1.6
 const PATROL_WAIT := 1.2
@@ -39,6 +44,17 @@ const EXIT_CLEARANCE := 1.0
 const ROCK_ROAD_CLEARANCE := 2.4
 const ROCK_MAX_ROAD_DISTANCE := 4.5
 const BOUNDS_INSET := 0.8
+const CAMP_CLEAR_RADIUS := 2.5
+
+const TREE_SPECIES := [
+	{"file": "prop_willow.png", "weight": 20.0, "min_height": 4.2, "max_height": 6.0},
+	{"file": "tree_camphor.png", "weight": 22.0, "min_height": 4.5, "max_height": 6.0},
+	{"file": "tree_oak.png", "weight": 18.0, "min_height": 4.5, "max_height": 6.2},
+	{"file": "tree_pine.png", "weight": 18.0, "min_height": 5.0, "max_height": 7.0},
+	{"file": "tree_poplar.png", "weight": 10.0, "min_height": 6.0, "max_height": 8.0},
+	{"file": "tree_maple.png", "weight": 8.0, "min_height": 4.0, "max_height": 5.5},
+	{"file": "tree_dead.png", "weight": 4.0, "min_height": 3.6, "max_height": 5.0},
+]
 
 const Texgen = preload("res://world/texgen.gd")
 const AiAssets = preload("res://world/ai_assets.gd")
@@ -83,6 +99,7 @@ var exits: Dictionary = {}
 var pickups: Array = []
 var chest_node: Node3D = null
 var chest_pivot: Node3D = null
+var chest_sprite: Sprite3D = null
 var chest_opened: bool = false
 var patrol_groups: Array = []
 var scout: Dictionary = {}
@@ -95,6 +112,9 @@ var _textures: Dictionary = {}
 var _road_points: Array[Vector2] = []
 var _spawn: Dictionary = {}
 var _chest_anim_t: float = -1.0
+var _chest_swapped: bool = false
+var _tree_style_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+var _camp_light: OmniLight3D = null
 var _time: float = 0.0
 var _focus: Vector3 = Vector3.ZERO
 var _hud_layer: CanvasLayer = null
@@ -165,6 +185,7 @@ func _process(delta: float) -> void:
 			and Input.is_action_just_pressed("interact"):
 		try_interact()
 	_time += delta
+	_update_camp_light()
 	update_camera(delta)
 
 
@@ -350,9 +371,18 @@ func _emissive_material(color: Color, energy: float) -> StandardMaterial3D:
 
 
 func _grass_material(uv_scale: Vector2) -> StandardMaterial3D:
-	var tex: ImageTexture = AiAssets.load_texture("tex_grass.png")
+	var tex: ImageTexture = AiAssets.load_texture("tex_forest_floor.png")
+	if tex == null:
+		tex = AiAssets.load_texture("tex_grass.png")
 	if tex == null:
 		tex = Texgen.make_texture(Texgen.grass(), true)
+	return Texgen.make_material(tex, uv_scale)
+
+
+func _path_material(uv_scale: Vector2) -> StandardMaterial3D:
+	var tex: ImageTexture = AiAssets.load_texture("tex_forest_path.png")
+	if tex == null:
+		return _dirt_material(uv_scale)
 	return Texgen.make_material(tex, uv_scale)
 
 
@@ -396,6 +426,14 @@ func _road_distance(point: Vector2) -> float:
 		var closest: Vector2 = Geometry2D.get_closest_point_to_segment(point, a, b)
 		best = minf(best, point.distance_to(closest))
 	return best
+
+
+func _point_blocked(point: Vector2, radius: float) -> bool:
+	for value in blockers:
+		var rect: Rect2 = value
+		if rect.grow(radius).has_point(point):
+			return true
+	return false
 
 
 func _is_clear(
@@ -451,7 +489,9 @@ func _build_ground() -> void:
 	fill_mesh.size = Vector2(160.0, 160.0)
 	fill.mesh = fill_mesh
 	var fill_mat: StandardMaterial3D = _solid_material(Color("#4a5a30"))
-	var fill_tex: ImageTexture = AiAssets.load_texture("tex_grass.png")
+	var fill_tex: ImageTexture = AiAssets.load_texture("tex_forest_floor.png")
+	if fill_tex == null:
+		fill_tex = AiAssets.load_texture("tex_grass.png")
 	if fill_tex != null:
 		fill_mat = Texgen.make_material(fill_tex, Vector2(40.0, 40.0))
 		fill_mat.albedo_color = Color(0.8, 0.85, 0.75)
@@ -460,6 +500,7 @@ func _build_ground() -> void:
 	root.add_child(fill)
 
 	var grounds: Array = data.get("ground", [])
+	var dirt_index := 0
 	for i in range(grounds.size()):
 		var ground_value: Variant = grounds[i]
 		if not (ground_value is Dictionary):
@@ -470,16 +511,39 @@ func _build_ground() -> void:
 			continue
 		var kind := str(ground.get("type", "grass"))
 		var y := 0.0
-		var mat: StandardMaterial3D
-		if kind == "dirt":
-			y = 0.01
-			mat = _dirt_material(Vector2(rect.size.x / 3.0, rect.size.y / 3.0))
-		else:
-			mat = _grass_material(Vector2(rect.size.x / 4.0, rect.size.y / 4.0))
-		var plane := PlaneMesh.new()
-		plane.size = rect.size
 		var center: Vector2 = rect.get_center()
-		_add_mesh(root, plane, mat, Vector3(center.x, y, center.y), "Ground_%d" % i)
+		var plane := PlaneMesh.new()
+		if kind == "dirt":
+			# Nudge overlapping road rectangles apart so their seams do not z-fight.
+			y = 0.01 + 0.001 * float(dirt_index)
+			dirt_index += 1
+			var path_tex: ImageTexture = AiAssets.load_texture("tex_forest_path.png")
+			var horizontal := rect.size.x > rect.size.y
+			var road_width := rect.size.y if horizontal else rect.size.x
+			var road_length := rect.size.x if horizontal else rect.size.y
+			if path_tex != null:
+				# The path art runs vertically. Horizontal stretches rotate the mesh
+				# 90 degrees so the painted path follows the road.
+				if horizontal:
+					plane.size = Vector2(road_width, road_length)
+				else:
+					plane.size = rect.size
+				var mat := _path_material(Vector2(1.0, road_length / 3.0))
+				var path_node := _add_mesh(
+					root, plane, mat, Vector3(center.x, y, center.y), "Ground_%d" % i
+				)
+				if horizontal:
+					path_node.rotation.y = PI * 0.5
+			else:
+				plane.size = rect.size
+				var fallback := _dirt_material(
+					Vector2(rect.size.x / 3.0, rect.size.y / 3.0)
+				)
+				_add_mesh(root, plane, fallback, Vector3(center.x, y, center.y), "Ground_%d" % i)
+		else:
+			plane.size = rect.size
+			var mat := _grass_material(Vector2(rect.size.x / 4.0, rect.size.y / 4.0))
+			_add_mesh(root, plane, mat, Vector3(center.x, y, center.y), "Ground_%d" % i)
 
 
 # ---------------------------------------------------------------- vegetation
@@ -493,11 +557,19 @@ func _build_vegetation() -> void:
 	_generate_bamboo(root)
 	_generate_shrubs(root)
 	_generate_grass(root)
+	_build_camp()
+	_build_signpost(root)
+	_build_path_fences(root)
+	_generate_floor_props(root)
 
 
 func _generate_trees(root: Node3D) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = TREE_SEED
+	# A separate stream chooses the species and height so the legacy rng keeps
+	# producing exactly the same tree positions as before.
+	_tree_style_rng = RandomNumberGenerator.new()
+	_tree_style_rng.seed = TREE_SEED + 11
 	var tree_root := Node3D.new()
 	tree_root.name = "Trees"
 	root.add_child(tree_root)
@@ -558,24 +630,56 @@ func _generate_outer_trees(tree_root: Node3D) -> void:
 
 
 func _add_outer_tree(root: Node3D, point: Vector2, rng: RandomNumberGenerator, index: int) -> void:
-	var height := rng.randf_range(4.2, 6.2)
-	var sprite := AiAssets.make_sprite(
-		"prop_willow.png", height, Vector3(point.x, 0.0, point.y), "OuterTree_%d" % index
+	# Keep the legacy height roll in the stream even though the species table
+	# now decides the visible height.
+	var _legacy_height := rng.randf_range(4.2, 6.2)
+	var species := _pick_tree_species(_tree_style_rng)
+	var height := _tree_style_rng.randf_range(
+		float(species["min_height"]), float(species["max_height"])
 	)
+	var sprite := _make_tree_sprite(str(species["file"]), height, point, "OuterTree_%d" % index)
 	if sprite != null:
 		root.add_child(sprite)
 
 
 func _add_tree(root: Node3D, point: Vector2, rng: RandomNumberGenerator) -> void:
 	var index := tree_positions.size()
-	var height := rng.randf_range(4.0, 6.0)
-	var sprite := AiAssets.make_sprite(
-		"prop_willow.png", height, Vector3(point.x, 0.0, point.y), "Tree_%d" % index
+	# Keep the legacy height roll in the stream even though the species table
+	# now decides the visible height.
+	var _legacy_height := rng.randf_range(4.0, 6.0)
+	var species := _pick_tree_species(_tree_style_rng)
+	var height := _tree_style_rng.randf_range(
+		float(species["min_height"]), float(species["max_height"])
 	)
+	var sprite := _make_tree_sprite(str(species["file"]), height, point, "Tree_%d" % index)
 	if sprite != null:
 		root.add_child(sprite)
 	tree_positions.append(point)
 	blockers.append(Rect2(point.x - 0.5, point.y - 0.5, 1.0, 1.0))
+
+
+func _pick_tree_species(rng: RandomNumberGenerator) -> Dictionary:
+	var roll := rng.randf_range(0.0, 100.0)
+	var accumulated := 0.0
+	for entry_value in TREE_SPECIES:
+		var entry: Dictionary = entry_value
+		accumulated += float(entry["weight"])
+		if roll < accumulated:
+			return entry
+	return TREE_SPECIES[0]
+
+
+func _make_tree_sprite(
+	file: String, height: float, point: Vector2, node_name: String
+) -> Sprite3D:
+	var sprite := AiAssets.make_sprite(
+		file, height, Vector3(point.x, 0.0, point.y), node_name
+	)
+	if sprite == null:
+		sprite = AiAssets.make_sprite(
+			"prop_willow.png", height, Vector3(point.x, 0.0, point.y), node_name
+		)
+	return sprite
 
 
 func _generate_rocks(root: Node3D) -> void:
@@ -671,6 +775,259 @@ func _generate_grass(root: Node3D) -> void:
 			grass_root.add_child(sprite)
 
 
+# ---------------------------------------------------------------- camp and floor props
+
+func _camp_position() -> Vector2:
+	var camp_value: Variant = data.get("camp", null)
+	if camp_value is Dictionary:
+		var camp: Dictionary = camp_value
+		var pos_value: Variant = camp.get("pos", null)
+		if pos_value is Array:
+			var pos: Array = pos_value
+			if pos.size() >= 2:
+				return Vector2(float(pos[0]), float(pos[1]))
+	return Vector2(-12.0, 4.0)
+
+
+func _build_camp() -> void:
+	var center := _camp_position()
+	# The camp clearing must not have a tree standing in it. Trees keep their
+	# original random stream; a few are nudged outward when the camp overlaps.
+	_clear_camp_trees(center)
+	var camp := Node3D.new()
+	camp.name = "Camp"
+	add_child(camp)
+
+	var tent := AiAssets.make_sprite(
+		"camp_tent.png", 2.2, Vector3(center.x, 0.0, center.y), "Tent"
+	)
+	if tent != null:
+		camp.add_child(tent)
+	blockers.append(Rect2(center.x - 1.5, center.y - 1.0, 3.0, 2.0))
+
+	var fire_pos := center + Vector2(1.8, 0.6)
+	var fire := AiAssets.make_sprite(
+		"camp_fire.png", 0.5, Vector3(fire_pos.x, 0.0, fire_pos.y), "Campfire"
+	)
+	if fire != null:
+		camp.add_child(fire)
+	_camp_light = OmniLight3D.new()
+	_camp_light.name = "FireLight"
+	_camp_light.light_color = Color("#ff9a4d")
+	_camp_light.light_energy = CAMP_LIGHT_ENERGY
+	_camp_light.omni_range = 5.0
+	_camp_light.position = Vector3(fire_pos.x, 0.9, fire_pos.y)
+	camp.add_child(_camp_light)
+
+	for i in range(3):
+		var angle := deg_to_rad(-60.0 + 60.0 * float(i))
+		var crate_pos := fire_pos + Vector2(cos(angle), sin(angle)) * 1.3
+		var crate := AiAssets.make_sprite(
+			"camp_crate.png", 0.9, Vector3(crate_pos.x, 0.0, crate_pos.y), "Crate_%d" % i
+		)
+		if crate != null:
+			camp.add_child(crate)
+		blockers.append(Rect2(crate_pos.x - 0.45, crate_pos.y - 0.45, 0.9, 0.9))
+
+	var firewood_pos := center + Vector2(-1.9, 1.8)
+	var firewood := AiAssets.make_sprite(
+		"prop_firewood.png", 0.6, Vector3(firewood_pos.x, 0.0, firewood_pos.y), "Firewood"
+	)
+	if firewood != null:
+		camp.add_child(firewood)
+
+	var scarecrow_pos := center + Vector2(-2.6, -1.4)
+	var scarecrow := AiAssets.make_sprite(
+		"prop_scarecrow.png", 1.8, Vector3(scarecrow_pos.x, 0.0, scarecrow_pos.y), "Scarecrow"
+	)
+	if scarecrow != null:
+		camp.add_child(scarecrow)
+
+
+func _update_camp_light() -> void:
+	if _camp_light == null or not is_instance_valid(_camp_light):
+		return
+	_camp_light.light_energy = CAMP_LIGHT_ENERGY \
+		+ sin(_time * CAMP_LIGHT_FLICKER_SPEED) * CAMP_LIGHT_FLICKER
+
+
+func _clear_camp_trees(center: Vector2) -> void:
+	var tree_count := tree_positions.size()
+	var arena := Vector2(arena_origin.x, arena_origin.z)
+	var ring := CAMP_CLEAR_RADIUS + 0.4
+	var preferred := (center - arena).angle()
+	if (center - arena).length_squared() < 0.0001:
+		preferred = (center - _spawn_point()).angle()
+	for i in range(tree_count):
+		var point: Vector2 = tree_positions[i]
+		if point.distance_to(center) >= CAMP_CLEAR_RADIUS:
+			continue
+		var moved := _find_camp_tree_spot(center, ring, preferred, i)
+		if moved == point:
+			continue
+		tree_positions[i] = moved
+		var tree_value: Variant = find_child("Tree_%d" % i, true, false)
+		if tree_value is Node3D:
+			var tree_node: Node3D = tree_value
+			tree_node.position = Vector3(moved.x, 0.0, moved.y)
+		if i < blockers.size():
+			blockers[i] = Rect2(moved.x - 0.5, moved.y - 0.5, 1.0, 1.0)
+
+
+func _find_camp_tree_spot(
+	center: Vector2, ring: float, preferred: float, skip_index: int
+) -> Vector2:
+	for step in range(16):
+		var offset := PI * 2.0 * float(step) / 16.0
+		var angle := preferred + offset
+		var candidate: Vector2 = center + Vector2(cos(angle), sin(angle)) * ring
+		if _camp_tree_spot_clear(candidate, center, skip_index):
+			return candidate
+	return tree_positions[skip_index]
+
+
+func _camp_tree_spot_clear(candidate: Vector2, center: Vector2, skip_index: int) -> bool:
+	if not _in_bounds(candidate):
+		return false
+	if candidate.distance_to(center) < CAMP_CLEAR_RADIUS:
+		return false
+	if candidate.distance_to(_spawn_point()) < SPAWN_CLEARANCE + 0.2:
+		return false
+	var arena := Vector2(arena_origin.x, arena_origin.z)
+	if candidate.distance_to(arena) < ARENA_CLEARANCE + 0.2:
+		return false
+	if _road_distance(candidate) < ROAD_CLEARANCE:
+		return false
+	for pickup_value in pickups:
+		var pickup: Dictionary = pickup_value
+		var pos_value: Variant = pickup.get("pos", Vector2.ZERO)
+		if not (pos_value is Vector2):
+			continue
+		var radius := HERB_CLEARANCE
+		if str(pickup.get("kind", "herb")) == "chest":
+			radius = CHEST_CLEARANCE
+		var pickup_pos: Vector2 = pos_value
+		if candidate.distance_to(pickup_pos) < radius + 0.2:
+			return false
+	for other_index in range(tree_positions.size()):
+		if other_index == skip_index:
+			continue
+		var other: Vector2 = tree_positions[other_index]
+		if candidate.distance_to(other) < TREE_GAP:
+			return false
+	for rock_value in rock_positions:
+		var rock: Vector2 = rock_value
+		if candidate.distance_to(rock) < 1.2:
+			return false
+	return true
+
+
+func _build_signpost(root: Node3D) -> void:
+	var spawn := _spawn_point()
+	var sprite := AiAssets.make_sprite(
+		"camp_signpost.png",
+		1.8,
+		Vector3(spawn.x + 1.6, 0.0, spawn.y - 3.0),
+		"ForestSignpost"
+	)
+	if sprite != null:
+		root.add_child(sprite)
+
+
+func _build_path_fences(root: Node3D) -> void:
+	var fence_root := Node3D.new()
+	fence_root.name = "PathFences"
+	root.add_child(fence_root)
+	for side in [-1.0, 1.0]:
+		for i in range(2):
+			var x := 6.0 + float(side) * 2.2
+			var z := -19.4 + 1.1 * float(i)
+			var sprite := AiAssets.make_sprite(
+				"prop_fence.png", 0.9, Vector3(x, 0.0, z), "Fence_%d_%d" % [int(side), i]
+			)
+			if sprite != null:
+				fence_root.add_child(sprite)
+
+
+func _generate_floor_props(root: Node3D) -> void:
+	var props_root := Node3D.new()
+	props_root.name = "FloorProps"
+	root.add_child(props_root)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = TREE_SEED + 17
+	var placed: Array[Vector2] = []
+	_scatter_floor_prop(
+		props_root, rng, placed, "prop_log.png", "Log", 4, 0.7, Vector2(1.0, 0.6), true
+	)
+	_scatter_floor_prop(
+		props_root, rng, placed, "prop_stump.png", "Stump", 6, 0.6, Vector2.ZERO, false
+	)
+	_scatter_floor_prop(
+		props_root, rng, placed, "prop_mushroom_red.png", "MushroomRed", 8, 0.4, Vector2.ZERO, false
+	)
+	_scatter_floor_prop(
+		props_root, rng, placed, "prop_mushroom_brown.png", "MushroomBrown", 8, 0.4, Vector2.ZERO, false
+	)
+	_scatter_floor_prop(
+		props_root, rng, placed, "prop_fern.png", "Fern", 16, 0.7, Vector2.ZERO, false
+	)
+	_scatter_floor_prop(
+		props_root, rng, placed, "prop_wildflower.png", "Wildflower", 16, 0.6, Vector2.ZERO, false
+	)
+	_scatter_floor_prop(
+		props_root, rng, placed, "prop_stones.png", "Stones", 6, 0.5, Vector2.ZERO, false
+	)
+
+
+func _scatter_floor_prop(
+	parent: Node3D,
+	rng: RandomNumberGenerator,
+	placed: Array[Vector2],
+	file: String,
+	prefix: String,
+	count: int,
+	height: float,
+	collision_size: Vector2,
+	collides: bool
+) -> void:
+	var added := 0
+	var attempts := 0
+	var camp := _camp_position()
+	while added < count and attempts < 3000:
+		attempts += 1
+		var point := Vector2(rng.randf_range(-22.0, 22.0), rng.randf_range(-22.0, 22.0))
+		var arena_clearance := (ARENA_CLEARANCE + 1.0) if collides else 0.0
+		if not _is_clear(point, 2.0, arena_clearance, 1.0):
+			continue
+		if _point_blocked(point, 0.55):
+			continue
+		if point.distance_to(camp) < CAMP_CLEAR_RADIUS + 1.0:
+			continue
+		var too_close := false
+		for other_value in placed:
+			var other: Vector2 = other_value
+			if point.distance_to(other) < 0.8:
+				too_close = true
+				break
+		if too_close:
+			continue
+		var sprite := AiAssets.make_sprite(
+			file, height, Vector3(point.x, 0.0, point.y), "%s_%d" % [prefix, added]
+		)
+		if sprite == null:
+			continue
+		parent.add_child(sprite)
+		if collides and collision_size != Vector2.ZERO:
+			blockers.append(Rect2(
+				point.x - collision_size.x * 0.5,
+				point.y - collision_size.y * 0.5,
+				collision_size.x,
+				collision_size.y
+			))
+		placed.append(point)
+		added += 1
+
+
 # ---------------------------------------------------------------- pickups
 
 func _pickup_root() -> Node3D:
@@ -700,8 +1057,10 @@ func _build_pickups() -> void:
 		node.name = "Herb_%d" % int(pickup.get("id", 1))
 		node.position = Vector3(pos.x, 0.0, pos.y)
 		var sprite := AiAssets.make_sprite(
-			"prop_grass.png", 0.5, Vector3.ZERO, "HerbSprite"
+			"herb_white.png", 0.75, Vector3.ZERO, "HerbSprite"
 		)
+		if sprite == null:
+			sprite = AiAssets.make_sprite("prop_grass.png", 0.5, Vector3.ZERO, "HerbSprite")
 		if sprite != null:
 			node.add_child(sprite)
 		var glow := MeshInstance3D.new()
@@ -716,6 +1075,53 @@ func _build_pickups() -> void:
 		node.add_child(glow)
 		root.add_child(node)
 		pickup["node"] = node
+	_generate_deco_herbs(root)
+
+
+func _generate_deco_herbs(root: Node3D) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = TREE_SEED + 13
+	var files: Array[String] = ["herb_ginseng.png", "herb_purple.png", "herb_glow.png"]
+	var herb_points: Array[Vector2] = []
+	for pickup_value in pickups:
+		var pickup: Dictionary = pickup_value
+		if str(pickup.get("kind", "")) == "chest":
+			continue
+		var pos_value: Variant = pickup.get("pos", Vector2.ZERO)
+		if pos_value is Vector2:
+			herb_points.append(pos_value)
+	var added := 0
+	var attempts := 0
+	while added < 14 and attempts < 800:
+		attempts += 1
+		var point := Vector2.ZERO
+		if not herb_points.is_empty() and added % 2 == 0:
+			var anchor: Vector2 = herb_points[rng.randi_range(0, herb_points.size() - 1)]
+			var angle := rng.randf_range(0.0, TAU)
+			point = anchor + Vector2(cos(angle), sin(angle)) * rng.randf_range(1.2, 2.4)
+		elif _road_points.size() >= 2:
+			var index := rng.randi_range(0, _road_points.size() - 2)
+			var a: Vector2 = _road_points[index]
+			var b: Vector2 = _road_points[index + 1]
+			var along := a.lerp(b, rng.randf())
+			var normal := (b - a).normalized().orthogonal()
+			var side := -1.0 if rng.randf() < 0.5 else 1.0
+			point = along + normal * rng.randf_range(1.0, 2.2) * side
+		else:
+			point = Vector2(rng.randf_range(-22.0, 22.0), rng.randf_range(-22.0, 22.0))
+		if not _in_bounds(point):
+			continue
+		if _road_distance(point) < 1.0:
+			continue
+		var file: String = files[rng.randi_range(0, files.size() - 1)]
+		var height := rng.randf_range(0.6, 0.8)
+		var sprite := AiAssets.make_sprite(
+			file, height, Vector3(point.x, 0.0, point.y), "DecoHerb_%d" % added
+		)
+		if sprite == null:
+			continue
+		root.add_child(sprite)
+		added += 1
 
 
 func _build_chest() -> void:
@@ -734,6 +1140,25 @@ func _build_chest() -> void:
 	node.position = Vector3(pos.x, 0.0, pos.y)
 	root.add_child(node)
 
+	var closed_tex: ImageTexture = AiAssets.load_texture("chest_closed.png")
+	var open_tex: ImageTexture = AiAssets.load_texture("chest_open.png")
+	if closed_tex != null and open_tex != null:
+		var sprite := AiAssets.make_sprite("chest_closed.png", 0.9, Vector3.ZERO, "ChestSprite")
+		if sprite != null:
+			node.add_child(sprite)
+			# Kept for backwards compatibility; the sprite chest animates by texture.
+			var pivot := Node3D.new()
+			pivot.name = "LidPivot"
+			node.add_child(pivot)
+			chest_node = node
+			chest_pivot = pivot
+			chest_sprite = sprite
+			entry["node"] = node
+			_chest_swapped = false
+			if chest_opened:
+				_set_chest_sprite_open()
+			return
+
 	var wood: StandardMaterial3D = _dark_wood_material()
 	var gold: StandardMaterial3D = _solid_material(Color("#c9a23f"))
 	_add_box(node, Vector3(1.1, 0.62, 0.75), wood, Vector3(0.0, 0.31, 0.0), "Body")
@@ -751,9 +1176,30 @@ func _build_chest() -> void:
 
 	chest_node = node
 	chest_pivot = pivot
+	chest_sprite = null
 	entry["node"] = node
 	if chest_opened:
 		pivot.rotation.x = -deg_to_rad(CHEST_LID_ANGLE)
+
+
+func _set_chest_sprite_open() -> void:
+	if chest_sprite == null or not is_instance_valid(chest_sprite):
+		return
+	var open_tex: ImageTexture = AiAssets.load_texture("chest_open.png")
+	if open_tex == null:
+		return
+	_apply_sprite_texture(chest_sprite, open_tex, 1.1)
+
+
+func _apply_sprite_texture(sprite: Sprite3D, texture: Texture2D, world_height: float) -> void:
+	if texture == null:
+		return
+	var size: Vector2 = texture.get_size()
+	if size.y <= 0.0:
+		return
+	sprite.texture = texture
+	sprite.pixel_size = world_height / size.y
+	sprite.offset = Vector2(0.0, size.y * 0.5)
 
 
 func _chest_entry() -> Dictionary:
@@ -796,6 +1242,7 @@ func _collect(pickup: Dictionary) -> void:
 			GameState.set_flag(flag)
 		Progression.give_item(str(pickup.get("item", "")))
 		_chest_anim_t = 0.0
+		_chest_swapped = false
 		return
 	if flag != "":
 		GameState.set_flag(flag)
@@ -820,6 +1267,17 @@ func _remove_pickup_node(pickup: Dictionary) -> void:
 
 func advance_chest(delta: float) -> void:
 	if _chest_anim_t < 0.0:
+		return
+	if chest_sprite != null and is_instance_valid(chest_sprite):
+		_chest_anim_t += delta
+		var t := clampf(_chest_anim_t / CHEST_SPRITE_DURATION, 0.0, 1.0)
+		var pop := 1.0 + 0.08 * sin(t * PI)
+		chest_sprite.scale = Vector3(pop, pop, pop)
+		if not _chest_swapped and _chest_anim_t >= CHEST_SWAP_TIME:
+			_chest_swapped = true
+			_set_chest_sprite_open()
+		if t >= 1.0:
+			_chest_anim_t = -1.0
 		return
 	if chest_pivot == null or not is_instance_valid(chest_pivot):
 		_chest_anim_t = -1.0
