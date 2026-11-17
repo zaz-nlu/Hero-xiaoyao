@@ -174,6 +174,54 @@ func test_town_builds_tavern_sign_and_mountain_backdrop() -> void:
 	town.free()
 
 
+func test_town_builds_building_volumes() -> void:
+	var town = load("res://world/town.gd").new()
+	town.build()
+	var volumes: Array = town.find_children("Volume_*", "Node3D", true, false)
+	assert_eq(volumes.size(), 6, "six building volumes")
+	var loaded: Dictionary = TownData.load_town(TOWN_PATH)
+	var buildings: Array = loaded["data"].get("buildings", [])
+	for building_value in buildings:
+		var building: Dictionary = building_value
+		var id := str(building.get("id", ""))
+		var volume: Node = town.find_child("Volume_%s" % id, true, false)
+		assert_true(volume != null, "Volume_%s exists" % id)
+		if volume == null:
+			continue
+		var parts: Array = volume.find_children("*", "MeshInstance3D", false, false)
+		assert_true(
+			parts.size() >= 5,
+			"Volume_%s has at least 5 parts (%d)" % [id, parts.size()]
+		)
+		var facade_node: Node = town.find_child("Facade_%s" % id, true, false)
+		assert_true(facade_node != null, "Facade_%s exists" % id)
+		if facade_node == null:
+			continue
+		var facade_quad := (facade_node as MeshInstance3D).mesh as QuadMesh
+		assert_true(facade_quad != null, "Facade_%s uses a QuadMesh" % id)
+		if facade_quad == null:
+			continue
+		var max_y := -INF
+		var z_min := INF
+		var z_max := -INF
+		for part_value in parts:
+			var part := part_value as MeshInstance3D
+			if part == null or part.mesh == null:
+				continue
+			var aabb: AABB = part.transform * part.mesh.get_aabb()
+			max_y = maxf(max_y, aabb.end.y)
+			z_min = minf(z_min, aabb.position.z)
+			z_max = maxf(z_max, aabb.end.z)
+		assert_near(max_y, facade_quad.size.y, 0.3, "Volume_%s ridge reaches the facade top" % id)
+		var z_front := float(building["z_front"])
+		var depth := float(building["depth"])
+		assert_near(
+			z_min, z_front - depth, 0.2, "Volume_%s reaches the back of the house" % id
+		)
+		assert_near(z_max, z_front, 0.2, "Volume_%s stops at the facade plane" % id)
+	town.free()
+
+
 func test_decor_props_avoid_river_bridge_and_landmarks() -> void:
 	var loaded: Dictionary = TownData.load_town(TOWN_PATH)
 	var town_data: Dictionary = loaded["data"]

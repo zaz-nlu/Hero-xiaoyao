@@ -15,6 +15,13 @@ const DECOR_FILES := {
 	"bamboo": "prop_bamboo.png",
 	"rocks": "prop_rocks.png",
 }
+# Eave height as a fraction of the facade image height, per building kind.
+const EAVE_FRAC := {
+	"tavern": 0.80,
+	"shop": 0.70,
+	"smith": 0.75,
+	"house": 0.66,
+}
 const DECOR_HEIGHTS := {
 	"shrub": 1.1,
 	"grass_tuft": 1.0,
@@ -440,7 +447,9 @@ func _build_building(parent: Node3D, building: Dictionary) -> void:
 	var kind := str(building.get("kind", "house"))
 	if x1 <= x0 or depth <= 0.0:
 		return
-	if _try_build_facade(parent, building, x0, x1, z_front, kind):
+	var facade_height: float = _try_build_facade(parent, building, x0, x1, z_front, kind)
+	if facade_height > 0.0:
+		_build_building_volume(parent, building, facade_height)
 		return
 	var width := x1 - x0
 	var z_back := z_front - depth
@@ -579,10 +588,10 @@ func _build_building(parent: Node3D, building: Dictionary) -> void:
 
 func _try_build_facade(
 	parent: Node3D, building: Dictionary, x0: float, x1: float, z_front: float, kind: String
-) -> bool:
+) -> float:
 	var file := _facade_file(kind)
 	if file == "":
-		return false
+		return 0.0
 	var facade := AiAssets.make_wall_quad(
 		file,
 		(x1 - x0) * 1.08,
@@ -590,7 +599,7 @@ func _try_build_facade(
 		"Facade_%s" % str(building.get("id", ""))
 	)
 	if facade == null:
-		return false
+		return 0.0
 	parent.add_child(facade)
 	if kind == "tavern":
 		_tavern_facade = true
@@ -603,7 +612,10 @@ func _try_build_facade(
 		)
 		if sign != null:
 			parent.add_child(sign)
-	return true
+	var facade_height := 0.0
+	if facade.mesh is QuadMesh:
+		facade_height = (facade.mesh as QuadMesh).size.y
+	return facade_height
 
 
 func _facade_file(kind: String) -> String:
@@ -617,6 +629,125 @@ func _facade_file(kind: String) -> String:
 		"house":
 			return "facade_residence.png"
 	return ""
+
+
+# Gives the flat facade a real 3D body behind it: walls, two roof slopes, a
+# ridge cap and side gables. Everything lives under "Volume_<id>", a sibling of
+# the facade, so the facade itself stays untouched.
+func _build_building_volume(
+	parent: Node3D, building: Dictionary, facade_height: float
+) -> void:
+	var x0 := float(building.get("x0", 0.0))
+	var x1 := float(building.get("x1", 0.0))
+	var z_front := float(building.get("z_front", 0.0))
+	var depth := float(building.get("depth", 0.0))
+	var kind := str(building.get("kind", "house"))
+	if x1 <= x0 or depth <= 0.0 or facade_height <= 0.0:
+		return
+	var width := x1 - x0
+	var cx := (x0 + x1) * 0.5
+	var roof_w := width * 1.08
+	var z_back := z_front - depth
+	var z_mid := z_front - depth * 0.5
+	var h_top := facade_height
+	var h_eave := h_top * float(EAVE_FRAC.get(kind, 0.7))
+	var front_z := z_front - 0.02
+	var xl := cx - roof_w * 0.5
+	var xr := cx + roof_w * 0.5
+	var slope_h := h_top - h_eave
+	var front_run := front_z - z_mid
+	var back_run := z_mid - z_back
+	var front_len := sqrt(front_run * front_run + slope_h * slope_h)
+	var back_len := sqrt(back_run * back_run + slope_h * slope_h)
+
+	var root := Node3D.new()
+	root.name = "Volume_%s" % str(building.get("id", ""))
+	parent.add_child(root)
+
+	var plaster_tex: ImageTexture = AiAssets.load_texture("tex_aged_plaster.png")
+	var wall_uv := Vector2(width * 0.98, h_eave) / 2.5
+	var wall_mat: StandardMaterial3D
+	if plaster_tex != null:
+		wall_mat = Texgen.make_material(plaster_tex, wall_uv)
+	else:
+		wall_mat = Texgen.make_material(_get_tex("plaster"), wall_uv * 2.5)
+	_add_box(
+		root,
+		Vector3(width * 0.98, h_eave, depth - 0.1),
+		wall_mat,
+		Vector3(cx, h_eave * 0.5, z_front - depth * 0.5 - 0.05),
+		"Walls"
+	)
+
+	# Roof tiles repeat every 2 world units along and across the slopes.
+	var roof_tex: ImageTexture = AiAssets.load_texture("tex_gray_roof_tiles.png")
+	var roof_mat: StandardMaterial3D
+	if roof_tex != null:
+		roof_mat = Texgen.make_material(roof_tex, Vector2(0.5, 0.5))
+	else:
+		roof_mat = Texgen.make_material(_get_tex("roof_tiles"), Vector2(1.0, 1.0))
+	roof_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	roof_mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	roof_mat.roughness = 1.0
+
+	var front_normal := Vector3(0.0, slope_h, front_run).normalized()
+	var front_st := SurfaceTool.new()
+	front_st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_roof_vertex(front_st, Vector3(xl, h_eave, front_z), Vector2(0.0, 0.0), front_normal)
+	_roof_vertex(front_st, Vector3(xr, h_eave, front_z), Vector2(roof_w, 0.0), front_normal)
+	_roof_vertex(front_st, Vector3(xr, h_top, z_mid), Vector2(roof_w, front_len), front_normal)
+	_roof_vertex(front_st, Vector3(xl, h_eave, front_z), Vector2(0.0, 0.0), front_normal)
+	_roof_vertex(front_st, Vector3(xr, h_top, z_mid), Vector2(roof_w, front_len), front_normal)
+	_roof_vertex(front_st, Vector3(xl, h_top, z_mid), Vector2(0.0, front_len), front_normal)
+	var front_roof := _add_mesh(root, front_st.commit(), roof_mat, Vector3.ZERO, "RoofFront")
+	front_roof.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+
+	var back_normal := Vector3(0.0, slope_h, z_back - z_mid).normalized()
+	var back_st := SurfaceTool.new()
+	back_st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_roof_vertex(back_st, Vector3(xr, h_eave, z_back), Vector2(roof_w, 0.0), back_normal)
+	_roof_vertex(back_st, Vector3(xl, h_eave, z_back), Vector2(0.0, 0.0), back_normal)
+	_roof_vertex(back_st, Vector3(xl, h_top, z_mid), Vector2(0.0, back_len), back_normal)
+	_roof_vertex(back_st, Vector3(xr, h_eave, z_back), Vector2(roof_w, 0.0), back_normal)
+	_roof_vertex(back_st, Vector3(xl, h_top, z_mid), Vector2(0.0, back_len), back_normal)
+	_roof_vertex(back_st, Vector3(xr, h_top, z_mid), Vector2(roof_w, back_len), back_normal)
+	var back_roof := _add_mesh(root, back_st.commit(), roof_mat, Vector3.ZERO, "RoofBack")
+	back_roof.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+
+	# Ridge cap.
+	_add_box(
+		root,
+		Vector3(roof_w, 0.25, 0.35),
+		_solid_material(Color("#3a322e")),
+		Vector3(cx, h_top + 0.05, z_mid),
+		"Ridge"
+	)
+
+	# Side gables close the triangular space under the slopes.
+	var gable_mat: StandardMaterial3D
+	if plaster_tex != null:
+		gable_mat = Texgen.make_material(plaster_tex, Vector2(0.4, 0.4))
+	else:
+		gable_mat = Texgen.make_material(_get_tex("plaster"), Vector2(1.0, 1.0))
+	gable_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+
+	var west_st := SurfaceTool.new()
+	west_st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var west_normal := Vector3(-1.0, 0.0, 0.0)
+	var west_x := x0 + 0.02
+	_roof_vertex(west_st, Vector3(west_x, h_eave, front_z), Vector2(0.0, 0.0), west_normal)
+	_roof_vertex(west_st, Vector3(west_x, h_top, z_mid), Vector2(depth * 0.5, slope_h), west_normal)
+	_roof_vertex(west_st, Vector3(west_x, h_eave, z_back), Vector2(depth, 0.0), west_normal)
+	_add_mesh(root, west_st.commit(), gable_mat, Vector3.ZERO, "GableWest")
+
+	var east_st := SurfaceTool.new()
+	east_st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var east_normal := Vector3(1.0, 0.0, 0.0)
+	var east_x := x1 - 0.02
+	_roof_vertex(east_st, Vector3(east_x, h_eave, front_z), Vector2(0.0, 0.0), east_normal)
+	_roof_vertex(east_st, Vector3(east_x, h_eave, z_back), Vector2(depth, 0.0), east_normal)
+	_roof_vertex(east_st, Vector3(east_x, h_top, z_mid), Vector2(depth * 0.5, slope_h), east_normal)
+	_add_mesh(root, east_st.commit(), gable_mat, Vector3.ZERO, "GableEast")
 
 
 func _build_roof(
