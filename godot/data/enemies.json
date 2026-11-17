@@ -2,6 +2,7 @@
 	{
 		"id": "bandit",
 		"name": "马匪",
+		"sprite": "bandit",
 		"tier": "minion",
 		"stats": {
 			"power": 6,
@@ -23,6 +24,7 @@
 	{
 		"id": "ma_youwei",
 		"name": "马匪头子",
+		"sprite": "ma_youwei",
 		"tier": "boss",
 		"stats": {
 			"power": 12,
@@ -36,10 +38,54 @@
 		"toughness": 8,
 		"stun_turns": 2,
 		"moves": [
-			{"id": "kaishan", "name": "开山", "type": "heavy", "threat": 18, "power": 18},
-			{"id": "luandao", "name": "乱刀横扫", "type": "sweep", "threat": 14, "power": 12},
-			{"id": "cihou", "name": "刺喉", "type": "thrust", "threat": 16, "power": 14}
+			{"id": "kaishan", "name": "开山", "type": "heavy", "threat": 25, "power": 20},
+			{"id": "luandao", "name": "乱刀横扫", "type": "sweep", "threat": 21, "power": 14},
+			{"id": "cihou", "name": "刺喉", "type": "thrust", "threat": 23, "power": 16}
 		],
 		"weak_moves": ["kaishan"]
+	},
+	{
+		"id": "bandit_scout",
+		"name": "马匪探子",
+		"sprite": "bandit",
+		"tier": "minion",
+		"stats": {
+			"power": 5,
+			"speed": 12,
+			"defense": 2,
+			"recovery": 1,
+			"skill": 3,
+			"mechanism": 1
+		},
+		"max_hp": 36,
+		"toughness": 2,
+		"stun_turns": 1,
+		"moves": [
+			{"id": "scout_thrust", "name": "突刺", "type": "thrust", "threat": 11, "power": 7},
+			{"id": "scout_dart", "name": "飞刀", "type": "ranged", "threat": 10, "power": 6}
+		],
+		"weak_moves": []
+	},
+	{
+		"id": "disciple_spar",
+		"name": "紫霞弟子",
+		"sprite": "zixia_disciple",
+		"tier": "minion",
+		"stats": {
+			"power": 7,
+			"speed": 11,
+			"defense": 4,
+			"recovery": 2,
+			"skill": 8,
+			"mechanism": 1
+		},
+		"max_hp": 60,
+		"toughness": 3,
+		"stun_turns": 1,
+		"moves": [
+			{"id": "disciple_thrust", "name": "直刺", "type": "thrust", "threat": 12, "power": 8},
+			{"id": "disciple_sweep", "name": "横削", "type": "sweep", "threat": 12, "power": 8}
+		],
+		"weak_moves": []
 	}
 ]

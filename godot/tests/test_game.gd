@@ -184,10 +184,11 @@ func test_forest_battle_returns_to_forest() -> void:
 	view.press_return()
 	assert_eq(str(game.current_kind), "forest", "the battle returns to the forest")
 	assert_eq(str(GameState.battle_backdrop), "town", "the backdrop resets after the battle")
+	assert_true(GameState.forest_return_pos == null, "a loss clears the saved forest position")
 	var back: Variant = game.current
 	assert_true(
-		back.player_pos.distance_to(Vector2(3.0, 9.0)) < 0.01,
-		"the player returns to the same forest spot"
+		back.player_pos.distance_to(Vector2(0.0, 21.5)) < 0.01,
+		"a loss respawns the player at the forest entrance"
 	)
 	game.free()
 

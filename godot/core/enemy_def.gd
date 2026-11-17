@@ -4,6 +4,7 @@ const Stats = preload("res://core/stats.gd")
 
 var id: String = ""
 var name: String = ""
+var sprite: String = ""
 var tier: String = ""
 var stats: Dictionary = {}
 var max_hp: int = 0
@@ -19,6 +20,7 @@ static func from_dict(d: Dictionary) -> RefCounted:
 	var e: Variant = script.new()
 	e.id = str(d.get("id", ""))
 	e.name = str(d.get("name", ""))
+	e.sprite = str(d.get("sprite", e.id))
 	e.tier = str(d.get("tier", ""))
 	e.stats = _int_stats(d.get("stats", {}))
 	e.max_hp = int(d.get("max_hp", 0))

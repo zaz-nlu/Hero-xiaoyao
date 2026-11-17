@@ -47,6 +47,7 @@ static func run(config: Dictionary) -> Dictionary:
 		"timeouts": 0,
 		"avg_rounds": 0.0,
 		"win_rate": 0.0,
+		"avg_hp_pct": 0.0,
 	}
 	if battle_count <= 0:
 		return totals
@@ -61,6 +62,7 @@ static func run(config: Dictionary) -> Dictionary:
 	var losses := 0
 	var timeouts := 0
 	var total_rounds := 0
+	var total_hp_pct := 0.0
 	for n in range(battle_count):
 		var battle: Variant = _make_battle(
 			player_data,
@@ -75,6 +77,9 @@ static func run(config: Dictionary) -> Dictionary:
 		)
 		_run_battle(battle, bot, bot_rng)
 		total_rounds += int(battle.round)
+		var max_hp := float(battle.player.max_hp)
+		if max_hp > 0.0:
+			total_hp_pct += float(maxi(0, int(battle.player.hp))) / max_hp
 		var final_state: int = battle.state()
 		if final_state == Battle.State.WON:
 			wins += 1
@@ -88,6 +93,7 @@ static func run(config: Dictionary) -> Dictionary:
 	totals["timeouts"] = timeouts
 	totals["avg_rounds"] = float(total_rounds) / float(battle_count)
 	totals["win_rate"] = float(wins) / float(battle_count)
+	totals["avg_hp_pct"] = total_hp_pct / float(battle_count)
 	return totals
 
 
@@ -124,7 +130,8 @@ static func _make_battle(
 		str(player_data.get("name", "")),
 		stats,
 		int(player_data.get("max_hp", 0)),
-		int(player_data.get("jianyi_max", 0))
+		int(player_data.get("jianyi_max", 0)),
+		int(player_data.get("foresight_max", 0))
 	)
 	var enemies: Array = []
 	for i in range(enemy_count):
@@ -156,7 +163,30 @@ static func _run_battle(battle: Variant, bot: String, rng: RandomNumberGenerator
 static func _choose_action(battle: Variant, bot: String, rng: RandomNumberGenerator) -> Dictionary:
 	if bot == "random":
 		return _random_action(battle, rng)
+	if bot == "human":
+		return _human_action(battle, rng)
 	return _smart_action(battle)
+
+
+# A bot that only uses what the battle UI shows a player: an enemy's move is known only
+# after it was executed or foreseen. Known moves are countered exactly; unknown ones are
+# guessed (a random martial); foresight is spent whenever the target's move is unknown.
+static func _human_action(battle: Variant, rng: RandomNumberGenerator) -> Dictionary:
+	var target_index: int = _first_alive(battle.enemies)
+	if target_index < 0:
+		return {}
+	var target: Variant = battle.enemies[target_index]
+	if target.is_stunned() or battle.is_move_known(target_index):
+		return _smart_action(battle)
+	if Jianyi.can_strike(battle.player, target):
+		return {"kind": "jianyi", "target": target_index}
+	if battle.foresight_available() and battle.foreseen(target_index).is_empty():
+		return {"kind": "foresight"}
+	var loadout: Array = battle.loadout
+	if loadout.is_empty():
+		return {}
+	var pick: int = rng.randi_range(0, loadout.size() - 1)
+	return {"kind": "martial", "id": str(loadout[pick]), "target": target_index}
 
 
 static func _random_action(battle: Variant, rng: RandomNumberGenerator) -> Dictionary:

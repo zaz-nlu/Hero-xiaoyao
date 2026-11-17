@@ -108,6 +108,49 @@ func test_top_keys_single() -> void:
 	)
 
 
+func test_shipped_forest_enemies_load() -> void:
+	var result: Dictionary = DataLoader.load_enemies("res://data/enemies.json")
+	assert_eq(result["errors"].size(), 0, "the shipped enemies file is valid")
+	var defs: Dictionary = result["defs"]
+	assert_true(defs.has("bandit_scout"), "the bandit scout loads")
+	assert_true(defs.has("disciple_spar"), "the sparring disciple loads")
+	if defs.has("bandit_scout"):
+		var scout: Variant = defs["bandit_scout"]
+		assert_eq(str(scout.name), "马匪探子", "scout display name")
+		assert_eq(str(scout.sprite), "bandit", "the scout reuses the bandit sprite")
+		assert_eq(int(scout.max_hp), 36, "scout hp")
+		assert_eq(scout.moves.size(), 2, "the scout has two moves")
+	if defs.has("disciple_spar"):
+		var disciple: Variant = defs["disciple_spar"]
+		assert_eq(str(disciple.name), "紫霞弟子", "disciple display name")
+		assert_eq(str(disciple.sprite), "zixia_disciple", "the disciple uses its own sprite")
+		assert_eq(int(disciple.max_hp), 60, "disciple hp")
+		assert_eq(disciple.moves.size(), 2, "the disciple has two moves")
+
+
+func test_enemy_sprite_defaults_to_id() -> void:
+	var json := '[{"id":"bandit","name":"马匪","tier":"minion",' \
+			+ '"stats":{"power":5,"speed":8,"defense":3,"recovery":1,"skill":3,"mechanism":1},' \
+			+ '"max_hp":40,"toughness":2,"stun_turns":1,"moves":[' \
+			+ '{"id":"m1","name":"乱砍","type":"sweep","threat":12,"power":8}],' \
+			+ '"weak_moves":[]}]'
+	var result := DataLoader.parse_enemies(json)
+	assert_eq(result["errors"].size(), 0, "an enemy without a sprite is valid")
+	assert_eq(str(result["defs"]["bandit"].sprite), "bandit", "the sprite defaults to the id")
+
+
+func test_enemy_sprite_field_is_read() -> void:
+	var json := '[{"id":"bandit_scout","name":"马匪探子","sprite":"bandit",' \
+			+ '"tier":"minion",' \
+			+ '"stats":{"power":5,"speed":12,"defense":2,"recovery":1,"skill":3,"mechanism":1},' \
+			+ '"max_hp":36,"toughness":2,"stun_turns":1,"moves":[' \
+			+ '{"id":"m1","name":"突刺","type":"thrust","threat":11,"power":7}],' \
+			+ '"weak_moves":[]}]'
+	var result := DataLoader.parse_enemies(json)
+	assert_eq(result["errors"].size(), 0, "an explicit sprite is valid")
+	assert_eq(str(result["defs"]["bandit_scout"].sprite), "bandit", "the sprite field wins over the id")
+
+
 func _errors_contain(errors: Array, needle: String) -> bool:
 	for message in errors:
 		if str(message).contains(needle):

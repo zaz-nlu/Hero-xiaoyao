@@ -12,6 +12,21 @@ const INTERACT_RANGE := 1.8
 const CHEST_OPEN_DURATION := 0.6
 const CHEST_LID_ANGLE := 70.0
 
+const PATROL_SPEED := 1.6
+const PATROL_WAIT := 1.2
+const PATROL_GAP := 1.2
+const PATROL_TURN_TIME := 0.6
+const PATROL_TURN_ANGLE := PI * 35.0 / 180.0
+const SCOUT_VIEW_DISTANCE := 5.0
+const SCOUT_HALF_ANGLE := PI * 30.0 / 180.0
+const ALERT_DELAY := 0.6
+const ALERT_MARK_HEIGHT := 2.6
+const VIEW_CONE_SHOW_DISTANCE := 12.0
+const VIEW_CONE_COLOR := Color(1.0, 0.3, 0.2, 0.18)
+const CROUCH_SPEED_MULT := 0.5
+const CROUCH_SCALE_Y := 0.8
+const CROUCH_TINT := Color(0.8, 0.8, 0.8, 1.0)
+
 const TREE_TARGET := 90
 const TREE_SEED := 20261117
 const TREE_GAP := 1.6
@@ -29,6 +44,7 @@ const Texgen = preload("res://world/texgen.gd")
 const AiAssets = preload("res://world/ai_assets.gd")
 const CharacterSprite = preload("res://world/character_sprite.gd")
 const PlayerMotion = preload("res://world/player_motion.gd")
+const Stealth = preload("res://world/stealth.gd")
 const GameState = preload("res://core/game_state.gd")
 const Progression = preload("res://core/progression.gd")
 
@@ -68,8 +84,12 @@ var pickups: Array = []
 var chest_node: Node3D = null
 var chest_pivot: Node3D = null
 var chest_opened: bool = false
+var patrol_groups: Array = []
+var scout: Dictionary = {}
+var crouch_hint: Label = null
 
 var _input_override: Variant = null
+var _crouch_override: Variant = null
 var _built: bool = false
 var _textures: Dictionary = {}
 var _road_points: Array[Vector2] = []
@@ -78,6 +98,11 @@ var _chest_anim_t: float = -1.0
 var _time: float = 0.0
 var _focus: Vector3 = Vector3.ZERO
 var _hud_layer: CanvasLayer = null
+var _patrol_root: Node3D = null
+var _alerted: bool = false
+var _alert_timer: float = 0.0
+var _encounter_sent: bool = false
+var _pending_encounter: Dictionary = {}
 
 
 func _ready() -> void:
@@ -92,6 +117,7 @@ func _register_input_actions() -> void:
 	_add_action("move_up", KEY_W, KEY_UP)
 	_add_action("move_down", KEY_S, KEY_DOWN)
 	_add_action("interact", KEY_E, KEY_NONE)
+	_add_action("crouch", KEY_SHIFT, KEY_NONE)
 
 
 func _add_action(action: StringName, primary: int, secondary: int) -> void:
@@ -123,6 +149,7 @@ func build() -> void:
 	_build_lighting()
 	_build_camera()
 	if not skip_actors:
+		_build_patrols()
 		_build_pickups()
 		_build_chest()
 		_build_player()
@@ -131,6 +158,7 @@ func build() -> void:
 
 func _process(delta: float) -> void:
 	tick_player(delta)
+	advance_patrols(delta)
 	advance_chest(delta)
 	update_prompt()
 	if not is_dialogue_active() and InputMap.has_action("interact") \
@@ -803,6 +831,590 @@ func advance_chest(delta: float) -> void:
 		_chest_anim_t = -1.0
 
 
+# ---------------------------------------------------------------- stealth patrols
+
+func _build_patrols() -> void:
+	_patrol_root = Node3D.new()
+	_patrol_root.name = "Patrols"
+	add_child(_patrol_root)
+	var slots: Dictionary = {}
+	var slots_value: Variant = data.get("patrol_slots", null)
+	if slots_value is Dictionary:
+		slots = slots_value
+	_build_patrol_routes(slots)
+	_build_scout(slots)
+
+
+func _build_patrol_routes(slots: Dictionary) -> void:
+	var routes_value: Variant = slots.get("routes", [])
+	if not (routes_value is Array):
+		return
+	var routes: Array = routes_value
+	for route_index in range(routes.size()):
+		if GameState.has_flag("patrol_defeated_%d" % route_index):
+			continue
+		var raw_value: Variant = routes[route_index]
+		if not (raw_value is Array):
+			continue
+		var raw_points: Array = raw_value
+		var route: Array = Stealth.sanitize_route(raw_points, blockers, bounds_rect, _road_points)
+		if route.size() < 2:
+			continue
+		var start: Vector2 = route[0]
+		var second: Vector2 = route[1]
+		var angle := Stealth.facing_angle("down")
+		if start.distance_to(second) > 0.001:
+			angle = Stealth.angle_of(second - start)
+		var facing := Stealth.facing_from_vector(Stealth.direction(angle))
+		var member_count := 2 if route_index == 0 else 1
+		var group := {
+			"index": route_index,
+			"route": route,
+			"target": 1,
+			"dir": 1,
+			"facing_angle": angle,
+			"base_angle": angle,
+			"turn_sign": 1.0,
+			"wait": 0.0,
+			"members": [],
+			"alerted": false,
+		}
+		patrol_groups.append(group)
+		for n in range(member_count):
+			var pos: Vector2 = start
+			if n > 0:
+				pos = _follower_start(start, angle)
+			var member := _make_patrol_member(
+				"Patrol_%d_%d" % [route_index, n],
+				pos,
+				facing,
+				Stealth.BASE_VIEW_DISTANCE,
+				Stealth.VIEW_HALF_ANGLE,
+				group
+			)
+			var members: Array = group["members"]
+			members.append(member)
+
+
+func _build_scout(slots: Dictionary) -> void:
+	if GameState.has_flag("scout_defeated"):
+		return
+	var scout_value: Variant = slots.get("scout", null)
+	if not (scout_value is Array):
+		return
+	var raw: Array = scout_value
+	if raw.size() < 2:
+		return
+	var raw_pos := Vector2(float(raw[0]), float(raw[1]))
+	var snapped: Array = Stealth.sanitize_route([raw_pos], blockers, bounds_rect, _road_points)
+	if snapped.is_empty():
+		return
+	var pos: Vector2 = snapped[0]
+	var facing := "down"
+	var member := _make_patrol_member(
+		"Scout", pos, facing, SCOUT_VIEW_DISTANCE, SCOUT_HALF_ANGLE, {}
+	)
+	member["enemy_id"] = "bandit_scout"
+	var node: Node3D = member["node"]
+	var label := Label3D.new()
+	label.name = "NameLabel"
+	label.text = "探子"
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.no_depth_test = true
+	label.pixel_size = 0.012
+	label.font_size = 48
+	label.outline_size = 10
+	label.modulate = Color("#f2e2b0")
+	label.outline_modulate = Color(0.0, 0.0, 0.0)
+	label.position = Vector3(0.0, 2.3, 0.0)
+	node.add_child(label)
+	scout = member
+
+
+func _make_patrol_member(
+	node_name: String,
+	pos: Vector2,
+	facing: String,
+	view: float,
+	half_angle: float,
+	group: Dictionary
+) -> Dictionary:
+	var character := CharacterSprite.new()
+	character.name = node_name
+	character.setup("bandit")
+	character.position = Vector3(pos.x, 0.0, pos.y)
+	character.set_facing(facing)
+	_patrol_root.add_child(character)
+	var cone := _make_view_cone(character, half_angle)
+	var mark := _make_alert_mark(character)
+	return {
+		"node": character,
+		"pos": pos,
+		"facing_angle": Stealth.facing_angle(facing),
+		"vision": view,
+		"half_angle": half_angle,
+		"cone": cone,
+		"mark": mark,
+		"group": group,
+		"alerted": false,
+	}
+
+
+func _follower_start(leader_pos: Vector2, angle: float) -> Vector2:
+	for gap in [PATROL_GAP, PATROL_GAP * 0.6, PATROL_GAP * 0.3]:
+		var point: Vector2 = leader_pos - Stealth.direction(angle) * float(gap)
+		if Stealth.is_walkable(point, blockers, bounds_rect):
+			return point
+	return leader_pos
+
+
+func _make_view_cone(parent: Node3D, half_angle: float) -> MeshInstance3D:
+	var cone := MeshInstance3D.new()
+	cone.name = "ViewCone"
+	cone.mesh = _cone_mesh(half_angle)
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = VIEW_CONE_COLOR
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.disable_receive_shadows = true
+	cone.material_override = mat
+	cone.position = Vector3(0.0, 0.03, 0.0)
+	cone.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	cone.visible = false
+	parent.add_child(cone)
+	return cone
+
+
+func _cone_mesh(half_angle: float) -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var segments := 18
+	for i in range(segments):
+		var a0: float = -half_angle + (2.0 * half_angle) * float(i) / float(segments)
+		var a1: float = -half_angle + (2.0 * half_angle) * float(i + 1) / float(segments)
+		st.add_vertex(Vector3.ZERO)
+		st.add_vertex(Vector3(cos(a0), 0.0, sin(a0)))
+		st.add_vertex(Vector3(cos(a1), 0.0, sin(a1)))
+	st.generate_normals()
+	return st.commit()
+
+
+func _make_alert_mark(parent: Node3D) -> Label3D:
+	var mark := Label3D.new()
+	mark.name = "AlertMark"
+	mark.text = "！"
+	mark.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	mark.no_depth_test = true
+	mark.pixel_size = 0.02
+	mark.font_size = 96
+	mark.outline_size = 20
+	mark.modulate = Color(1.0, 0.12, 0.1)
+	mark.outline_modulate = Color(0.0, 0.0, 0.0)
+	mark.position = Vector3(0.0, ALERT_MARK_HEIGHT, 0.0)
+	mark.visible = false
+	parent.add_child(mark)
+	return mark
+
+
+func set_crouch_override(value: Variant) -> void:
+	_crouch_override = value
+
+
+func is_crouching() -> bool:
+	if _crouch_override != null:
+		return bool(_crouch_override)
+	if not InputMap.has_action("crouch"):
+		return false
+	return Input.is_action_pressed("crouch")
+
+
+func _in_hide_spot(point: Vector2) -> bool:
+	for spot_value in hide_spots:
+		var spot: Dictionary = spot_value
+		var pos_value: Variant = spot.get("pos", Vector2.ZERO)
+		if not (pos_value is Vector2):
+			continue
+		var spot_pos: Vector2 = pos_value
+		if point.distance_to(spot_pos) <= float(spot.get("radius", 1.8)):
+			return true
+	return false
+
+
+func _player_view_reach(base: float) -> float:
+	return Stealth.view_distance(base, is_crouching(), _in_hide_spot(player_pos))
+
+
+func advance_patrols(delta: float) -> void:
+	if patrol_groups.is_empty() and scout.is_empty():
+		return
+	if _alerted:
+		_update_view_cones()
+		if not _encounter_sent:
+			_alert_timer -= delta
+			if _alert_timer <= 0.0:
+				_finish_alert()
+		return
+	_advance_patrol_motion(delta)
+	_update_view_cones()
+	_check_detection()
+	if _alerted and not _encounter_sent:
+		# The alert timer starts on the frame the player is spotted. Large test
+		# ticks can therefore complete the 0.6s delay immediately.
+		_alert_timer -= delta
+		if _alert_timer <= 0.0:
+			_finish_alert()
+
+
+func _advance_patrol_motion(delta: float) -> void:
+	for group_value in patrol_groups:
+		var group: Dictionary = group_value
+		if bool(group.get("alerted", false)):
+			continue
+		var members: Array = group["members"]
+		if members.is_empty():
+			continue
+		var route: Array = group["route"]
+		if route.size() < 2:
+			continue
+		var leader: Dictionary = members[0]
+		var wait := float(group.get("wait", 0.0))
+		var moving := false
+		if wait > 0.0:
+			var remaining := maxf(0.0, wait - delta)
+			group["wait"] = remaining
+			var elapsed := PATROL_WAIT - remaining
+			if elapsed <= PATROL_TURN_TIME:
+				var t := clampf(elapsed / PATROL_TURN_TIME, 0.0, 1.0)
+				var offset: float = sin(t * PI) * PATROL_TURN_ANGLE \
+						* float(group.get("turn_sign", 1.0))
+				group["facing_angle"] = float(group.get("base_angle", 0.0)) + offset
+				_apply_group_facing(group, float(group["facing_angle"]))
+			if remaining <= 0.0:
+				_advance_route_target(group)
+		else:
+			var target: Vector2 = route[int(group["target"])]
+			var leader_pos: Vector2 = leader["pos"]
+			var to_target := target - leader_pos
+			var dist := to_target.length()
+			var step := PATROL_SPEED * delta
+			if dist <= step:
+				leader["pos"] = target
+				group["wait"] = PATROL_WAIT
+				group["base_angle"] = float(group["facing_angle"])
+				group["turn_sign"] = -float(group.get("turn_sign", 1.0))
+			else:
+				leader["pos"] = leader_pos + to_target / dist * step
+				var angle := Stealth.angle_of(to_target)
+				group["facing_angle"] = angle
+				_apply_group_facing(group, angle)
+				moving = true
+		_apply_group_facing(group, float(group["facing_angle"]))
+		for i in range(1, members.size()):
+			var follower: Dictionary = members[i]
+			var desired := _follower_target(group, leader["pos"])
+			var follower_pos: Vector2 = follower["pos"]
+			var to_desired := desired - follower_pos
+			var follower_step := PATROL_SPEED * delta
+			var candidate := follower_pos
+			if to_desired.length() <= follower_step:
+				candidate = desired
+			elif to_desired.length() > 0.0001:
+				candidate = follower_pos + to_desired.normalized() * follower_step
+			if Stealth.is_walkable(candidate, blockers, bounds_rect):
+				follower["pos"] = candidate
+		for member_value in members:
+			var member: Dictionary = member_value
+			_sync_member_node(member)
+		_set_group_moving(group, moving)
+
+
+func _advance_route_target(group: Dictionary) -> void:
+	var route: Array = group["route"]
+	if route.size() < 2:
+		return
+	var target_index := int(group["target"])
+	var direction := int(group.get("dir", 1))
+	var next_index := target_index + direction
+	if next_index < 0 or next_index >= route.size():
+		direction = -direction
+		next_index = target_index + direction
+	group["dir"] = direction
+	group["target"] = clampi(next_index, 0, route.size() - 1)
+	var members: Array = group["members"]
+	if members.is_empty():
+		return
+	var leader: Dictionary = members[0]
+	var leader_pos: Vector2 = leader["pos"]
+	var next_point: Vector2 = route[int(group["target"])]
+	if leader_pos.distance_to(next_point) > 0.001:
+		var angle := Stealth.angle_of(next_point - leader_pos)
+		group["facing_angle"] = angle
+		group["base_angle"] = angle
+		_apply_group_facing(group, angle)
+
+
+func _follower_target(group: Dictionary, leader_pos: Vector2) -> Vector2:
+	var angle := float(group["facing_angle"])
+	for gap in [PATROL_GAP, PATROL_GAP * 0.6, PATROL_GAP * 0.3]:
+		var point: Vector2 = leader_pos - Stealth.direction(angle) * float(gap)
+		if Stealth.is_walkable(point, blockers, bounds_rect):
+			return point
+	return leader_pos
+
+
+func _apply_group_facing(group: Dictionary, angle: float) -> void:
+	group["facing_angle"] = angle
+	var members: Array = group["members"]
+	for member_value in members:
+		var member: Dictionary = member_value
+		member["facing_angle"] = angle
+		_apply_member_facing(member, angle)
+
+
+func _apply_member_facing(member: Dictionary, angle: float) -> void:
+	var node_value: Variant = member.get("node", null)
+	if not (node_value is Node3D):
+		return
+	var node: Node3D = node_value
+	var facing := Stealth.facing_from_vector(
+		Stealth.direction(angle), str(node.get("facing"))
+	)
+	node.call("set_facing", facing)
+
+
+func _set_group_moving(group: Dictionary, moving: bool) -> void:
+	var members: Array = group["members"]
+	for member_value in members:
+		var member: Dictionary = member_value
+		_set_member_moving(member, moving)
+
+
+func _set_member_moving(member: Dictionary, moving: bool) -> void:
+	var node_value: Variant = member.get("node", null)
+	if not (node_value is Node3D):
+		return
+	var node: Node3D = node_value
+	node.call("set_moving", moving)
+
+
+func _sync_member_node(member: Dictionary) -> void:
+	var node_value: Variant = member.get("node", null)
+	if not (node_value is Node3D):
+		return
+	var node: Node3D = node_value
+	var pos: Vector2 = member["pos"]
+	node.position = Vector3(pos.x, 0.0, pos.y)
+
+
+func _update_view_cones() -> void:
+	var crouched := is_crouching()
+	var in_hide := _in_hide_spot(player_pos)
+	for group_value in patrol_groups:
+		var group: Dictionary = group_value
+		var members: Array = group["members"]
+		for member_value in members:
+			var member: Dictionary = member_value
+			_update_view_cone(member, crouched, in_hide)
+	if not scout.is_empty():
+		_update_view_cone(scout, crouched, in_hide)
+
+
+func _update_view_cone(member: Dictionary, crouched: bool, in_hide: bool) -> void:
+	var cone_value: Variant = member.get("cone", null)
+	if not (cone_value is MeshInstance3D):
+		return
+	var cone: MeshInstance3D = cone_value
+	var pos: Vector2 = member["pos"]
+	var show := player_pos.distance_to(pos) <= VIEW_CONE_SHOW_DISTANCE and not _alerted
+	cone.visible = show
+	if not show:
+		return
+	var reach := Stealth.view_distance(float(member["vision"]), crouched, in_hide)
+	cone.scale = Vector3(reach, 1.0, reach)
+	cone.rotation.y = -float(member["facing_angle"])
+
+
+func _check_detection() -> void:
+	for group_value in patrol_groups:
+		var group: Dictionary = group_value
+		if bool(group.get("alerted", false)):
+			continue
+		var members: Array = group["members"]
+		for member_value in members:
+			var member: Dictionary = member_value
+			if _member_sees_player(member):
+				_begin_group_alert(group, member)
+				return
+	if scout.is_empty() or bool(scout.get("alerted", false)):
+		return
+	if _member_sees_player(scout):
+		_begin_scout_alert()
+
+
+func _member_sees_player(member: Dictionary) -> bool:
+	var pos: Vector2 = member["pos"]
+	var reach := _player_view_reach(float(member["vision"]))
+	return Stealth.sees(
+		pos,
+		float(member["facing_angle"]),
+		player_pos,
+		reach,
+		float(member["half_angle"]),
+		blockers
+	)
+
+
+func _begin_group_alert(group: Dictionary, spotter: Dictionary) -> void:
+	if _alerted:
+		return
+	var members: Array = group["members"]
+	var count := int(members.size())
+	_begin_alert("bandit", count, "patrol", int(group["index"]))
+	group["alerted"] = true
+	for member_value in members:
+		var member: Dictionary = member_value
+		_stop_member(member)
+		_face_member_toward(member, player_pos)
+	_show_alert_mark(spotter)
+
+
+func _begin_scout_alert() -> void:
+	if _alerted:
+		return
+	_begin_alert("bandit_scout", 1, "scout", -1)
+	scout["alerted"] = true
+	_stop_member(scout)
+	_face_member_toward(scout, player_pos)
+	_show_alert_mark(scout)
+
+
+func _begin_alert(enemy_id: String, count: int, kind: String, id: int) -> void:
+	_alerted = true
+	_alert_timer = ALERT_DELAY
+	_encounter_sent = false
+	_pending_encounter = {"enemy": enemy_id, "count": count}
+	GameState.pending_forest_encounter = {"kind": kind, "id": id}
+
+
+func _finish_alert() -> void:
+	if _encounter_sent:
+		return
+	_encounter_sent = true
+	var enemy_id := str(_pending_encounter.get("enemy", "bandit"))
+	var count := int(_pending_encounter.get("count", 1))
+	emit_signal("encounter_requested", enemy_id, count, false)
+
+
+func _stop_member(member: Dictionary) -> void:
+	_set_member_moving(member, false)
+
+
+func _show_alert_mark(member: Dictionary) -> void:
+	var mark_value: Variant = member.get("mark", null)
+	if mark_value is Label3D:
+		var mark: Label3D = mark_value
+		mark.visible = true
+
+
+func _face_member_toward(member: Dictionary, point: Vector2) -> void:
+	var pos: Vector2 = member["pos"]
+	var delta := point - pos
+	if delta.length_squared() < 0.000001:
+		return
+	var angle := Stealth.angle_of(delta)
+	member["facing_angle"] = angle
+	_apply_member_facing(member, angle)
+
+
+func _nearest_sneak_target() -> Dictionary:
+	if _alerted or player == null:
+		return {}
+	var best: Dictionary = {}
+	var best_dist := 9999.0
+	for group_value in patrol_groups:
+		var group: Dictionary = group_value
+		if bool(group.get("alerted", false)):
+			continue
+		var members: Array = group["members"]
+		for member_value in members:
+			var member: Dictionary = member_value
+			var target := _sneak_target_for(
+				member, "bandit", members.size(), "patrol", int(group["index"]), group
+			)
+			if target.is_empty():
+				continue
+			var dist := player_pos.distance_to(Vector2(member["pos"]))
+			if dist < best_dist:
+				best = target
+				best_dist = dist
+	if not scout.is_empty() and not bool(scout.get("alerted", false)):
+		var scout_target := _sneak_target_for(
+			scout, "bandit_scout", 1, "scout", -1, {}
+		)
+		if not scout_target.is_empty():
+			var scout_dist := player_pos.distance_to(Vector2(scout["pos"]))
+			if scout_dist < best_dist:
+				best = scout_target
+				best_dist = scout_dist
+	return best
+
+
+func _sneak_target_for(
+	member: Dictionary,
+	enemy_id: String,
+	count: int,
+	kind: String,
+	id: int,
+	group: Dictionary
+) -> Dictionary:
+	var pos: Vector2 = member["pos"]
+	var facing := float(member["facing_angle"])
+	var reach := _player_view_reach(float(member["vision"]))
+	var in_view := Stealth.sees(
+		pos, facing, player_pos, reach, float(member["half_angle"]), blockers
+	)
+	if not Stealth.can_sneak(pos, facing, player_pos, in_view):
+		return {}
+	var target := {
+		"member": member,
+		"enemy_id": enemy_id,
+		"count": count,
+		"kind": kind,
+		"id": id,
+	}
+	if not group.is_empty():
+		target["group"] = group
+	return target
+
+
+func _trigger_sneak(target: Dictionary) -> void:
+	if _alerted:
+		return
+	_alerted = true
+	_encounter_sent = true
+	var kind := str(target.get("kind", "patrol"))
+	GameState.pending_forest_encounter = {"kind": kind, "id": int(target.get("id", -1))}
+	var group_value: Variant = target.get("group", null)
+	if group_value is Dictionary:
+		var group: Dictionary = group_value
+		group["alerted"] = true
+		var members: Array = group["members"]
+		for member_value in members:
+			var member: Dictionary = member_value
+			_stop_member(member)
+	var member_value: Variant = target.get("member", null)
+	if member_value is Dictionary:
+		var member: Dictionary = member_value
+		_stop_member(member)
+	emit_signal(
+		"encounter_requested",
+		str(target.get("enemy_id", "bandit")),
+		int(target.get("count", 1)),
+		true
+	)
+
+
 # ---------------------------------------------------------------- backdrop, lights, camera
 
 func _build_backdrop() -> void:
@@ -1000,7 +1612,7 @@ func set_input_override(v: Variant) -> void:
 
 
 func get_move_input() -> Vector2:
-	if input_blocked:
+	if input_blocked or _alerted:
 		return Vector2.ZERO
 	if _input_override != null:
 		if typeof(_input_override) == TYPE_VECTOR2:
@@ -1019,6 +1631,10 @@ func tick_player(delta: float) -> void:
 	var input := get_move_input()
 	if is_dialogue_active():
 		input = Vector2.ZERO
+	var crouched := is_crouching()
+	_update_crouch_visual(crouched)
+	if crouched:
+		input *= CROUCH_SPEED_MULT
 	player_pos = PlayerMotion.step(player_pos, input, delta, blockers, bounds_rect)
 	var weight: float = 1.0 - exp(-14.0 * delta)
 	var next_y: float = lerpf(player.position.y, 0.0, weight)
@@ -1026,6 +1642,19 @@ func tick_player(delta: float) -> void:
 	var facing: String = PlayerMotion.facing_from_input(input, str(player.get("facing")))
 	player.call("set_facing", facing)
 	player.call("set_moving", input.length() > 0.01)
+
+
+func _update_crouch_visual(crouched: bool) -> void:
+	var sprite_value: Variant = player.get("sprite")
+	if not (sprite_value is Sprite3D):
+		return
+	var sprite: Sprite3D = sprite_value
+	if crouched:
+		sprite.scale = Vector3(1.0, CROUCH_SCALE_Y, 1.0)
+		sprite.modulate = CROUCH_TINT
+	else:
+		sprite.scale = Vector3.ONE
+		sprite.modulate = Color.WHITE
 
 
 # ---------------------------------------------------------------- hud / interaction
@@ -1063,6 +1692,24 @@ func build_hud() -> void:
 	prompt_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_hud_layer.add_child(prompt_label)
 
+	crouch_hint = Label.new()
+	crouch_hint.name = "CrouchHint"
+	crouch_hint.text = "Shift 蹲伏"
+	crouch_hint.add_theme_font_size_override("font_size", 14)
+	crouch_hint.modulate = Color(1.0, 1.0, 1.0, 0.55)
+	crouch_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	crouch_hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	crouch_hint.anchor_left = 0.0
+	crouch_hint.anchor_right = 0.0
+	crouch_hint.anchor_top = 1.0
+	crouch_hint.anchor_bottom = 1.0
+	crouch_hint.offset_left = 16.0
+	crouch_hint.offset_right = 160.0
+	crouch_hint.offset_top = -40.0
+	crouch_hint.offset_bottom = -16.0
+	crouch_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hud_layer.add_child(crouch_hint)
+
 
 func is_dialogue_active() -> bool:
 	return dialogue_view != null and bool(dialogue_view.call("is_active"))
@@ -1094,8 +1741,13 @@ func _exit_prompt(place: String) -> String:
 func update_prompt() -> void:
 	if prompt_label == null:
 		return
-	if is_dialogue_active():
+	if is_dialogue_active() or _alerted:
 		prompt_label.visible = false
+		return
+	var sneak_target := _nearest_sneak_target()
+	if not sneak_target.is_empty():
+		prompt_label.text = "按 E 偷袭"
+		prompt_label.visible = true
 		return
 	var pickup := _nearest_pickup()
 	if not pickup.is_empty():
@@ -1114,10 +1766,14 @@ func update_prompt() -> void:
 
 
 func try_interact() -> bool:
-	if input_blocked:
+	if input_blocked or _alerted:
 		return false
 	if is_dialogue_active():
 		return false
+	var sneak_target := _nearest_sneak_target()
+	if not sneak_target.is_empty():
+		_trigger_sneak(sneak_target)
+		return true
 	var pickup := _nearest_pickup()
 	if not pickup.is_empty():
 		_collect(pickup)

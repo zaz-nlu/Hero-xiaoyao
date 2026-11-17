@@ -150,14 +150,26 @@ func show_battle(
 
 
 func _on_battle_finished(result: String) -> void:
+	var origin := _battle_origin
+	var pending: Variant = GameState.pending_forest_encounter
 	if result == "won":
 		Quests.notify("defeat", _battle_enemy, _battle_count)
 		if _battle_enemy == BOSS_ENEMY_ID:
 			GameState.set_flag("boss_defeated")
-	var origin := _battle_origin
+		if origin == "forest" and pending is Dictionary:
+			var encounter: Dictionary = pending
+			var kind := str(encounter.get("kind", ""))
+			if kind == "patrol":
+				GameState.set_flag("patrol_defeated_%d" % int(encounter.get("id", -1)))
+			elif kind == "scout":
+				GameState.set_flag("scout_defeated")
 	_battle_origin = ""
 	GameState.battle_backdrop = "town"
+	GameState.pending_forest_encounter = null
 	if origin == "forest":
+		if result != "won":
+			# A loss drops the player back at the forest spawn; the patrol resets.
+			GameState.forest_return_pos = null
 		show_forest()
 	else:
 		show_town()

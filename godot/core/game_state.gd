@@ -5,6 +5,7 @@ const INITIAL_POINTS := 3
 static var flags: Dictionary = {}
 static var town_return_pos: Variant = null
 static var forest_return_pos: Variant = null
+static var pending_forest_encounter: Variant = null
 static var battle_backdrop: String = "town"
 static var known_moves: Dictionary = {}
 static var stat_bonus: Dictionary = {}
@@ -29,6 +30,7 @@ static func reset() -> void:
 	flags.clear()
 	town_return_pos = null
 	forest_return_pos = null
+	pending_forest_encounter = null
 	battle_backdrop = "town"
 	known_moves.clear()
 	stat_bonus.clear()

@@ -455,7 +455,10 @@ func _create_stage() -> void:
 		return
 	var ids: Array = []
 	for enemy in battle.enemies:
-		ids.append(str(enemy.id))
+		var sprite_id := str(enemy.id)
+		if enemy.def != null and str(enemy.def.sprite) != "":
+			sprite_id = str(enemy.def.sprite)
+		ids.append(sprite_id)
 	var built: Variant = BattleStage.new()
 	built.name = "BattleStage"
 	add_child(built)
