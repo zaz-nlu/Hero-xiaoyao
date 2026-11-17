@@ -10,6 +10,7 @@ const DEFEATED_NPC_IDS: Array[String] = ["ma_youwei", "bandit_1", "bandit_2"]
 
 const TownData = preload("res://world/town_data.gd")
 const Texgen = preload("res://world/texgen.gd")
+const AiAssets = preload("res://world/ai_assets.gd")
 const CharacterSprite = preload("res://world/character_sprite.gd")
 const PlayerMotion = preload("res://world/player_motion.gd")
 const Dialogue = preload("res://core/dialogue.gd")
@@ -55,6 +56,7 @@ var _banner_phases: Array[float] = []
 var _time: float = 0.0
 var _focus: Vector3 = Vector3.ZERO
 var _hud_layer: CanvasLayer = null
+var _tavern_facade: bool = false
 
 
 func _ready() -> void:
@@ -289,11 +291,16 @@ func _build_ground() -> void:
 			continue
 		var y := 0.0
 		var tex: ImageTexture
+		var uv_scale := Vector2(width, depth)
 		var node_name := "Ground_%d" % i
 		match ground_type:
 			"stone":
 				y = 0.01
-				tex = _get_tex("stone_street")
+				tex = AiAssets.load_texture("tex_cobblestone.png")
+				if tex != null:
+					uv_scale = Vector2(width / 3.0, depth / 3.0)
+				else:
+					tex = _get_tex("stone_street")
 			"water":
 				y = 0.02
 				tex = _get_tex("water")
@@ -303,7 +310,7 @@ func _build_ground() -> void:
 				tex = _get_tex("grass")
 		var plane := PlaneMesh.new()
 		plane.size = Vector2(width, depth)
-		var mat: StandardMaterial3D = Texgen.make_material(tex, Vector2(width, depth))
+		var mat: StandardMaterial3D = Texgen.make_material(tex, uv_scale)
 		if ground_type == "water":
 			_water_material = mat
 		_add_mesh(root, plane, mat, Vector3((x0 + x1) * 0.5, y, (z0 + z1) * 0.5), node_name)
@@ -391,6 +398,8 @@ func _build_building(parent: Node3D, building: Dictionary) -> void:
 	var door_w := float(building.get("door_w", 1.6))
 	var kind := str(building.get("kind", "house"))
 	if x1 <= x0 or depth <= 0.0:
+		return
+	if _try_build_facade(parent, building, x0, x1, z_front, kind):
 		return
 	var width := x1 - x0
 	var z_back := z_front - depth
@@ -529,6 +538,39 @@ func _build_building(parent: Node3D, building: Dictionary) -> void:
 			chimney_mat,
 			Vector3(x1 - 2.0, top_y + roof_h + 0.4, z_back + 2.0)
 		)
+
+
+func _try_build_facade(
+	parent: Node3D, building: Dictionary, x0: float, x1: float, z_front: float, kind: String
+) -> bool:
+	var file := _facade_file(kind)
+	if file == "":
+		return false
+	var facade := AiAssets.make_wall_quad(
+		file,
+		(x1 - x0) * 1.08,
+		Vector3((x0 + x1) * 0.5, 0.0, z_front),
+		"Facade_%s" % str(building.get("id", ""))
+	)
+	if facade == null:
+		return false
+	parent.add_child(facade)
+	if kind == "tavern":
+		_tavern_facade = true
+	return true
+
+
+func _facade_file(kind: String) -> String:
+	match kind:
+		"tavern":
+			return "facade_tavern.png"
+		"shop":
+			return "facade_general_store.png"
+		"smith":
+			return "facade_blacksmith.png"
+		"house":
+			return "facade_residence.png"
+	return ""
 
 
 func _build_roof(
@@ -681,7 +723,8 @@ func _build_props() -> void:
 			"lamp_post":
 				_build_lamp_post(root, x, z)
 			"banner":
-				_build_banner(root, x, z, str(prop.get("text", "")))
+				if not _tavern_facade:
+					_build_banner(root, x, z, str(prop.get("text", "")))
 			"cart":
 				_build_cart(root, x, z, float(prop.get("rot", 0.0)))
 			"stall":
@@ -695,9 +738,21 @@ func _build_props() -> void:
 				)
 			"tree":
 				_build_tree(root, x, z)
+			"jars":
+				_build_jars(root, x, z, i)
+			"baskets":
+				_build_baskets(root, x, z, i)
+			"stone_lantern":
+				_build_stone_lantern(root, x, z, i)
+			"boat":
+				_build_boat(root, x, z, i)
 
 
 func _build_barrel(parent: Node3D, x: float, z: float) -> void:
+	var sprite := AiAssets.make_sprite("prop_barrel.png", 1.2, Vector3(x, 0.0, z), "Barrel")
+	if sprite != null:
+		parent.add_child(sprite)
+		return
 	var wood_mat: StandardMaterial3D = Texgen.make_material(
 		_get_tex("wood_planks"), Vector2(1.0, 1.0)
 	)
@@ -717,6 +772,10 @@ func _build_barrel(parent: Node3D, x: float, z: float) -> void:
 
 
 func _build_crate(parent: Node3D, x: float, z: float) -> void:
+	var sprite := AiAssets.make_sprite("prop_crates.png", 1.3, Vector3(x, 0.0, z), "Crates")
+	if sprite != null:
+		parent.add_child(sprite)
+		return
 	var wood_mat: StandardMaterial3D = Texgen.make_material(
 		_get_tex("wood_planks"), Vector2(0.9, 0.9)
 	)
@@ -724,6 +783,10 @@ func _build_crate(parent: Node3D, x: float, z: float) -> void:
 
 
 func _build_bench(parent: Node3D, x: float, z: float) -> void:
+	var sprite := AiAssets.make_sprite("prop_bench.png", 0.9, Vector3(x, 0.0, z), "Bench")
+	if sprite != null:
+		parent.add_child(sprite)
+		return
 	var wood_mat: StandardMaterial3D = Texgen.make_material(
 		_get_tex("wood_planks"), Vector2(2.0, 0.6)
 	)
@@ -734,6 +797,13 @@ func _build_bench(parent: Node3D, x: float, z: float) -> void:
 
 
 func _build_lamp_post(parent: Node3D, x: float, z: float) -> void:
+	var sprite := AiAssets.make_sprite(
+		"prop_lantern_post.png", 3.0, Vector3(x, 0.0, z), "LanternPost"
+	)
+	if sprite != null:
+		parent.add_child(sprite)
+		_add_omni_light(parent, Vector3(x, 1.6, z), Color("#ffb870"), 8.0, 0.9)
+		return
 	var wood_mat: StandardMaterial3D = Texgen.make_material(
 		_get_tex("wood_planks"), Vector2(0.5, 4.0)
 	)
@@ -795,6 +865,12 @@ func _build_cart(parent: Node3D, x: float, z: float, rot: float) -> void:
 func _build_stall(
 	parent: Node3D, x: float, z: float, width: float, depth: float, text: String
 ) -> void:
+	var sprite := AiAssets.make_sprite(
+		"facade_baozi_stall.png", 3.6, Vector3(x, 0.0, z), "StallFacade"
+	)
+	if sprite != null:
+		parent.add_child(sprite)
+		return
 	var stall := Node3D.new()
 	stall.name = "Stall"
 	stall.position = Vector3(x, 0.0, z)
@@ -835,6 +911,12 @@ func _build_stall(
 
 
 func _build_tree(parent: Node3D, x: float, z: float) -> void:
+	var willow := AiAssets.make_sprite(
+		"prop_willow.png", 4.2, Vector3(x, 0.0, z), "Willow"
+	)
+	if willow != null:
+		parent.add_child(willow)
+		return
 	var tree := Sprite3D.new()
 	tree.name = "Tree"
 	tree.texture = _get_tex("tree")
@@ -861,6 +943,45 @@ func _build_tree(parent: Node3D, x: float, z: float) -> void:
 	shadow.rotation.x = -PI / 2.0
 	shadow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	parent.add_child(shadow)
+
+
+func _build_jars(parent: Node3D, x: float, z: float, index: int) -> void:
+	var sprite := AiAssets.make_sprite(
+		"prop_jars.png", 1.0, Vector3(x, 0.0, z), "Jars%d" % index
+	)
+	if sprite != null:
+		parent.add_child(sprite)
+
+
+func _build_baskets(parent: Node3D, x: float, z: float, index: int) -> void:
+	var sprite := AiAssets.make_sprite(
+		"prop_baskets.png", 0.8, Vector3(x, 0.0, z), "Baskets%d" % index
+	)
+	if sprite != null:
+		parent.add_child(sprite)
+
+
+func _build_stone_lantern(parent: Node3D, x: float, z: float, index: int) -> void:
+	var sprite := AiAssets.make_sprite(
+		"prop_stone_lantern.png", 1.6, Vector3(x, 0.0, z), "StoneLantern%d" % index
+	)
+	if sprite != null:
+		parent.add_child(sprite)
+
+
+func _build_boat(parent: Node3D, x: float, z: float, index: int) -> void:
+	var texture := AiAssets.load_texture("prop_boat.png")
+	if texture == null:
+		return
+	var size := texture.get_size()
+	if size.x <= 0.0:
+		return
+	var height: float = 6.0 * size.y / size.x
+	var sprite := AiAssets.make_sprite(
+		"prop_boat.png", height, Vector3(x, -0.15, z), "Boat%d" % index
+	)
+	if sprite != null:
+		parent.add_child(sprite)
 
 
 # ---------------------------------------------------------------- stairs, platform, gate

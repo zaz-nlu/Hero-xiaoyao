@@ -236,11 +236,13 @@ func test_town_builds() -> void:
 	if town.sun != null:
 		assert_true(town.sun.shadow_enabled, "sun casts shadows")
 	var mesh_count := _count_nodes(town, "MeshInstance3D")
-	assert_true(mesh_count > 150, "mesh count %d is above 150" % mesh_count)
+	assert_true(mesh_count > 40, "mesh count %d is above 40" % mesh_count)
+	var sprite_count := _count_nodes(town, "Sprite3D")
+	assert_true(sprite_count >= 40, "sprite count %d is at least 40" % sprite_count)
 	var label_count := _count_nodes(town, "Label3D")
-	assert_true(label_count >= 6, "label count %d is at least 6" % label_count)
+	assert_true(label_count >= 1, "label count %d is at least 1" % label_count)
 	var light_count := _count_nodes(town, "OmniLight3D")
-	assert_true(light_count >= 7, "omni light count %d is at least 7" % light_count)
+	assert_true(light_count >= 5, "omni light count %d is at least 5" % light_count)
 	town.free()
 
 

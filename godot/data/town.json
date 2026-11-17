@@ -54,7 +54,15 @@
     {"kind": "tree", "x": 2.0, "z": 15.0},
     {"kind": "tree", "x": 10.0, "z": 17.0},
     {"kind": "tree", "x": 20.0, "z": 15.0},
-    {"kind": "tree", "x": 28.0, "z": 17.0}
+    {"kind": "tree", "x": 28.0, "z": 17.0},
+    {"kind": "jars", "x": -9.0, "z": -2.3},
+    {"kind": "jars", "x": -5.0, "z": -2.3},
+    {"kind": "baskets", "x": 20.8, "z": 2.4},
+    {"kind": "stone_lantern", "x": 27.6, "z": -1.6},
+    {"kind": "stone_lantern", "x": 30.6, "z": -1.6},
+    {"kind": "boat", "x": -9.0, "z": 10.6},
+    {"kind": "boat", "x": 5.0, "z": 10.2},
+    {"kind": "boat", "x": 19.0, "z": 10.8}
   ],
   "npcs": [
     {"id": "bun_vendor", "sprite": "vendor", "name": "包子摊老板", "x": 18.0, "z": 0.6, "facing": "down"},
