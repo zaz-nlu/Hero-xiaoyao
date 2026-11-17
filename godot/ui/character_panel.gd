@@ -12,6 +12,7 @@ const Balance = preload("res://core/balance.gd")
 const Stats = preload("res://core/stats.gd")
 const Realms = preload("res://core/realms.gd")
 const ImageCache = preload("res://ui/image_cache.gd")
+const IconLib = preload("res://ui/icon_lib.gd")
 const Hud = preload("res://ui/battle_hud_style.gd")
 
 const PLAYER_PATH := "res://data/player.json"
@@ -341,22 +342,37 @@ func _build_attributes_tab() -> void:
 		var total_value := int(final_values.get(key, 0))
 		var bonus := total_value - base_value
 
-		var icon := Panel.new()
-		icon.name = "AttrIcon_%s" % key
-		icon.position = Vector2(0.0, y + 3.0)
-		icon.size = Vector2(14.0, 14.0)
-		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		icon.add_theme_stylebox_override("panel", Hud.circle_style(STAT_COLORS[key], 7))
-		_content_root.add_child(icon)
+		var stat_icon: Texture2D = IconLib.stat_icon(key)
+		var icon_shift := 0.0
+		if stat_icon != null:
+			var icon_rect := TextureRect.new()
+			icon_rect.name = "AttrIcon_%s" % key
+			icon_rect.position = Vector2(0.0, y - 3.0)
+			icon_rect.size = Vector2(28.0, 28.0)
+			icon_rect.texture = stat_icon
+			icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			icon_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			_content_root.add_child(icon_rect)
+			icon_shift = 14.0
+		else:
+			var fallback := Panel.new()
+			fallback.name = "AttrIcon_%s" % key
+			fallback.position = Vector2(0.0, y + 3.0)
+			fallback.size = Vector2(14.0, 14.0)
+			fallback.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			fallback.add_theme_stylebox_override("panel", Hud.circle_style(STAT_COLORS[key], 7))
+			_content_root.add_child(fallback)
 
 		var name_label := _make_label(
-			_content_root, "AttrName_%s" % key, Vector2(22.0, y), Vector2(42.0, 20.0), 15, Hud.TEXT
+			_content_root, "AttrName_%s" % key, Vector2(22.0 + icon_shift, y), Vector2(42.0, 20.0), 15, Hud.TEXT
 		)
 		name_label.text = str(STAT_NAMES[key])
 
 		var bar_bg := Panel.new()
 		bar_bg.name = "AttrBar_%s" % key
-		bar_bg.position = Vector2(70.0, y + 4.0)
+		bar_bg.position = Vector2(70.0 + icon_shift, y + 4.0)
 		bar_bg.size = Vector2(230.0, 12.0)
 		bar_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		bar_bg.add_theme_stylebox_override("panel", Hud.bar_bg_style())
@@ -384,7 +400,7 @@ func _build_attributes_tab() -> void:
 
 		var value_label := RichTextLabel.new()
 		value_label.name = "AttrValue_%s" % key
-		value_label.position = Vector2(312.0, y)
+		value_label.position = Vector2(312.0 + icon_shift, y)
 		value_label.size = Vector2(116.0, 20.0)
 		value_label.bbcode_enabled = true
 		value_label.scroll_active = false
@@ -400,13 +416,13 @@ func _build_attributes_tab() -> void:
 		_content_root.add_child(value_label)
 
 		var best_mark := _make_label(
-			_content_root, "BestMark_%s" % key, Vector2(432.0, y), Vector2(100.0, 20.0), 14, Hud.GOLD_BRIGHT
+			_content_root, "BestMark_%s" % key, Vector2(432.0 + icon_shift, y), Vector2(100.0, 20.0), 14, Hud.GOLD_BRIGHT
 		)
 		if top.has(key):
 			best_mark.text = "★ 最强"
 
 		var desc := _make_label(
-			_content_root, "AttrDesc_%s" % key, Vector2(70.0, y + 20.0), Vector2(500.0, 16.0), 12, Hud.MUTED
+			_content_root, "AttrDesc_%s" % key, Vector2(70.0 + icon_shift, y + 20.0), Vector2(500.0, 16.0), 12, Hud.MUTED
 		)
 		desc.text = str(STAT_DESC[key])
 		y += 50.0
@@ -461,12 +477,31 @@ func _build_skills_tab() -> void:
 		var martial_id := str(learned[i])
 		var button := Button.new()
 		button.name = "MartialLearned_%s" % martial_id
+		var learned_icon: Texture2D = IconLib.martial_icon(martial_id)
 		button.text = _martial_name(martial_id)
 		button.position = Vector2(0.0, 168.0 + float(i) * 32.0)
 		button.size = Vector2(212.0, 26.0)
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.focus_mode = Control.FOCUS_NONE
 		_style_list_button(button, martial_id == _selected_martial)
+		if learned_icon != null:
+			# leave room for the 32 px icon: widen the left content margin of every state style
+			for state in ["normal", "hover", "pressed", "focus", "disabled"]:
+				var base_style: StyleBox = button.get_theme_stylebox(state)
+				if base_style is StyleBoxFlat:
+					var padded: StyleBoxFlat = (base_style as StyleBoxFlat).duplicate()
+					padded.content_margin_left = 42.0
+					button.add_theme_stylebox_override(state, padded)
+			var row_icon := TextureRect.new()
+			row_icon.name = "MartialIcon_%s" % martial_id
+			row_icon.position = Vector2(3.0, -3.0)
+			row_icon.size = Vector2(32.0, 32.0)
+			row_icon.texture = learned_icon
+			row_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			row_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			row_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			row_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			button.add_child(row_icon)
 		var grade := _martial_grade(martial_id)
 		var grade_color := Mastery.grade_color(grade)
 		button.add_theme_color_override("font_color", grade_color)
@@ -500,18 +535,33 @@ func _build_martial_slot_card(index: int, martial_id: String) -> Control:
 	var icon_color: Color = Hud.MUTED
 	if martial_id != "":
 		icon_color = _martial_color(martial_id)
-	var circle := Panel.new()
-	circle.name = "SlotIcon_%d" % index
-	circle.position = Vector2(30.0, 20.0)
-	circle.size = Vector2(44.0, 44.0)
-	circle.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	circle.add_theme_stylebox_override("panel", Hud.circle_style(icon_color, 22))
-	card.add_child(circle)
+	var martial_icon: Texture2D = null
+	if martial_id != "":
+		martial_icon = IconLib.martial_icon(martial_id)
+	if martial_icon != null:
+		var icon_rect := TextureRect.new()
+		icon_rect.name = "SlotIcon_%d" % index
+		icon_rect.position = Vector2(24.0, 12.0)
+		icon_rect.size = Vector2(56.0, 56.0)
+		icon_rect.texture = martial_icon
+		icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card.add_child(icon_rect)
+	else:
+		var circle := Panel.new()
+		circle.name = "SlotIcon_%d" % index
+		circle.position = Vector2(30.0, 20.0)
+		circle.size = Vector2(44.0, 44.0)
+		circle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		circle.add_theme_stylebox_override("panel", Hud.circle_style(icon_color, 22))
+		card.add_child(circle)
 
-	var glyph := _make_label(circle, "SlotGlyph_%d" % index, Vector2.ZERO, Vector2(44.0, 44.0), 20, Hud.TEXT)
-	glyph.text = "空" if martial_id == "" else _martial_glyph(martial_id)
-	glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		var glyph := _make_label(circle, "SlotGlyph_%d" % index, Vector2.ZERO, Vector2(44.0, 44.0), 20, Hud.TEXT)
+		glyph.text = "空" if martial_id == "" else _martial_glyph(martial_id)
+		glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
 	var name_label := _make_label(card, "SlotName_%d" % index, Vector2(4.0, 72.0), Vector2(96.0, 24.0), 13, Hud.TEXT)
 	name_label.text = "空" if martial_id == "" else _martial_name(martial_id)
@@ -668,6 +718,23 @@ func _build_equipment_tab() -> void:
 		glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
+		var equipped_id := str(GameState.equipment.get(slot, ""))
+		var equipped_icon: Texture2D = null
+		if equipped_id != "":
+			equipped_icon = IconLib.item_icon(equipped_id)
+		if equipped_icon != null:
+			var item_icon_rect := TextureRect.new()
+			item_icon_rect.name = "SlotItemIcon_%s" % slot
+			item_icon_rect.position = Vector2(13.0, 13.0)
+			item_icon_rect.size = Vector2(36.0, 36.0)
+			item_icon_rect.texture = equipped_icon
+			item_icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			item_icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			item_icon_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			item_icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			card.add_child(item_icon_rect)
+			glyph.visible = false
+
 		_make_label(card, "SlotLabel_%s" % slot, Vector2(58.0, 10.0), Vector2(112.0, 20.0), 15, Hud.GOLD).text = \
 			str(SLOT_NAMES[slot])
 
@@ -720,14 +787,29 @@ func _build_bag_row(item_id: String, count: int, y: float) -> void:
 	)
 	_content_root.add_child(row)
 
-	var name_label := _make_label(row, "BagName_%s" % item_id, Vector2(10.0, 4.0), Vector2(140.0, 20.0), 15, Hud.TEXT)
+	var bag_icon: Texture2D = IconLib.item_icon(item_id)
+	var text_x := 10.0
+	if bag_icon != null:
+		var icon_rect := TextureRect.new()
+		icon_rect.name = "BagIcon_%s" % item_id
+		icon_rect.position = Vector2(8.0, 9.0)
+		icon_rect.size = Vector2(36.0, 36.0)
+		icon_rect.texture = bag_icon
+		icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(icon_rect)
+		text_x = 50.0
+
+	var name_label := _make_label(row, "BagName_%s" % item_id, Vector2(text_x, 4.0), Vector2(140.0, 20.0), 15, Hud.TEXT)
 	name_label.text = str(item.get("name", item_id))
-	var count_label := _make_label(row, "BagCount_%s" % item_id, Vector2(150.0, 6.0), Vector2(44.0, 18.0), 12, Hud.MUTED)
+	var count_label := _make_label(row, "BagCount_%s" % item_id, Vector2(text_x + 140.0, 6.0), Vector2(44.0, 18.0), 12, Hud.MUTED)
 	count_label.text = "×%d" % count
 	var kind := str(item.get("kind", ""))
-	var kind_label := _make_label(row, "BagKind_%s" % item_id, Vector2(200.0, 6.0), Vector2(60.0, 18.0), 12, Hud.GOLD)
+	var kind_label := _make_label(row, "BagKind_%s" % item_id, Vector2(text_x + 190.0, 6.0), Vector2(60.0, 18.0), 12, Hud.GOLD)
 	kind_label.text = str(KIND_NAMES.get(kind, kind))
-	var desc := _make_label(row, "BagDesc_%s" % item_id, Vector2(10.0, 27.0), Vector2(480.0, 18.0), 12, Hud.MUTED)
+	var desc := _make_label(row, "BagDesc_%s" % item_id, Vector2(text_x, 27.0), Vector2(440.0, 18.0), 12, Hud.MUTED)
 	desc.text = str(item.get("desc", ""))
 
 	var raw_perm: Variant = item.get("perm", {})
@@ -800,23 +882,43 @@ func _build_points_tab() -> void:
 	var y := 40.0
 	for key in STAT_KEYS:
 		var pending := _pending(key)
+		var point_icon: Texture2D = IconLib.stat_icon(key)
+		if point_icon != null:
+			var icon_rect := TextureRect.new()
+			icon_rect.name = "PointIcon_%s" % key
+			icon_rect.position = Vector2(0.0, y - 3.0)
+			icon_rect.size = Vector2(28.0, 28.0)
+			icon_rect.texture = point_icon
+			icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			icon_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			_content_root.add_child(icon_rect)
+		else:
+			var fallback := Panel.new()
+			fallback.name = "PointIcon_%s" % key
+			fallback.position = Vector2(0.0, y - 3.0)
+			fallback.size = Vector2(28.0, 28.0)
+			fallback.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			fallback.add_theme_stylebox_override("panel", Hud.circle_style(STAT_COLORS[key], 14))
+			_content_root.add_child(fallback)
 		var name_label := _make_label(
-			_content_root, "PointName_%s" % key, Vector2(0.0, y), Vector2(60.0, 22.0), 15, Hud.TEXT
+			_content_root, "PointName_%s" % key, Vector2(34.0, y), Vector2(60.0, 22.0), 15, Hud.TEXT
 		)
 		name_label.text = str(STAT_NAMES[key])
 		var value_label := _make_label(
-			_content_root, "PointValue_%s" % key, Vector2(70.0, y), Vector2(110.0, 22.0), 15, Hud.TEXT
+			_content_root, "PointValue_%s" % key, Vector2(104.0, y), Vector2(110.0, 22.0), 15, Hud.TEXT
 		)
 		value_label.text = str(int(final_values.get(key, 0)))
 
 		var minus := _make_small_button(
-			_content_root, "PointMinus_%s" % key, "－", Vector2(200.0, y - 2.0), Vector2(34.0, 26.0)
+			_content_root, "PointMinus_%s" % key, "－", Vector2(234.0, y - 2.0), Vector2(34.0, 26.0)
 		)
 		minus.disabled = pending <= 0
 		minus.pressed.connect(_on_point_minus.bind(key))
 
 		var plus := _make_small_button(
-			_content_root, "PointPlus_%s" % key, "＋", Vector2(240.0, y - 2.0), Vector2(34.0, 26.0)
+			_content_root, "PointPlus_%s" % key, "＋", Vector2(274.0, y - 2.0), Vector2(34.0, 26.0)
 		)
 		plus.disabled = available <= 0 \
 				or total_assigned >= available \
@@ -824,13 +926,13 @@ func _build_points_tab() -> void:
 		plus.pressed.connect(_on_point_plus.bind(key))
 
 		var pending_label := _make_label(
-			_content_root, "PointPending_%s" % key, Vector2(284.0, y), Vector2(60.0, 22.0), 14, BONUS_COLOR
+			_content_root, "PointPending_%s" % key, Vector2(318.0, y), Vector2(60.0, 22.0), 14, BONUS_COLOR
 		)
 		if pending > 0:
 			pending_label.text = "+%d" % pending
 		if key == "constitution":
 			_make_label(
-				_content_root, "ConstitutionHpHint", Vector2(356.0, y + 2.0), Vector2(220.0, 20.0), 12, Hud.MUTED
+				_content_root, "ConstitutionHpHint", Vector2(390.0, y + 2.0), Vector2(190.0, 20.0), 12, Hud.MUTED
 			).text = "+1 体质 = +%d 气血" % Realms.hp_per_con(GameState.realm_id)
 		y += 38.0
 

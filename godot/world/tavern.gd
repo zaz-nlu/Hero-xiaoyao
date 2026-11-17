@@ -82,6 +82,7 @@ var arena_origin: Vector3 = Vector3.ZERO
 var _npc_entries: Dictionary = {}
 var _npc_root: Node3D = null
 var _furniture_root: Node3D = null
+var _debris_root: Node3D = null
 var _input_override: Variant = null
 var _built: bool = false
 var _textures: Dictionary = {}
@@ -91,6 +92,7 @@ var _hud_layer: CanvasLayer = null
 var _anim_active: bool = false
 var _anim_t: float = 0.0
 var _anim_furniture: Array = []
+var _anim_swaps: Array = []
 var _anim_npcs: Array = []
 var _ambush_triggered: bool = false
 var _ambush_elapsed: float = 0.0
@@ -883,6 +885,14 @@ func _wood_material(uv_scale: Vector2) -> StandardMaterial3D:
 	return Texgen.make_material(_get_tex("wood_planks"), uv_scale)
 
 
+# Floor boards from the AI pack, repeating once every four world units.
+func _floor_material(uv_scale: Vector2) -> StandardMaterial3D:
+	var tex: ImageTexture = AiAssets.load_texture("tex_floor_wood.png")
+	if tex != null:
+		return Texgen.make_material(tex, uv_scale)
+	return _wood_material(uv_scale)
+
+
 # Aged plaster from the AI pack, repeated roughly every 2.5 world units.
 func _plaster_material(uv_scale: Vector2) -> StandardMaterial3D:
 	var tex: ImageTexture = AiAssets.load_texture("tex_aged_plaster.png")
@@ -977,6 +987,47 @@ func _sprite_prop(
 	_add_box(parent, fallback_size, fallback_mat, Vector3(0.0, fallback_size.y * 0.5, 0.0))
 
 
+# Places a sprite whose world width is fixed, deriving its height from the image.
+func _sprite_by_width(
+	parent: Node3D, file: String, world_width: float, pos: Vector3, node_name: String
+) -> Sprite3D:
+	var texture: ImageTexture = AiAssets.load_texture(file)
+	if texture == null or world_width <= 0.0:
+		return null
+	var size: Vector2 = texture.get_size()
+	if size.x <= 0.0 or size.y <= 0.0:
+		return null
+	var sprite := AiAssets.make_sprite(
+		file, world_width * size.y / size.x, pos, node_name
+	)
+	if sprite != null:
+		parent.add_child(sprite)
+	return sprite
+
+
+# Two painted wine shelves side by side; false means "use the code-built shelf".
+func _add_wine_shelf(node: Node3D) -> bool:
+	var texture: ImageTexture = AiAssets.load_texture("tavern_wine_shelf.png")
+	if texture == null:
+		return false
+	var size: Vector2 = texture.get_size()
+	if size.x <= 0.0 or size.y <= 0.0:
+		return false
+	var shelf_width := 3.6
+	var shelf_height: float = shelf_width * size.y / size.x
+	var placed := 0
+	for i in range(2):
+		var sprite := AiAssets.make_sprite(
+			"tavern_wine_shelf.png", shelf_height,
+			Vector3(-1.85 + float(i) * 3.7, 0.0, 0.0), "WineShelf_%d" % i
+		)
+		if sprite == null:
+			break
+		node.add_child(sprite)
+		placed += 1
+	return placed == 2
+
+
 # ---------------------------------------------------------------- room
 
 func _build_room() -> void:
@@ -998,7 +1049,7 @@ func _build_room() -> void:
 	# turn so the planks run across the room.
 	var floor_mesh := PlaneMesh.new()
 	floor_mesh.size = Vector2(depth, width)
-	var floor_mat: StandardMaterial3D = _wood_material(Vector2(depth / 4.0, width / 4.0))
+	var floor_mat: StandardMaterial3D = _floor_material(Vector2(depth / 4.0, width / 4.0))
 	floor_mat.albedo_color = Color(0.5, 0.44, 0.4)
 	var floor_instance := _add_mesh(
 		root, floor_mesh, floor_mat, Vector3(cx, 0.0, cz), "Floor"
@@ -1479,6 +1530,7 @@ func _build_furniture() -> void:
 		_furniture_root.add_child(node)
 		_fill_furniture(node, str(entry.get("kind", "")), entry)
 		furniture_nodes[str(id)] = node
+	_build_wrecked_debris()
 
 
 func _fill_furniture(node: Node3D, kind: String, entry: Dictionary) -> void:
@@ -1486,78 +1538,114 @@ func _fill_furniture(node: Node3D, kind: String, entry: Dictionary) -> void:
 	var dark: StandardMaterial3D = _solid_material(Color("#3e2a1a"))
 	match kind:
 		"bar":
-			_add_box(node, Vector3(8.0, 1.15, 1.2), wood, Vector3(0.0, 0.575, 0.0), "BarBody")
-			_add_box(node, Vector3(8.3, 0.15, 1.4), wood, Vector3(0.0, 1.225, 0.0), "BarTop")
-			var bar_porcelain: StandardMaterial3D = _solid_material(Color("#efe9da"))
-			for offset in [-2.5, -1.9, 2.0]:
-				var bar_bowl := CylinderMesh.new()
-				bar_bowl.top_radius = 0.22
-				bar_bowl.bottom_radius = 0.13
-				bar_bowl.height = 0.12
-				_add_mesh(node, bar_bowl, bar_porcelain, Vector3(float(offset), 1.36, 0.0))
+			var bar_sprite: Sprite3D = _sprite_by_width(
+				node, "tavern_bar_counter.png", 8.0, Vector3.ZERO, "BarSprite"
+			)
+			if bar_sprite == null:
+				_add_box(node, Vector3(8.0, 1.15, 1.2), wood, Vector3(0.0, 0.575, 0.0), "BarBody")
+				_add_box(node, Vector3(8.3, 0.15, 1.4), wood, Vector3(0.0, 1.225, 0.0), "BarTop")
+				var bar_porcelain: StandardMaterial3D = _solid_material(Color("#efe9da"))
+				for offset in [-2.5, -1.9, 2.0]:
+					var bar_bowl := CylinderMesh.new()
+					bar_bowl.top_radius = 0.22
+					bar_bowl.bottom_radius = 0.13
+					bar_bowl.height = 0.12
+					_add_mesh(node, bar_bowl, bar_porcelain, Vector3(float(offset), 1.36, 0.0))
 		"shelf":
-			_add_box(node, Vector3(8.0, 3.2, 0.2), wood, Vector3(0.0, 1.6, -0.05), "ShelfBack")
-			_add_box(node, Vector3(8.0, 0.12, 0.5), wood, Vector3(0.0, 1.0, 0.1), "ShelfLow")
-			_add_box(node, Vector3(8.0, 0.12, 0.5), wood, Vector3(0.0, 2.1, 0.1), "ShelfHigh")
-			_add_box(node, Vector3(8.0, 0.12, 0.5), wood, Vector3(0.0, 2.7, 0.1), "ShelfTop")
-			var jar_xs: Array[float] = [-3.0, -1.8, -0.6, 0.6, 1.8, 3.0]
-			var jar_fallback: StandardMaterial3D = _solid_material(Color("#8a6a3a"))
-			for jar_x in jar_xs:
-				var sprite := AiAssets.make_sprite(
-					"prop_jars.png", 0.9, Vector3(jar_x, 1.06, 0.15), "Jar"
-				)
-				if sprite != null:
-					node.add_child(sprite)
-				else:
-					var jar := CylinderMesh.new()
-					jar.top_radius = 0.2
-					jar.bottom_radius = 0.24
-					jar.height = 0.45
-					_add_mesh(node, jar, jar_fallback, Vector3(jar_x, 1.29, 0.15))
-			for jar_x in [-2.4, 0.0, 2.4]:
-				var mid_jar := AiAssets.make_sprite(
-					"prop_jars.png", 0.42, Vector3(float(jar_x), 2.16, 0.15), "JarMid"
-				)
-				if mid_jar != null:
-					node.add_child(mid_jar)
-			for basket_x in [-2.6, 0.0, 2.6]:
-				var basket := AiAssets.make_sprite(
-					"prop_baskets.png", 0.44, Vector3(float(basket_x), 2.76, 0.15), "Basket"
-				)
-				if basket != null:
-					node.add_child(basket)
-				else:
-					_add_box(
-						node,
-						Vector3(0.45, 0.3, 0.45),
-						jar_fallback,
-						Vector3(float(basket_x), 2.91, 0.15)
+			if not _add_wine_shelf(node):
+				_add_box(node, Vector3(8.0, 3.2, 0.2), wood, Vector3(0.0, 1.6, -0.05), "ShelfBack")
+				_add_box(node, Vector3(8.0, 0.12, 0.5), wood, Vector3(0.0, 1.0, 0.1), "ShelfLow")
+				_add_box(node, Vector3(8.0, 0.12, 0.5), wood, Vector3(0.0, 2.1, 0.1), "ShelfHigh")
+				_add_box(node, Vector3(8.0, 0.12, 0.5), wood, Vector3(0.0, 2.7, 0.1), "ShelfTop")
+				var jar_xs: Array[float] = [-3.0, -1.8, -0.6, 0.6, 1.8, 3.0]
+				var jar_fallback: StandardMaterial3D = _solid_material(Color("#8a6a3a"))
+				for jar_x in jar_xs:
+					var sprite := AiAssets.make_sprite(
+						"prop_jars.png", 0.9, Vector3(jar_x, 1.06, 0.15), "Jar"
 					)
+					if sprite != null:
+						node.add_child(sprite)
+					else:
+						var jar := CylinderMesh.new()
+						jar.top_radius = 0.2
+						jar.bottom_radius = 0.24
+						jar.height = 0.45
+						_add_mesh(node, jar, jar_fallback, Vector3(jar_x, 1.29, 0.15))
+				for jar_x in [-2.4, 0.0, 2.4]:
+					var mid_jar := AiAssets.make_sprite(
+						"prop_jars.png", 0.42, Vector3(float(jar_x), 2.16, 0.15), "JarMid"
+					)
+					if mid_jar != null:
+						node.add_child(mid_jar)
+				for basket_x in [-2.6, 0.0, 2.6]:
+					var basket := AiAssets.make_sprite(
+						"prop_baskets.png", 0.44, Vector3(float(basket_x), 2.76, 0.15), "Basket"
+					)
+					if basket != null:
+						node.add_child(basket)
+					else:
+						_add_box(
+							node,
+							Vector3(0.45, 0.3, 0.45),
+							jar_fallback,
+							Vector3(float(basket_x), 2.91, 0.15)
+						)
 		"barrel":
 			_sprite_prop(
 				node, "prop_barrel.png", 1.2, Vector3(0.9, 0.9, 0.9), wood
 			)
 		"table":
-			_add_box(node, Vector3(1.8, 0.12, 1.8), wood, Vector3(0.0, 0.89, 0.0), "TableTop")
-			_add_box(node, Vector3(1.86, 0.04, 1.86), dark, Vector3(0.0, 0.9, 0.0), "TableRim")
-			var leg_xs: Array[float] = [-0.75, 0.75]
-			for leg_x in leg_xs:
-				for leg_z in leg_xs:
-					_add_box(
-						node,
-						Vector3(0.12, 0.83, 0.12),
-						dark,
-						Vector3(leg_x, 0.415, leg_z)
-					)
-			var stool := CylinderMesh.new()
-			stool.top_radius = 0.34
-			stool.bottom_radius = 0.36
-			stool.height = 0.16
-			_add_mesh(node, stool, dark, Vector3(0.0, 0.08, 0.0), "FootStool")
-		"bench":
-			_sprite_prop(
-				node, "prop_bench.png", 0.9, Vector3(2.0, 0.45, 0.6), wood
+			var table_sprite := AiAssets.make_sprite(
+				"tavern_square_table.png", 1.5, Vector3.ZERO, "TableSprite"
 			)
+			if table_sprite != null:
+				node.add_child(table_sprite)
+				if entry.has("wrecked"):
+					var wrecked_sprite := AiAssets.make_sprite(
+						"tavern_wrecked_overturned_table.png", 1.2, Vector3.ZERO,
+						"TableWreckedSprite"
+					)
+					if wrecked_sprite != null:
+						wrecked_sprite.modulate = Color(1.0, 1.0, 1.0, 0.0)
+						wrecked_sprite.visible = false
+						wrecked_sprite.basis = _wrecked_sprite_basis(entry)
+						node.add_child(wrecked_sprite)
+			else:
+				_add_box(node, Vector3(1.8, 0.12, 1.8), wood, Vector3(0.0, 0.89, 0.0), "TableTop")
+				_add_box(node, Vector3(1.86, 0.04, 1.86), dark, Vector3(0.0, 0.9, 0.0), "TableRim")
+				var leg_xs: Array[float] = [-0.75, 0.75]
+				for leg_x in leg_xs:
+					for leg_z in leg_xs:
+						_add_box(
+							node,
+							Vector3(0.12, 0.83, 0.12),
+							dark,
+							Vector3(leg_x, 0.415, leg_z)
+						)
+				var stool := CylinderMesh.new()
+				stool.top_radius = 0.34
+				stool.bottom_radius = 0.36
+				stool.height = 0.16
+				_add_mesh(node, stool, dark, Vector3(0.0, 0.08, 0.0), "FootStool")
+		"bench":
+			var bench_sprite := AiAssets.make_sprite(
+				"tavern_long_bench.png", 0.7, Vector3.ZERO, "BenchSprite"
+			)
+			if bench_sprite != null:
+				node.add_child(bench_sprite)
+				var broken_bench := AiAssets.make_sprite(
+					"tavern_wrecked_broken_bench.png", 0.7, Vector3.ZERO,
+					"BenchWreckedSprite"
+				)
+				if broken_bench != null:
+					broken_bench.modulate = Color(1.0, 1.0, 1.0, 0.0)
+					broken_bench.visible = false
+					broken_bench.basis = _wrecked_sprite_basis(entry)
+					node.add_child(broken_bench)
+			else:
+				_sprite_prop(
+					node, "prop_bench.png", 0.9, Vector3(2.0, 0.45, 0.6), wood
+				)
 		"crates":
 			var crate_h: float = _entry_float(entry, "height", 1.3)
 			_sprite_prop(
@@ -1649,6 +1737,97 @@ func _fill_furniture(node: Node3D, kind: String, entry: Dictionary) -> void:
 			quad.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
+# The wrecked table/bench art is already drawn fallen; cancel the node's wrecked
+# tilt on that sprite so it reads upright once the transform animation ends.
+func _wrecked_sprite_basis(entry: Dictionary) -> Basis:
+	if entry.has("wrecked"):
+		var target: Transform3D = _transform_from_dict(entry.get("wrecked", {}))
+		return target.basis.inverse()
+	return Basis.IDENTITY
+
+
+func _build_wrecked_debris() -> void:
+	_debris_root = Node3D.new()
+	_debris_root.name = "WreckedDebris"
+	_debris_root.visible = false
+	_furniture_root.add_child(_debris_root)
+	var pieces: Array = [
+		["tavern_wrecked_broken_bowls.png", 0.4, Vector3(7.2, 0.0, -2.0), 15.0,
+				"wrecked_broken_bowls_1"],
+		["tavern_wrecked_broken_bowls.png", 0.34, Vector3(8.1, 0.0, -2.7), -35.0,
+				"wrecked_broken_bowls_2"],
+		["tavern_wrecked_broken_planks.png", 0.5, Vector3(12.3, 0.0, -1.4), 25.0,
+				"wrecked_broken_planks_1"],
+		["tavern_wrecked_broken_planks.png", 0.44, Vector3(13.6, 0.0, 0.6), -50.0,
+				"wrecked_broken_planks_2"],
+		["tavern_wrecked_smashed_stool.png", 0.6, Vector3(9.6, 0.0, 0.6), -20.0,
+				"wrecked_smashed_stool_1"],
+	]
+	for raw in pieces:
+		var row: Array = raw
+		var sprite := AiAssets.make_sprite(
+			str(row[0]), float(row[1]), row[2], str(row[4])
+		)
+		if sprite == null:
+			continue
+		sprite.rotation.y = deg_to_rad(float(row[3]))
+		_debris_root.add_child(sprite)
+	var wine := AiAssets.make_sprite(
+		"tavern_wrecked_spilled_wine.png", 1.4, Vector3(10.2, 0.03, -0.6),
+		"wrecked_spilled_wine_1"
+	)
+	if wine != null:
+		wine.rotation.x = -PI / 2.0
+		_debris_root.add_child(wine)
+
+
+func _set_sprite_alpha(sprite: Sprite3D, alpha: float) -> void:
+	var color: Color = sprite.modulate
+	color.a = clampf(alpha, 0.0, 1.0)
+	sprite.modulate = color
+	sprite.visible = color.a > 0.001
+
+
+func _apply_visual_swap(
+	node: Node3D, entry: Dictionary, new_state: String, animate: bool
+) -> void:
+	var kind := str(entry.get("kind", ""))
+	var normal_value: Variant = null
+	var wrecked_value: Variant = null
+	var target_wrecked := false
+	match kind:
+		"table":
+			normal_value = node.get_node_or_null("TableSprite")
+			wrecked_value = node.get_node_or_null("TableWreckedSprite")
+			target_wrecked = entry.has("wrecked") and _state_key(entry, new_state) == "wrecked"
+		"bench":
+			normal_value = node.get_node_or_null("BenchSprite")
+			wrecked_value = node.get_node_or_null("BenchWreckedSprite")
+			target_wrecked = new_state != "normal"
+		_:
+			return
+	if not (normal_value is Sprite3D) or not (wrecked_value is Sprite3D):
+		return
+	var normal: Sprite3D = normal_value
+	var wrecked: Sprite3D = wrecked_value
+	var from_normal: float = normal.modulate.a
+	var from_wrecked: float = wrecked.modulate.a
+	var to_normal: float = 0.0 if target_wrecked else 1.0
+	var to_wrecked: float = 1.0 if target_wrecked else 0.0
+	if animate:
+		_anim_swaps.append({
+			"normal": normal,
+			"wrecked": wrecked,
+			"from_normal": from_normal,
+			"from_wrecked": from_wrecked,
+			"to_normal": to_normal,
+			"to_wrecked": to_wrecked,
+		})
+	else:
+		_set_sprite_alpha(normal, to_normal)
+		_set_sprite_alpha(wrecked, to_wrecked)
+
+
 func _transform_from_dict(entry_value: Variant) -> Transform3D:
 	if not (entry_value is Dictionary):
 		return Transform3D.IDENTITY
@@ -1724,6 +1903,7 @@ func fallen_table_count() -> int:
 
 func _apply_state(new_state: String, animate: bool) -> void:
 	_anim_furniture.clear()
+	_anim_swaps.clear()
 	_anim_npcs.clear()
 	_anim_active = false
 	_anim_t = 0.0
@@ -1743,6 +1923,9 @@ func _apply_state(new_state: String, animate: bool) -> void:
 			})
 		else:
 			node.transform = target
+		_apply_visual_swap(node, entry, new_state, animate)
+	if _debris_root != null:
+		_debris_root.visible = new_state != "normal"
 	_sync_npcs(new_state, animate)
 	if new_state == "brawl" and not skip_actors:
 		_apply_brawl_poses()
@@ -1803,6 +1986,24 @@ func _step_animation() -> void:
 		var to_q: Quaternion = to.basis.get_rotation_quaternion()
 		var basis := Basis(from_q.slerp(to_q, weight))
 		node.transform = Transform3D(basis, from.origin.lerp(to.origin, weight))
+	for record_value in _anim_swaps:
+		if not (record_value is Dictionary):
+			continue
+		var swap: Dictionary = record_value
+		var normal_value: Variant = swap.get("normal", null)
+		var wrecked_value: Variant = swap.get("wrecked", null)
+		if normal_value is Sprite3D:
+			var normal: Sprite3D = normal_value
+			_set_sprite_alpha(
+				normal,
+				lerpf(float(swap.get("from_normal", 1.0)), float(swap.get("to_normal", 1.0)), weight)
+			)
+		if wrecked_value is Sprite3D:
+			var wrecked: Sprite3D = wrecked_value
+			_set_sprite_alpha(
+				wrecked,
+				lerpf(float(swap.get("from_wrecked", 0.0)), float(swap.get("to_wrecked", 0.0)), weight)
+			)
 	for record_value in _anim_npcs:
 		if not (record_value is Dictionary):
 			continue
@@ -1833,7 +2034,20 @@ func _finish_animation() -> void:
 			var target_position: Vector3 = record.get("to", Vector3.ZERO)
 			node.position = target_position
 			node.call("set_moving", false)
+	for record_value in _anim_swaps:
+		if not (record_value is Dictionary):
+			continue
+		var swap: Dictionary = record_value
+		var normal_value: Variant = swap.get("normal", null)
+		var wrecked_value: Variant = swap.get("wrecked", null)
+		if normal_value is Sprite3D:
+			var normal: Sprite3D = normal_value
+			_set_sprite_alpha(normal, float(swap.get("to_normal", 1.0)))
+		if wrecked_value is Sprite3D:
+			var wrecked: Sprite3D = wrecked_value
+			_set_sprite_alpha(wrecked, float(swap.get("to_wrecked", 0.0)))
 	_anim_furniture.clear()
+	_anim_swaps.clear()
 	_anim_npcs.clear()
 	_anim_active = false
 	_anim_t = 0.0
@@ -2228,7 +2442,12 @@ func _build_stairs() -> void:
 		var steps: int = int(stairs.get("steps", 6))
 		var height := float(stairs.get("height", 3.0))
 		var step_mat: StandardMaterial3D = _wood_material(Vector2(1.0, 1.0))
-		if steps > 0:
+		var stairs_sprite: Sprite3D = _sprite_by_width(
+			root, "tavern_stairs.png", 6.0,
+			Vector3(sx1 - 3.0, 0.0, (z_top + z_bottom) * 0.5),
+			"StairsSprite"
+		)
+		if stairs_sprite == null and steps > 0:
 			depth = (z_bottom - z_top) / float(steps)
 			for i in range(steps):
 				var step_h := height - (height / float(steps)) * float(i)

@@ -16,6 +16,7 @@ const Unit = preload("res://core/unit.gd")
 const Hud = preload("res://ui/battle_hud_style.gd")
 const ImageCache = preload("res://ui/image_cache.gd")
 const AiAssets = preload("res://world/ai_assets.gd")
+const IconLib = preload("res://ui/icon_lib.gd")
 const SkillSlot = preload("res://ui/skill_slot.gd")
 const HudBar = preload("res://ui/hud_bar.gd")
 const HudPips = preload("res://ui/hud_pips.gd")
@@ -430,7 +431,7 @@ func _rebuild_martial_buttons() -> void:
 		var id: String = str(battle.loadout[i])
 		var button := _build_card_button(
 			i, _martial_color(id), _martial_glyph(id), _martial_name(id),
-			"icon_martial_%s.png" % id
+			"", Hud.GOLD, id
 		)
 		button.name = "MartialCard%d" % i
 		button.tooltip_text = _martial_tooltip(id)
@@ -1282,9 +1283,15 @@ func _build_return_button() -> void:
 	add_child(return_button)
 
 
+func _empty_texture() -> Texture2D:
+	var image := Image.create_empty(1, 1, false, Image.FORMAT_RGBA8)
+	image.set_pixel(0, 0, Color(0.0, 0.0, 0.0, 0.0))
+	return ImageTexture.create_from_image(image)
+
+
 func _build_card_button(
 	slot: int, icon_color: Color, glyph: String, title: String,
-	icon_file: String = "", frame: Color = Hud.GOLD
+	icon_file: String = "", frame: Color = Hud.GOLD, martial_id: String = ""
 ) -> Button:
 	var button := SkillSlot.new()
 	button.custom_minimum_size = Vector2(CARD_WIDTH, CARD_HEIGHT)
@@ -1295,9 +1302,26 @@ func _build_card_button(
 	button.mouse_filter = Control.MOUSE_FILTER_STOP
 	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	var texture: Texture2D = null
-	if icon_file != "":
+	var martial_icon: Texture2D = null
+	if martial_id != "":
+		martial_icon = IconLib.martial_icon(martial_id)
+		if martial_icon != null:
+			# 图标由下面的 TextureRect 绘制，SkillSlot 自绘的彩色圆/首字不再显示。
+			texture = _empty_texture()
+	elif icon_file != "":
 		texture = AiAssets.load_texture(icon_file)
 	button.setup(texture, icon_color, frame, glyph)
+	if martial_icon != null:
+		var icon_rect := TextureRect.new()
+		icon_rect.name = "Icon"
+		icon_rect.texture = martial_icon
+		icon_rect.position = Vector2(15.0, 15.0)
+		icon_rect.size = Vector2(52.0, 52.0)
+		icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		button.add_child(icon_rect)
 
 	var key_label := Label.new()
 	key_label.name = "KeyLabel"
