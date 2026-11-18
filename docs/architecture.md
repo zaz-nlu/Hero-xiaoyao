@@ -8,12 +8,11 @@
 | 路径 | 职责 |
 | --- | --- |
 | `godot/` | 主游戏，Godot 4 工程 |
-| `prototypes/web/` | 早期 Web 原型（React + Vite + three.js），根 `package.json` 的 npm workspace，仅作参考 |
 | `art_source/` | 原始素材、历史备份与参考包，不参与运行打包 |
 | `scripts/` | 架构检查、Godot 检查与兼容入口 |
 | `docs/` | 架构、结构与历史设计文档 |
 | `architecture.config.json` | 架构检查的项目级例外（行数预算、跨 feature 白名单等） |
-| `package.json` | npm workspace 根；`npm run check` 是完整质量入口 |
+| `package.json` | 检查脚本入口；`npm run check` 是完整质量入口 |
 
 ## Godot 目录与职责
 
@@ -146,11 +145,10 @@ flowchart LR
 
 | 命令 | 内容 |
 | --- | --- |
-| `npm run check` | `test:architecture` → `check:architecture` → `check:godot` → `build` |
+| `npm run check` | `test:architecture` → `check:architecture` → `check:godot` |
 | `npm run test:architecture` | 架构检查器自身的 Node 单测 |
 | `npm run check:architecture` | Godot 目录/依赖方向/行数预算/资源存在性 |
 | `npm run check:godot` | 单元测试、小镇/酒馆/森林场景、默认主场景、冒烟测试 |
-| `npm run build` | 转发到 `prototypes/web` 的 Vite 构建 |
 | `bash scripts/check.sh` | 兼容薄入口：架构检查 + Godot 检查 |
 
 Godot 引擎优先取 `GODOT_BIN`；未设置时尝试本机默认路径和 PATH 中的 `godot4` / `godot`。
@@ -201,5 +199,4 @@ Godot 引擎优先取 `GODOT_BIN`；未设置时尝试本机默认路径和 PATH
   不校验素材导入设置、音频可解析性、图片可读性或 UI 布局。
 - 场景只检查根节点脚本与场景同目录，不检查所有子节点脚本的相邻关系。
 - `core` 的纯净性只按基类黑名单判断；`FileAccess`、`DirAccess`、`Time`、`ProjectSettings` 等不会报错。
-- Web 原型没有自动测试；`npm run check` 里只有 Vite 构建这一层验证。
 - 历史文档 `docs/superpowers/` 未随代码更新，只作历史记录。

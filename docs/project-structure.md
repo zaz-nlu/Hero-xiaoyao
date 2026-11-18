@@ -1,6 +1,6 @@
 # 项目结构与放置规范
 
-主游戏在 `godot/`，Web 原型在 `prototypes/web/`（根 npm workspace，仅作参考）。运行素材在
+主游戏在 `godot/`（早期 Web 原型已移除，git 标签 `web-prototype-final` 可取回）。运行素材在
 `godot/assets/`；原始包和历史备份在 `art_source/`。现有生成工具依赖的 `ai/raw_user/` 和预览 JPG
 暂留原位，详见素材说明。完整架构、状态归属和技术债见 [architecture.md](architecture.md)。
 
@@ -11,12 +11,11 @@
 | 目录 | 职责 |
 | --- | --- |
 | `godot/` | 主游戏，Godot 4 工程 |
-| `prototypes/web/` | 早期 Web 原型（React + Vite），仅作参考 |
 | `art_source/` | 原始素材、历史备份与参考包，不参与运行打包 |
 | `scripts/` | 架构检查、Godot 检查与兼容入口 |
 | `docs/` | 架构、结构与历史设计文档 |
 | `architecture.config.json` | 架构检查的项目级例外 |
-| `package.json` | npm workspace 根与 `npm run check` 入口 |
+| `package.json` | `npm run check` 入口 |
 
 ## Godot 模块职责
 

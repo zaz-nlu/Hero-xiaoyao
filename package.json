@@ -3,13 +3,8 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "workspaces": [
-    "prototypes/web"
-  ],
   "scripts": {
-    "dev": "npm run dev --workspace @hd2d-ranger/web-prototype",
-    "build": "npm run build --workspace @hd2d-ranger/web-prototype",
-    "check": "npm run test:architecture && npm run check:architecture && npm run check:godot && npm run build",
+    "check": "npm run test:architecture && npm run check:architecture && npm run check:godot",
     "check:architecture": "node scripts/check-architecture.mjs",
     "check:godot": "node scripts/check-godot.mjs",
     "test:architecture": "node --test scripts/check-architecture.test.mjs"

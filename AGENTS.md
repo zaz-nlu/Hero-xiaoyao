@@ -6,7 +6,7 @@
 ## 工程边界
 
 - `godot/` 是主游戏（Godot 4）。游戏功能、内容、测试以这里为准。
-- `prototypes/web/` 是早期 React + Vite Web 原型，只作参考。不要把新的游戏功能做在这里，也不要混用两边素材。
+- 早期 Web 原型已移除（git 标签 `web-prototype-final` 可取回）。所有游戏功能都在 `godot/`。
 - `art_source/` 只存原始/备份素材，不参与运行打包。
 
 ## 目录职责
@@ -56,7 +56,7 @@ Godot 生产脚本只能放在 `app/`、`core/`、`features/`、`shared/` 之下
 - 不要删除、移动来源不明的素材。素材移动前按
   [godot/assets/README.md](godot/assets/README.md) 的清单检查动态加载、JSON、工具和测试。
 - 行为变化要补测试；至少运行受影响范围的检查。
-- 提交前最终运行 `npm run check`（架构单测 → 架构检查 → Godot 检查 → Web 构建）。
+- 提交前最终运行 `npm run check`（架构单测 → 架构检查 → Godot 检查）。
   只改 Godot 时可以先跑 `npm run check:godot`。
 
 ## 检查环境
