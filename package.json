@@ -3,21 +3,15 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "workspaces": [
+    "prototypes/web"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "vite build"
-  },
-  "dependencies": {
-    "@react-three/drei": "^9.122.0",
-    "@react-three/fiber": "^8.17.10",
-    "@react-three/postprocessing": "^2.16.3",
-    "postprocessing": "^6.36.4",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "three": "^0.169.0"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-react": "^4.3.4",
-    "vite": "^5.4.11"
+    "dev": "npm run dev --workspace @hd2d-ranger/web-prototype",
+    "build": "npm run build --workspace @hd2d-ranger/web-prototype",
+    "check": "npm run test:architecture && npm run check:architecture && npm run check:godot && npm run build",
+    "check:architecture": "node scripts/check-architecture.mjs",
+    "check:godot": "node scripts/check-godot.mjs",
+    "test:architecture": "node --test scripts/check-architecture.test.mjs"
   }
 }
