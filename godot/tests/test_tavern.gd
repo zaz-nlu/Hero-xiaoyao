@@ -10,13 +10,13 @@ var encounter_args: Array = []
 
 
 func _new_tavern() -> Variant:
-	var tavern: Variant = load("res://world/tavern.gd").new()
+	var tavern: Variant = load("res://features/tavern/tavern.gd").new()
 	tavern.build()
 	return tavern
 
 
 func _new_town() -> Variant:
-	var town: Variant = load("res://world/town.gd").new()
+	var town: Variant = load("res://features/town/town.gd").new()
 	town.build()
 	town.build_hud()
 	return town

@@ -15,7 +15,7 @@ var encounter_args: Array = []
 
 
 func _new_tavern() -> Variant:
-	var tavern: Variant = load("res://world/tavern.gd").new()
+	var tavern: Variant = load("res://features/tavern/tavern.gd").new()
 	tavern.build()
 	tavern.build_hud()
 	return tavern

@@ -105,7 +105,7 @@ func test_herb_is_rejected_at_full_hp() -> void:
 
 
 func _make_view() -> Variant:
-	var view: Variant = load("res://ui/battle_view.gd").new()
+	var view: Variant = load("res://features/battle/battle_view.gd").new()
 	view.build_ui()
 	return view
 

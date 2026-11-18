@@ -1,6 +1,6 @@
 extends SceneTree
 
-const Simulator = preload("res://core/simulator.gd")
+const Simulator = preload("res://tools/simulator.gd")
 
 
 func _init() -> void:

@@ -3,8 +3,8 @@ extends "res://tests/test_case.gd"
 const GameState = preload("res://core/game_state.gd")
 const Progression = preload("res://core/progression.gd")
 const DataLoader = preload("res://core/data_loader.gd")
-const PlayerMotion = preload("res://world/player_motion.gd")
-const AiAssets = preload("res://world/ai_assets.gd")
+const PlayerMotion = preload("res://shared/gameplay/player_motion.gd")
+const AiAssets = preload("res://shared/resources/ai_assets.gd")
 
 const FOREST_PATH := "res://data/forest.json"
 
@@ -12,7 +12,7 @@ var exit_places: Array = []
 
 
 func _new_forest() -> Variant:
-	var forest: Variant = load("res://world/forest.gd").new()
+	var forest: Variant = load("res://features/forest/forest.gd").new()
 	forest.build()
 	forest.build_hud()
 	return forest

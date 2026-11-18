@@ -7,7 +7,7 @@ var battle_finished_count: int = 0
 
 func _new_game() -> Variant:
 	Engine.set_meta("skip_title", true)
-	var game: Variant = load("res://ui/game.gd").new()
+	var game: Variant = load("res://app/game.gd").new()
 	game.show_town()
 	return game
 
@@ -133,13 +133,13 @@ func test_return_button_hidden_while_battle_ongoing() -> void:
 
 
 func test_start_three_args_still_plays_intro() -> void:
-	var view: Variant = load("res://ui/battle_view.gd").new()
+	var view: Variant = load("res://features/battle/battle_view.gd").new()
 	view.build_ui()
 	view.start("ma_youwei", 1, false)
 	assert_true(bool(view.dialogue_view.is_active()), "a three-argument start plays the intro")
 	view.free()
 
-	var quiet: Variant = load("res://ui/battle_view.gd").new()
+	var quiet: Variant = load("res://features/battle/battle_view.gd").new()
 	quiet.build_ui()
 	quiet.start("ma_youwei", 1, false, false)
 	assert_true(

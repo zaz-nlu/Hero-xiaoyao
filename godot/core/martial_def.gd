@@ -1,5 +1,7 @@
 extends RefCounted
 
+const Pattern = preload("res://core/tactics/pattern.gd")
+
 var id: String = ""
 var name: String = ""
 var grade: String = "common"
@@ -9,6 +11,7 @@ var initiative: int = 0
 var counter_level: int = 0
 var advantage_stat: String = ""
 var effects: Array = []
+var range: Dictionary = {}
 
 
 static func from_dict(d: Dictionary) -> RefCounted:
@@ -22,6 +25,13 @@ static func from_dict(d: Dictionary) -> RefCounted:
 	m.initiative = int(d.get("initiative", 0))
 	m.counter_level = int(d.get("counter_level", 0))
 	m.advantage_stat = str(d.get("advantage_stat", ""))
+	var raw_range = d.get("range", {})
+	var parsed_range := {}
+	if raw_range is Dictionary:
+		parsed_range = Pattern.normalize(raw_range)
+	else:
+		parsed_range = Pattern.normalize({})
+	m.range = parsed_range
 
 	var parsed_effects: Array = []
 	var raw_effects = d.get("effects", [])

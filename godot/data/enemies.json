@@ -2,6 +2,7 @@
 	{
 		"id": "bandit",
 		"name": "马匪",
+		"ai": "rush",
 		"sprite": "bandit",
 		"tier": "minion",
 		"exp": 15,
@@ -16,14 +17,15 @@
 		"toughness": 2,
 		"stun_turns": 1,
 		"moves": [
-			{"id": "bandit_sweep", "name": "乱砍", "type": "sweep", "threat": 11, "power": 12},
-			{"id": "bandit_heavy", "name": "力劈", "type": "heavy", "threat": 12, "power": 14}
+			{"id": "bandit_sweep", "range": {"shape": "melee", "min": 1, "max": 1, "width": 1, "pierce": false},"name": "乱砍", "type": "sweep", "threat": 11, "power": 12},
+			{"id": "bandit_heavy", "range": {"shape": "melee", "min": 1, "max": 1, "width": 1, "pierce": false},"name": "力劈", "type": "heavy", "threat": 12, "power": 14}
 		],
 		"weak_moves": []
 	},
 	{
 		"id": "ma_youwei",
 		"name": "马匪头子",
+		"ai": "boss",
 		"sprite": "ma_youwei",
 		"tier": "boss",
 		"exp": 120,
@@ -38,15 +40,16 @@
 		"toughness": 8,
 		"stun_turns": 2,
 		"moves": [
-			{"id": "kaishan", "name": "开山", "type": "heavy", "threat": 22, "power": 20},
-			{"id": "luandao", "name": "乱刀横扫", "type": "sweep", "threat": 21, "power": 16},
-			{"id": "cihou", "name": "刺喉", "type": "thrust", "threat": 19, "power": 16}
+			{"id": "kaishan", "range": {"shape": "line", "min": 1, "max": 2, "width": 1, "pierce": false},"name": "开山", "type": "heavy", "threat": 22, "power": 20},
+			{"id": "luandao", "range": {"shape": "cone", "min": 1, "max": 2, "width": 1, "pierce": false},"name": "乱刀横扫", "type": "sweep", "threat": 21, "power": 16},
+			{"id": "cihou", "range": {"shape": "melee", "min": 1, "max": 1, "width": 1, "pierce": false},"name": "刺喉", "type": "thrust", "threat": 19, "power": 16}
 		],
 		"weak_moves": ["cihou"]
 	},
 	{
 		"id": "bandit_scout",
 		"name": "马匪探子",
+		"ai": "archer",
 		"sprite": "bandit",
 		"tier": "minion",
 		"exp": 18,
@@ -61,14 +64,15 @@
 		"toughness": 2,
 		"stun_turns": 1,
 		"moves": [
-			{"id": "scout_thrust", "name": "突刺", "type": "thrust", "threat": 11, "power": 8},
-			{"id": "scout_dart", "name": "飞刀", "type": "ranged", "threat": 10, "power": 7}
+			{"id": "scout_thrust", "range": {"shape": "melee", "min": 1, "max": 1, "width": 1, "pierce": false},"name": "突刺", "type": "thrust", "threat": 11, "power": 8},
+			{"id": "scout_dart", "range": {"shape": "ranged", "min": 2, "max": 4, "width": 1, "pierce": false},"name": "飞刀", "type": "ranged", "threat": 10, "power": 7}
 		],
 		"weak_moves": []
 	},
 	{
 		"id": "disciple_spar",
 		"name": "紫霞弟子",
+		"ai": "rush",
 		"sprite": "zixia_disciple",
 		"tier": "minion",
 		"exp": 10,
@@ -83,8 +87,8 @@
 		"toughness": 2,
 		"stun_turns": 1,
 		"moves": [
-			{"id": "disciple_thrust", "name": "直刺", "type": "thrust", "threat": 12, "power": 7},
-			{"id": "disciple_sweep", "name": "横削", "type": "sweep", "threat": 12, "power": 7}
+			{"id": "disciple_thrust", "range": {"shape": "melee", "min": 1, "max": 1, "width": 1, "pierce": false},"name": "直刺", "type": "thrust", "threat": 12, "power": 7},
+			{"id": "disciple_sweep", "range": {"shape": "melee", "min": 1, "max": 1, "width": 1, "pierce": false},"name": "横削", "type": "sweep", "threat": 12, "power": 7}
 		],
 		"weak_moves": []
 	}

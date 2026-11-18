@@ -2,12 +2,13 @@ extends RefCounted
 
 const DataLoader = preload("res://core/data_loader.gd")
 const GameState = preload("res://core/game_state.gd")
+const QuestProgress = preload("res://core/quest_progress.gd")
 const Realms = preload("res://core/realms.gd")
 const Stats = preload("res://core/stats.gd")
 
-const ITEMS_PATH := "res://data/items.json"
-const PLAYER_PATH := "res://data/player.json"
-const PROGRESSION_PATH := "res://data/progression.json"
+const ITEMS_PATH := DataLoader.ITEMS_PATH
+const PLAYER_PATH := DataLoader.PLAYER_PATH
+const PROGRESSION_PATH := DataLoader.PROGRESSION_PATH
 const STAT_CAP := 50
 const EQUIP_SLOTS: Array[String] = ["weapon", "armor", "accessory"]
 const STAT_NAMES := {
@@ -166,8 +167,8 @@ static func give_item(id: String, count: int = 1) -> void:
 		if slot != "" and not GameState.equipment.has(slot):
 			GameState.equipment[slot] = id
 			push_toast("已装备 %s" % item_name)
-	# 惰性加载，避免 Quests 与 Progression 互相 preload 形成循环依赖。
-	load("res://core/quests.gd").notify("item", id, count)
+	# 任务进度服务只依赖 GameState，避免 Quests 与 Progression 互相引用形成循环。
+	QuestProgress.notify("item", id, count)
 
 
 # 服用带永久加成的消耗品（如养元丹）：消耗一颗，永久加属性，并提示气血上限变化。

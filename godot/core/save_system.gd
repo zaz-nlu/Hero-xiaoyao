@@ -12,7 +12,7 @@ const DataLoader = preload("res://core/data_loader.gd")
 const SAVE_DIR := "user://saves"
 const VERSION := 1
 const SLOTS: Array[String] = ["auto", "1", "2", "3"]
-const PLAYER_PATH := "res://data/player.json"
+const PLAYER_PATH := DataLoader.PLAYER_PATH
 const CHAPTER_NAME := "第一章·紫霞镇"
 
 

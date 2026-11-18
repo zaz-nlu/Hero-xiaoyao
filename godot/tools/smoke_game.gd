@@ -20,7 +20,7 @@ func _initialize() -> void:
 	sv.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	root.add_child(sv)
 	Engine.set_meta("skip_title", true)
-	var scene: PackedScene = load("res://ui/game.tscn")
+	var scene: PackedScene = load("res://app/game.tscn")
 	game = scene.instantiate()
 	sv.add_child(game)
 

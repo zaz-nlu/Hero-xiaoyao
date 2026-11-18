@@ -1,7 +1,7 @@
 extends "res://tests/test_case.gd"
 
-const AudioLoader = preload("res://core/audio_loader.gd")
-const AudioManagerScript = preload("res://ui/audio_manager.gd")
+const AudioLoader = preload("res://shared/audio/audio_loader.gd")
+const AudioManagerScript = preload("res://shared/audio/audio_manager.gd")
 const GameState = preload("res://core/game_state.gd")
 
 const TEST_SETTINGS_PATH := "user://test_audio_settings.cfg"
@@ -22,7 +22,7 @@ func _new_manager() -> Variant:
 
 func _new_game() -> Variant:
 	Engine.set_meta("skip_title", true)
-	var game: Variant = load("res://ui/game.gd").new()
+	var game: Variant = load("res://app/game.gd").new()
 	game.show_town()
 	return game
 
@@ -204,7 +204,7 @@ func test_battle_victory_plays_jingle_and_resumes_town_music() -> void:
 
 
 func test_battle_view_without_game_is_silent() -> void:
-	var view: Variant = load("res://ui/battle_view.gd").new()
+	var view: Variant = load("res://features/battle/battle_view.gd").new()
 	view.build_ui()
 	view.start("bandit", 1, false, false)
 	assert_true(view.audio == null, "a standalone battle view has no audio manager")

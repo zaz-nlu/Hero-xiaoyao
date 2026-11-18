@@ -1,6 +1,6 @@
 extends "res://tests/test_case.gd"
 
-const Stealth = preload("res://world/stealth.gd")
+const Stealth = preload("res://shared/gameplay/stealth.gd")
 
 
 func test_cone_inside_outside_and_range() -> void:

@@ -2,7 +2,8 @@ extends "res://tests/test_case.gd"
 
 const GameState = preload("res://core/game_state.gd")
 const SaveSystem = preload("res://core/save_system.gd")
-const PauseMenu = preload("res://ui/pause_menu.gd")
+const PauseMenu = preload("res://features/pause/pause_menu.gd")
+const TitleScreen = preload("res://features/title/title_screen.gd")
 
 
 func _temp_dir(tag: String) -> String:
@@ -35,7 +36,7 @@ func _key(code: int) -> InputEventKey:
 func _new_game(dir: String) -> Variant:
 	Engine.set_meta("skip_title", true)
 	GameState.reset()
-	var game: Variant = load("res://ui/game.gd").new()
+	var game: Variant = load("res://app/game.gd").new()
 	game.save_dir = dir
 	game.show_town()
 	return game
@@ -152,6 +153,29 @@ func test_settings_sliders_control_the_audio_manager() -> void:
 	menu._mute_box.toggled.emit(true)
 	assert_true(bool(game.audio.is_muted()), "the mute checkbox works")
 	menu.close()
+	menu.free()
+	game.free()
+	_cleanup(dir)
+
+
+func test_settings_volume_syncs_between_title_and_pause() -> void:
+	var dir := _temp_dir("sync")
+	var game: Variant = _new_game(dir)
+	game.audio.settings_path = dir.path_join("settings.cfg")
+	var title: Variant = TitleScreen.new()
+	title.audio = game.audio
+	title.save_dir = dir
+	title.build()
+	var menu: Variant = PauseMenu.new()
+	menu.game = game
+	title.open_page("settings")
+	title._music_slider.value_changed.emit(0.26)
+	menu.show_page("settings")
+	assert_near(float(menu._music_slider.value), 0.26, 0.001, "pause shows the title volume")
+	menu._sfx_slider.value_changed.emit(0.37)
+	title.open_page("settings")
+	assert_near(float(title._sfx_slider.value), 0.37, 0.001, "title shows the pause volume")
+	title.free()
 	menu.free()
 	game.free()
 	_cleanup(dir)

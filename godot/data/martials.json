@@ -1,6 +1,7 @@
 [
 	{
 		"id": "basic_sword",
+		"range": {"shape": "melee", "min": 1, "max": 1, "width": 1, "pierce": false},
 		"name": "基础剑术",
 		"grade": "common",
 		"power": 10,
@@ -12,6 +13,7 @@
 	},
 	{
 		"id": "parry",
+		"range": {"shape": "melee", "min": 1, "max": 1, "width": 1, "pierce": false},
 		"name": "格挡",
 		"grade": "common",
 		"power": 4,
@@ -23,6 +25,7 @@
 	},
 	{
 		"id": "sidestep",
+		"range": {"shape": "melee", "min": 1, "max": 1, "width": 1, "pierce": false},
 		"name": "闪身",
 		"grade": "common",
 		"power": 3,
@@ -34,6 +37,7 @@
 	},
 	{
 		"id": "taiji",
+		"range": {"shape": "melee", "min": 1, "max": 1, "width": 1, "pierce": false},
 		"name": "太极缠劲",
 		"grade": "rare",
 		"power": 5,
@@ -45,6 +49,7 @@
 	},
 	{
 		"id": "qingyun",
+		"range": {"shape": "line", "min": 1, "max": 2, "width": 1, "pierce": false},
 		"name": "青云剑法",
 		"grade": "fine",
 		"power": 12,
@@ -56,6 +61,7 @@
 	},
 	{
 		"id": "huifeng",
+		"range": {"shape": "cone", "min": 1, "max": 3, "width": 1, "pierce": false},
 		"name": "回风剑",
 		"grade": "fine",
 		"power": 9,
@@ -67,6 +73,7 @@
 	},
 	{
 		"id": "lianhuan",
+		"range": {"shape": "melee", "min": 1, "max": 1, "width": 1, "pierce": false},
 		"name": "连环快剑",
 		"grade": "fine",
 		"power": 8,
@@ -78,6 +85,7 @@
 	},
 	{
 		"id": "duanshi",
+		"range": {"shape": "melee", "min": 1, "max": 1, "width": 1, "pierce": false},
 		"name": "断势一击",
 		"grade": "rare",
 		"power": 14,
@@ -89,6 +97,7 @@
 	},
 	{
 		"id": "liuxing",
+		"range": {"shape": "ranged", "min": 2, "max": 5, "width": 1, "pierce": false},
 		"name": "流星诀",
 		"grade": "rare",
 		"power": 8,
@@ -100,6 +109,7 @@
 	},
 	{
 		"id": "jueshi",
+		"range": {"shape": "line", "min": 1, "max": 3, "width": 1, "pierce": true},
 		"name": "绝世剑术",
 		"grade": "legendary",
 		"power": 18,

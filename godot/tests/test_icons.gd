@@ -1,6 +1,6 @@
 extends "res://tests/test_case.gd"
 
-const IconLib = preload("res://ui/icon_lib.gd")
+const IconLib = preload("res://shared/ui/icon_lib.gd")
 const GameState = preload("res://core/game_state.gd")
 const Progression = preload("res://core/progression.gd")
 
@@ -46,7 +46,7 @@ func test_item_icons_load() -> void:
 
 func test_martial_cards_show_texture_rect_icons() -> void:
 	GameState.reset()
-	var view: Variant = load("res://ui/battle_view.gd").new()
+	var view: Variant = load("res://features/battle/battle_view.gd").new()
 	view.build_ui()
 	view.start("bandit", 1, true)
 	assert_eq(
@@ -73,7 +73,7 @@ func test_martial_cards_show_texture_rect_icons() -> void:
 func test_character_panel_shows_martial_and_item_icons() -> void:
 	GameState.reset()
 	Progression.reload_items()
-	var panel: Variant = load("res://ui/character_panel.gd").new()
+	var panel: Variant = load("res://features/character/character_panel.gd").new()
 	panel.refresh()
 	panel.select_tab(1)
 	for i in range(4):
@@ -109,7 +109,7 @@ func test_character_panel_shows_martial_and_item_icons() -> void:
 
 func test_tavern_furniture_uses_ai_sprites() -> void:
 	GameState.reset()
-	var tavern: Variant = load("res://world/tavern.gd").new()
+	var tavern: Variant = load("res://features/tavern/tavern.gd").new()
 	tavern.build()
 	var table_ids: Array[String] = ["table_1", "table_2", "table_3", "table_4"]
 	for id in table_ids:

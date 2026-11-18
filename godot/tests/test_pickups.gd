@@ -3,8 +3,8 @@ extends "res://tests/test_case.gd"
 const GameState = preload("res://core/game_state.gd")
 const Progression = preload("res://core/progression.gd")
 const Quests = preload("res://core/quests.gd")
-const PlayerMotion = preload("res://world/player_motion.gd")
-const TownData = preload("res://world/town_data.gd")
+const PlayerMotion = preload("res://shared/gameplay/player_motion.gd")
+const TownData = preload("res://shared/resources/town_data.gd")
 
 const TOWN_PATH := "res://data/town.json"
 
@@ -25,14 +25,14 @@ func _reset() -> void:
 
 
 func _new_forest() -> Variant:
-	var forest: Variant = load("res://world/forest.gd").new()
+	var forest: Variant = load("res://features/forest/forest.gd").new()
 	forest.build()
 	forest.build_hud()
 	return forest
 
 
 func _new_town() -> Variant:
-	var town: Variant = load("res://world/town.gd").new()
+	var town: Variant = load("res://features/town/town.gd").new()
 	town.build()
 	town.build_hud()
 	return town

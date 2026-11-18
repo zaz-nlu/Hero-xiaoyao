@@ -9,7 +9,7 @@ const GROUP: Array = [
 
 
 func _make_view() -> Variant:
-	var view: Variant = load("res://ui/battle_view.gd").new()
+	var view: Variant = load("res://features/battle/battle_view.gd").new()
 	view.build_ui()
 	return view
 
@@ -21,7 +21,7 @@ func _make_view_in_tree() -> Dictionary:
 	holder.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	if tree != null:
 		tree.root.add_child(holder)
-	var view: Variant = load("res://ui/battle_view.gd").new()
+	var view: Variant = load("res://features/battle/battle_view.gd").new()
 	holder.add_child(view)
 	view.build_ui()
 	view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

@@ -2,7 +2,7 @@ extends "res://tests/test_case.gd"
 
 const GameState = preload("res://core/game_state.gd")
 const Prefight = preload("res://core/prefight.gd")
-const Simulator = preload("res://core/simulator.gd")
+const Simulator = preload("res://tools/simulator.gd")
 
 
 func test_damage_stays_in_the_target_band_for_every_bandit_count() -> void:
@@ -47,7 +47,7 @@ func test_battle_view_applies_the_boss_wound_once() -> void:
 		{"id": "ma_youwei", "count": 1},
 		{"id": "bandit", "count": 1},
 	]
-	var view: Variant = load("res://ui/battle_view.gd").new()
+	var view: Variant = load("res://features/battle/battle_view.gd").new()
 	view.build_ui()
 	view.start("ma_youwei", 1, false, false)
 	assert_eq(int(view.battle.enemies.size()), 2, "the mixed group is built")

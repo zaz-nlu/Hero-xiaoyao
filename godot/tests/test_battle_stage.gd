@@ -11,7 +11,7 @@ const ENEMY_POSITIONS_2: Array = [
 
 
 func _make_stage() -> Variant:
-	var stage: Variant = load("res://world/battle_stage.gd").new()
+	var stage: Variant = load("res://features/battle/battle_stage.gd").new()
 	stage.build(["bandit", "bandit"])
 	return stage
 
@@ -111,7 +111,7 @@ func test_lunge_returns_to_origin() -> void:
 func test_forest_backdrop_offsets_the_stage() -> void:
 	GameState.reset()
 	GameState.battle_backdrop = "forest"
-	var stage: Variant = load("res://world/battle_stage.gd").new()
+	var stage: Variant = load("res://features/battle/battle_stage.gd").new()
 	stage.build(["bandit", "bandit"])
 	var forest_origin: Vector3 = stage.town.arena_origin
 	assert_true(

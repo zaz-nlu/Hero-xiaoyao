@@ -3,7 +3,7 @@ extends "res://tests/test_case.gd"
 const GameState = preload("res://core/game_state.gd")
 const Mastery = preload("res://core/mastery.gd")
 const Progression = preload("res://core/progression.gd")
-const StatusOverlay = preload("res://ui/status_overlay.gd")
+const StatusOverlay = preload("res://features/character/status_overlay.gd")
 
 
 func _reset() -> void:
@@ -338,6 +338,55 @@ func test_permanent_item_shows_use_button_and_applies() -> void:
 	assert_true(
 		_text_of(overlay.character_panel, "HpValue").contains("115"),
 		"the hp display follows the new constitution"
+	)
+	overlay.free()
+	GameState.reset()
+
+
+func test_pending_points_survive_tab_switching() -> void:
+	var overlay: Variant = _open()
+	overlay.character_panel.select_tab(3)
+	_press_button(overlay.character_panel, "PointPlus_power")
+	_press_button(overlay.character_panel, "PointPlus_power")
+	assert_eq(
+		int(overlay.character_panel.pending_points.get("power", 0)), 2,
+		"two points are pending before switching tabs"
+	)
+	overlay.character_panel.select_tab(0)
+	overlay.character_panel.select_tab(3)
+	assert_eq(
+		int(overlay.character_panel.pending_points.get("power", 0)), 2,
+		"pending points survive a tab round trip"
+	)
+	assert_eq(
+		_text_of(overlay.character_panel, "PointPending_power"), "+2",
+		"the points tab still shows the pending allocation"
+	)
+	assert_true(
+		_press_button(overlay.character_panel, "ConfirmPoints"),
+		"confirm is clickable after returning to the tab"
+	)
+	assert_eq(
+		int(GameState.stat_bonus.get("power", 0)), 2,
+		"pending points can still be confirmed after switching tabs"
+	)
+	overlay.free()
+	GameState.reset()
+
+
+func test_selected_martial_survives_tab_switching() -> void:
+	var overlay: Variant = _open()
+	overlay.character_panel.select_tab(1)
+	_press_button(overlay.character_panel, "MartialLearned_taiji")
+	assert_true(
+		_text_of(overlay.character_panel, "DetailEffect").contains("反震"),
+		"the selected martial shows its detail before switching tabs"
+	)
+	overlay.character_panel.select_tab(0)
+	overlay.character_panel.select_tab(1)
+	assert_true(
+		_text_of(overlay.character_panel, "DetailEffect").contains("反震"),
+		"the selected martial survives a tab round trip"
 	)
 	overlay.free()
 	GameState.reset()

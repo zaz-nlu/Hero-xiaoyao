@@ -1,6 +1,6 @@
 extends "res://tests/test_case.gd"
 
-const Interaction = preload("res://world/interaction.gd")
+const Interaction = preload("res://shared/gameplay/interaction.gd")
 const GameState = preload("res://core/game_state.gd")
 
 const BUN_VENDOR_PLAYER_POS := Vector2(18.0, 2.4)
@@ -11,7 +11,7 @@ var encounter_args: Array = []
 
 
 func _new_town() -> Variant:
-	var town: Variant = load("res://world/town.gd").new()
+	var town: Variant = load("res://features/town/town.gd").new()
 	town.build()
 	town.build_hud()
 	return town

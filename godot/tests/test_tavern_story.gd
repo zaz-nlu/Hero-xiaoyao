@@ -9,7 +9,7 @@ var last_ambush_text: String = ""
 
 
 func _new_tavern() -> Variant:
-	var tavern: Variant = load("res://world/tavern.gd").new()
+	var tavern: Variant = load("res://features/tavern/tavern.gd").new()
 	tavern.build()
 	tavern.build_hud()
 	return tavern
@@ -17,7 +17,7 @@ func _new_tavern() -> Variant:
 
 func _new_game() -> Variant:
 	Engine.set_meta("skip_title", true)
-	var game: Variant = load("res://ui/game.gd").new()
+	var game: Variant = load("res://app/game.gd").new()
 	game.show_town()
 	return game
 
@@ -206,7 +206,7 @@ func test_game_returns_to_the_tavern_after_a_win() -> void:
 
 func test_the_town_no_longer_has_bandits() -> void:
 	GameState.reset()
-	var town: Variant = load("res://world/town.gd").new()
+	var town: Variant = load("res://features/town/town.gd").new()
 	town.build()
 	for id in ["ma_youwei", "bandit_1", "bandit_2"]:
 		assert_true(not town.npc_nodes.has(id), "%s lives in the tavern now" % id)

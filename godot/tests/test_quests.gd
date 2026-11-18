@@ -98,3 +98,32 @@ func test_list_by_state_in_json_order() -> void:
 	)
 	assert_eq(Quests.list_by_state("done"), [], "nothing is done yet")
 	GameState.reset()
+
+
+func test_reward_item_advances_another_quest_in_order() -> void:
+	_reset()
+	Quests.start("herbs")
+	Quests.start("smith_whet")
+	Quests.notify("item", "iron_ore", 3)
+	assert_eq(Quests.state("smith_whet"), "ready", "three ores complete the smith quest")
+	Progression.take_toasts()
+	assert_true(Quests.turn_in("smith_whet"), "the smith quest can be turned in")
+	assert_eq(Quests.state("herbs"), "active", "two reward herbs are not enough for the herbs quest")
+	var progress: Array = Quests.progress("herbs")
+	assert_eq(int(progress[0]["have"]), 2, "reward items count towards the other active quest")
+	assert_eq(
+		Progression.take_toasts(), ["获得 草药"],
+		"turning in queues only the reward item toast"
+	)
+	assert_true(not Quests.turn_in("smith_whet"), "turning in again returns false")
+	assert_eq(
+		int(GameState.inventory.get("herb", 0)), 2,
+		"a repeated turn in does not grant the reward again"
+	)
+	Progression.give_item("herb")
+	assert_eq(Quests.state("herbs"), "ready", "the third herb completes the cascaded quest")
+	assert_eq(
+		Progression.take_toasts(), ["获得 草药", "任务完成：草药"],
+		"the pickup toast precedes the quest completion toast"
+	)
+	GameState.reset()

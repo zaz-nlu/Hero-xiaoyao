@@ -4,7 +4,7 @@ const Battle = preload("res://core/battle.gd")
 
 
 func _make_view() -> Variant:
-	var view: Variant = load("res://ui/battle_view.gd").new()
+	var view: Variant = load("res://features/battle/battle_view.gd").new()
 	view.build_ui()
 	return view
 

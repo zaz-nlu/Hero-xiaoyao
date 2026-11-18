@@ -4,7 +4,7 @@ const GameState = preload("res://core/game_state.gd")
 
 
 func _make_view() -> Variant:
-	var view: Variant = load("res://ui/battle_view.gd").new()
+	var view: Variant = load("res://features/battle/battle_view.gd").new()
 	view.build_ui()
 	return view
 
@@ -67,7 +67,7 @@ func test_one_head_label_per_enemy() -> void:
 func test_debug_top_bar_is_hidden_in_game() -> void:
 	GameState.reset()
 	Engine.set_meta("skip_title", true)
-	var game: Variant = load("res://ui/game.gd").new()
+	var game: Variant = load("res://app/game.gd").new()
 	game.show_town()
 	var town: Variant = game.current
 	town.encounter_requested.emit("bandit", 1, false)

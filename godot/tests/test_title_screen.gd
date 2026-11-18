@@ -2,7 +2,7 @@ extends "res://tests/test_case.gd"
 
 const GameState = preload("res://core/game_state.gd")
 const SaveSystem = preload("res://core/save_system.gd")
-const TitleScreen = preload("res://ui/title_screen.gd")
+const TitleScreen = preload("res://features/title/title_screen.gd")
 
 
 func _temp_dir(tag: String) -> String:
@@ -45,7 +45,7 @@ func _clear_skip_title() -> void:
 func _new_game_in_tree(dir: String) -> Variant:
 	_clear_skip_title()
 	GameState.reset()
-	var game: Variant = load("res://ui/game.gd").new()
+	var game: Variant = load("res://app/game.gd").new()
 	game.save_dir = dir
 	var tree: Variant = Engine.get_meta("test_tree", null)
 	if tree != null:

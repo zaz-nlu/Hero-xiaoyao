@@ -1,7 +1,7 @@
 extends "res://tests/test_case.gd"
 
-const AiAssets = preload("res://world/ai_assets.gd")
-const TownData = preload("res://world/town_data.gd")
+const AiAssets = preload("res://shared/resources/ai_assets.gd")
+const TownData = preload("res://shared/resources/town_data.gd")
 
 const TOWN_PATH := "res://data/town.json"
 const DECOR_KINDS: Array[String] = [
@@ -128,7 +128,7 @@ func test_make_wall_quad_bottom_and_aspect() -> void:
 
 
 func test_town_builds_facades_and_boats() -> void:
-	var town = load("res://world/town.gd").new()
+	var town = load("res://features/town/town.gd").new()
 	town.build()
 	var facades: Array = town.find_children("Facade_*", "MeshInstance3D", true, false)
 	assert_eq(facades.size(), 10, "ten building facades")
@@ -147,7 +147,7 @@ func test_town_builds_facades_and_boats() -> void:
 
 
 func test_town_builds_tavern_sign_and_mountain_backdrop() -> void:
-	var town = load("res://world/town.gd").new()
+	var town = load("res://features/town/town.gd").new()
 	town.build()
 	var signs: Array = town.find_children("TavernSign", "Sprite3D", true, false)
 	assert_eq(signs.size(), 1, "the tavern sign is created")
@@ -175,7 +175,7 @@ func test_town_builds_tavern_sign_and_mountain_backdrop() -> void:
 
 
 func test_town_builds_building_volumes() -> void:
-	var town = load("res://world/town.gd").new()
+	var town = load("res://features/town/town.gd").new()
 	town.build()
 	var volumes: Array = town.find_children("Volume_*", "Node3D", true, false)
 	assert_eq(volumes.size(), 10, "ten building volumes")

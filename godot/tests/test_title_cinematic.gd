@@ -1,6 +1,6 @@
 extends "res://tests/test_case.gd"
 
-const Cinematic = preload("res://ui/title_cinematic.gd")
+const Cinematic = preload("res://features/title/title_cinematic.gd")
 const Profile = preload("res://core/profile.gd")
 
 const SHOTS_PATH := "res://data/title_shots.json"

@@ -18,7 +18,7 @@ func _reset() -> void:
 
 
 func _new_town() -> Variant:
-	var town: Variant = load("res://world/town.gd").new()
+	var town: Variant = load("res://features/town/town.gd").new()
 	town.build()
 	town.build_hud()
 	return town

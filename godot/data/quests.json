@@ -20,8 +20,7 @@
 		"dialogue": {
 			"offer": "res://data/dialogues/quest_herbs_offer.json",
 			"active": "res://data/dialogues/quest_herbs_active.json",
-			"ready": "res://data/dialogues/quest_herbs_ready.json",
-			"done": "res://data/dialogues/quest_herbs_done.json"
+			"ready": "res://data/dialogues/quest_herbs_ready.json"
 		}
 	},
 	{
@@ -50,8 +49,7 @@
 		"dialogue": {
 			"offer": "res://data/dialogues/quest_spar_offer.json",
 			"active": "res://data/dialogues/quest_spar_active.json",
-			"ready": "res://data/dialogues/quest_spar_ready.json",
-			"done": "res://data/dialogues/quest_spar_done.json"
+			"ready": "res://data/dialogues/quest_spar_ready.json"
 		}
 	},
 	{
@@ -80,8 +78,7 @@
 		"dialogue": {
 			"offer": "res://data/dialogues/quest_scout_offer.json",
 			"active": "res://data/dialogues/quest_scout_active.json",
-			"ready": "res://data/dialogues/quest_scout_ready.json",
-			"done": "res://data/dialogues/quest_scout_done.json"
+			"ready": "res://data/dialogues/quest_scout_ready.json"
 		}
 	},
 	{

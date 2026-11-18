@@ -1,6 +1,6 @@
 extends "res://tests/test_case.gd"
 
-const CharacterSprite = preload("res://world/character_sprite.gd")
+const CharacterSprite = preload("res://shared/scene/character_sprite.gd")
 
 
 func _make():

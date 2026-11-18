@@ -36,7 +36,7 @@ func _cleanup_dir(dir: String) -> void:
 func _new_game(profile_path: String, save_dir: String) -> Variant:
 	Engine.set_meta("skip_title", true)
 	GameState.reset()
-	var game: Variant = load("res://ui/game.gd").new()
+	var game: Variant = load("res://app/game.gd").new()
 	game.profile_path = profile_path
 	game.save_dir = save_dir
 	return game

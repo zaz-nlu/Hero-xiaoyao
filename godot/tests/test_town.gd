@@ -1,14 +1,14 @@
 extends "res://tests/test_case.gd"
 
-const Texgen = preload("res://world/texgen.gd")
-const TownData = preload("res://world/town_data.gd")
+const Texgen = preload("res://shared/scene/texgen.gd")
+const TownData = preload("res://shared/resources/town_data.gd")
 
 const TOWN_PATH := "res://data/town.json"
 const CAMERA_OFFSET := Vector3(0.0, 16.7, 37.5)
 
 
 func _new_town():
-	return load("res://world/town.gd").new()
+	return load("res://features/town/town.gd").new()
 
 
 func _count_nodes(root: Node, native_class: String) -> int:
@@ -288,4 +288,32 @@ func test_camera_follows_target() -> void:
 		"camera settles above the follow target"
 	)
 	target.free()
+	town.free()
+
+
+func test_camera_falls_back_to_town_spawn_without_target() -> void:
+	var town = _new_town()
+	town.skip_actors = true
+	town.build()
+	var spawn: Dictionary = town.data.get("spawn", {})
+	var fallback := Vector3(
+		float(spawn.get("x", 0.0)), 0.0, float(spawn.get("z", 0.0))
+	)
+	assert_true(
+		fallback.distance_to(Vector3(11.0, 0.0, 3.5)) > 0.01,
+		"the town spawn differs from the old tavern fallback"
+	)
+	town.snap_camera()
+	var expected := fallback + CAMERA_OFFSET
+	assert_true(
+		town.camera.position.distance_to(expected) < 0.001,
+		"snap falls back to the town spawn"
+	)
+	town.camera.position = Vector3.ZERO
+	for i in range(60):
+		town.update_camera(0.1)
+	assert_true(
+		town.camera.position.distance_to(expected) < 0.5,
+		"update falls back to the town spawn"
+	)
 	town.free()

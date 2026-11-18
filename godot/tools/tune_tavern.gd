@@ -4,7 +4,7 @@ extends SceneTree
 # Each config: [bandit_power_delta, boss_power_delta, bandit_threat_delta, boss_threat_delta]
 #   godot --headless --path godot -s res://tools/tune_tavern.gd
 
-const Simulator = preload("res://core/simulator.gd")
+const Simulator = preload("res://tools/simulator.gd")
 const DataLoader = preload("res://core/data_loader.gd")
 const Prefight = preload("res://core/prefight.gd")
 

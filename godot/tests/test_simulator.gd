@@ -1,6 +1,6 @@
 extends "res://tests/test_case.gd"
 
-const Simulator = preload("res://core/simulator.gd")
+const Simulator = preload("res://tools/simulator.gd")
 const EnemyDef = preload("res://core/enemy_def.gd")
 
 

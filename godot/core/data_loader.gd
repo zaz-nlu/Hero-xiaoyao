@@ -8,6 +8,22 @@ const EnemyDef = preload("res://core/enemy_def.gd")
 
 const MARTIAL_GRADES: Array[String] = ["common", "fine", "rare", "epic", "legendary"]
 
+const PLAYER_PATH := "res://data/player.json"
+const MARTIALS_PATH := "res://data/martials.json"
+const ENEMIES_PATH := "res://data/enemies.json"
+const ENCOUNTERS_PATH := "res://data/encounters.json"
+const SPEAKERS_PATH := "res://data/speakers.json"
+const ITEMS_PATH := "res://data/items.json"
+const PROGRESSION_PATH := "res://data/progression.json"
+const TOWN_PATH := "res://data/town.json"
+const NPC_DIALOGUES_PATH := "res://data/npc_dialogues.json"
+const FOREST_PATH := "res://data/forest.json"
+const TAVERN_PATH := "res://data/tavern.json"
+const TAVERN_AMBUSH_OPEN_PATH := "res://data/dialogues/tavern_ambush_open.json"
+const TAVERN_AMBUSH_MANY_PATH := "res://data/dialogues/tavern_ambush_many.json"
+const TAVERN_AMBUSH_FEW_PATH := "res://data/dialogues/tavern_ambush_few.json"
+const TAVERN_PREFIGHT_END_PATH := "res://data/dialogues/tavern_prefight_end.json"
+
 
 static func parse_martials(json_text: String) -> Dictionary:
 	var defs := {}

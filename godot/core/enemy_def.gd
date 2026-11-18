@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Stats = preload("res://core/stats.gd")
+const Pattern = preload("res://core/tactics/pattern.gd")
 
 var id: String = ""
 var name: String = ""
@@ -15,6 +16,8 @@ var stun_turns: int = 0
 var moves: Array = []
 var weak_moves: Array[String] = []
 var incorporeal: bool = false
+var ai: String = "rush"
+var move_override: int = -1
 
 
 static func from_dict(d: Dictionary) -> RefCounted:
@@ -30,18 +33,30 @@ static func from_dict(d: Dictionary) -> RefCounted:
 	e.max_hp = int(d.get("max_hp", 0))
 	e.toughness = int(d.get("toughness", 0))
 	e.stun_turns = int(d.get("stun_turns", 0))
+	e.ai = str(d.get("ai", "rush"))
+	e.move_override = int(d.get("move", -1))
 
 	var parsed_moves: Array = []
 	var raw_moves = d.get("moves", [])
 	if raw_moves is Array:
 		for raw in raw_moves:
 			if raw is Dictionary:
+				var move_type := str(raw.get("type", ""))
+				var raw_range = raw.get("range", null)
+				var move_range := {}
+				if raw_range is Dictionary:
+					move_range = Pattern.normalize(raw_range)
+				elif move_type == "ranged":
+					move_range = Pattern.normalize({"shape": "ranged", "min": 2, "max": 4})
+				else:
+					move_range = Pattern.normalize({})
 				parsed_moves.append({
 					"id": str(raw.get("id", "")),
 					"name": str(raw.get("name", "")),
-					"type": str(raw.get("type", "")),
+					"type": move_type,
 					"threat": int(raw.get("threat", 0)),
 					"power": int(raw.get("power", 0)),
+					"range": move_range,
 				})
 	e.moves = parsed_moves
 

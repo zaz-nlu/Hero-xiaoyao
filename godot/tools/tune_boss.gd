@@ -6,7 +6,7 @@ extends SceneTree
 # Prints human/smart win rates (and average hp left) for the starting and the grown stat lines.
 #   godot --headless --path godot -s res://tools/tune_boss.gd
 
-const Simulator = preload("res://core/simulator.gd")
+const Simulator = preload("res://tools/simulator.gd")
 const DataLoader = preload("res://core/data_loader.gd")
 
 const GROWN := {"power": 8, "speed": 9, "defense": 5, "recovery": 5, "skill": 17, "constitution": 6}

@@ -1,6 +1,6 @@
 extends "res://tests/test_case.gd"
 
-const TownData = preload("res://world/town_data.gd")
+const TownData = preload("res://shared/resources/town_data.gd")
 const Dialogue = preload("res://core/dialogue.gd")
 const GameState = preload("res://core/game_state.gd")
 
@@ -10,7 +10,7 @@ const SPEAKERS_PATH := "res://data/speakers.json"
 
 
 func _new_town() -> Variant:
-	var town: Variant = load("res://world/town.gd").new()
+	var town: Variant = load("res://features/town/town.gd").new()
 	town.build()
 	town.build_hud()
 	return town
@@ -181,7 +181,7 @@ func test_speakers_without_portraits_are_supported() -> void:
 			var def: Dictionary = speakers[id]
 			assert_eq(str(def.get("portrait", "")), "", "speaker %s has no portrait" % id)
 
-	var view: Variant = load("res://ui/dialogue_view.gd").new()
+	var view: Variant = load("res://shared/ui/dialogue_view.gd").new()
 	view.build_ui()
 	var loaded: Dictionary = Dialogue.load_file("res://data/dialogues/npc_elder.json", speakers)
 	view.start(loaded.get("lines", []))

@@ -7,11 +7,11 @@ extends SceneTree
 # Run with:
 #   godot --headless --path godot -s res://tools/difficulty_report.gd
 
-const Simulator = preload("res://core/simulator.gd")
+const Simulator = preload("res://tools/simulator.gd")
 const DataLoader = preload("res://core/data_loader.gd")
 const Prefight = preload("res://core/prefight.gd")
 
-const PLAYER_PATH := "res://data/player.json"
+const PLAYER_PATH := DataLoader.PLAYER_PATH
 const DOC_RELATIVE := "../docs/superpowers/specs/2026-11-17-numbers-system-design.md"
 const BATTLES := 400
 const SEED := 1

@@ -224,7 +224,7 @@ func test_settle_exp_skips_battles_without_martials() -> void:
 
 func test_battle_view_shows_exp_toast_and_updates_mastery_total() -> void:
 	GameState.reset()
-	var view: Variant = load("res://ui/battle_view.gd").new()
+	var view: Variant = load("res://features/battle/battle_view.gd").new()
 	view.build_ui()
 	view.start("bandit", 1, true)
 	assert_true(
@@ -249,7 +249,7 @@ func test_battle_view_shows_exp_toast_and_updates_mastery_total() -> void:
 func test_battle_view_announces_level_up() -> void:
 	GameState.reset()
 	GameState.mastery_total["basic_sword"] = 190
-	var view: Variant = load("res://ui/battle_view.gd").new()
+	var view: Variant = load("res://features/battle/battle_view.gd").new()
 	view.build_ui()
 	view.start("bandit", 1, true)
 	view.battle.enemies[0].hp = 1

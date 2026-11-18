@@ -1,13 +1,13 @@
 extends "res://tests/test_case.gd"
 
 const GameState = preload("res://core/game_state.gd")
-const Stealth = preload("res://world/stealth.gd")
+const Stealth = preload("res://shared/gameplay/stealth.gd")
 
 var encounters: Array = []
 
 
 func _new_forest() -> Variant:
-	var forest: Variant = load("res://world/forest.gd").new()
+	var forest: Variant = load("res://features/forest/forest.gd").new()
 	forest.build()
 	forest.build_hud()
 	return forest
@@ -19,7 +19,7 @@ func _on_encounter_requested(enemy_id: String, count: int, first_strike: bool) -
 
 func _new_game() -> Variant:
 	Engine.set_meta("skip_title", true)
-	var game: Variant = load("res://ui/game.gd").new()
+	var game: Variant = load("res://app/game.gd").new()
 	game.show_town()
 	return game
 

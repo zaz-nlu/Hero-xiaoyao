@@ -1,8 +1,8 @@
 extends "res://tests/test_case.gd"
 
-const PlayerMotion = preload("res://world/player_motion.gd")
-const TownData = preload("res://world/town_data.gd")
-const Town = preload("res://world/town.gd")
+const PlayerMotion = preload("res://shared/gameplay/player_motion.gd")
+const TownData = preload("res://shared/resources/town_data.gd")
+const Town = preload("res://features/town/town.gd")
 
 const TOWN_PATH := "res://data/town.json"
 const BOUNDS := Rect2(-10.0, -10.0, 20.0, 20.0)

@@ -1,6 +1,6 @@
 extends "res://tests/test_case.gd"
 
-const ImageCache = preload("res://ui/image_cache.gd")
+const ImageCache = preload("res://shared/resources/image_cache.gd")
 
 const PORTRAIT_PATH := "res://assets/portraits/ren_xiaoyao.png"
 const MISSING_PATH := "res://assets/portraits/not_a_real_portrait.png"

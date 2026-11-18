@@ -9,7 +9,7 @@ var finished_count: int = 0
 
 
 func _make_view() -> Variant:
-	var view: Variant = load("res://ui/dialogue_view.gd").new()
+	var view: Variant = load("res://shared/ui/dialogue_view.gd").new()
 	view.build_ui()
 	return view
 

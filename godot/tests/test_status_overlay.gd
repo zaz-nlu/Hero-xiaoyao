@@ -3,7 +3,7 @@ extends "res://tests/test_case.gd"
 const GameState = preload("res://core/game_state.gd")
 const Progression = preload("res://core/progression.gd")
 const Quests = preload("res://core/quests.gd")
-const StatusOverlay = preload("res://ui/status_overlay.gd")
+const StatusOverlay = preload("res://features/character/status_overlay.gd")
 
 
 func _reset() -> void:
@@ -108,7 +108,7 @@ func test_toasts_consume_queue_and_respect_enabled() -> void:
 func test_game_syncs_input_blocked_and_battle_disables_overlay() -> void:
 	_reset()
 	Engine.set_meta("skip_title", true)
-	var game: Variant = load("res://ui/game.gd").new()
+	var game: Variant = load("res://app/game.gd").new()
 	game.show_town()
 	var overlay: Variant = game.overlay
 	overlay.toggle_character()
