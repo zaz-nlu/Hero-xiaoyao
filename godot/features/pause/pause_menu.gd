@@ -4,11 +4,13 @@ extends CanvasLayer
 # 返回标题与退出。整个菜单 process_mode = ALWAYS，所以暂停时键盘和鼠标仍然可用。
 
 const SaveSystem = preload("res://core/save_system.gd")
+const Progression = preload("res://core/progression.gd")
+const PauseMenuStyle = preload("res://features/pause/pause_menu_style.gd")
 const Hud = preload("res://shared/ui/battle_hud_style.gd")
 const AudioSettingsPanel = preload("res://shared/ui/audio_settings_panel.gd")
 
 const PAGES: Array[String] = ["main", "save", "load", "settings"]
-const MAIN_ITEMS: Array[String] = ["继续", "存档", "读档", "设置", "返回标题", "退出游戏"]
+const MAIN_ITEMS: Array[String] = ["继续", "打坐", "存档", "读档", "设置", "返回标题", "退出游戏"]
 const SLOT_LABELS := {
 	"auto": "自动存档",
 	"1": "存档 1",
@@ -21,6 +23,8 @@ const DEFAULT_SFX_VOLUME := 0.8
 var game: Variant = null
 var current_page: String = "main"
 var slot_cards: Dictionary = {}
+# 由 game 在每次打开前刷新：只有小镇/酒馆/森林（非战斗、非标题）可以打坐。
+var can_meditate: bool = false
 
 var _open: bool = false
 var _built: bool = false
@@ -64,6 +68,7 @@ func open() -> void:
 	if _open:
 		return
 	_open = true
+	can_meditate = game != null and ["town", "tavern", "forest"].has(str(game.get("current_kind")))
 	_root.visible = true
 	show_page("main")
 	var tree := get_tree()
@@ -175,7 +180,7 @@ func refresh_slots() -> void:
 		else:
 			enabled = exists and not corrupt
 		button.disabled = not enabled
-		_style_card(button, false, not enabled)
+		PauseMenuStyle.style_card(button, false, not enabled)
 		if enabled:
 			_slot_order.append(slot)
 	if _slot_order.is_empty():
@@ -310,7 +315,7 @@ func _ensure_built() -> void:
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	_root.add_child(panel)
 
-	var title := _make_label(panel, "PauseTitle", "暂停", Vector2(0.0, 18.0), Vector2(640.0, 34.0), 26, Hud.GOLD_BRIGHT)
+	var title := PauseMenuStyle.make_label(panel, "PauseTitle", "暂停", Vector2(0.0, 18.0), Vector2(640.0, 34.0), 26, Hud.GOLD_BRIGHT)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 	_build_main_page(panel)
@@ -333,13 +338,13 @@ func _build_main_page(panel: Control) -> void:
 	_main_page.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(_main_page)
 	for i in range(MAIN_ITEMS.size()):
-		var button := _make_menu_button(
+		var button := PauseMenuStyle.make_menu_button(
 			_main_page, "Main_%d" % i, str(MAIN_ITEMS[i]),
 			Vector2(170.0, 76.0 + 58.0 * float(i)), Vector2(300.0, 42.0)
 		)
 		button.pressed.connect(_on_main_pressed.bind(i))
 		_main_buttons.append(button)
-	var hint := _make_label(
+	var hint := PauseMenuStyle.make_label(
 		_main_page, "MainHint", "↑↓ 选择    Enter 确认    Esc 返回",
 		Vector2(0.0, 520.0), Vector2(640.0, 24.0), 15, Hud.MUTED
 	)
@@ -354,7 +359,7 @@ func _build_slot_page(panel: Control) -> void:
 	_slot_page.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(_slot_page)
 
-	_slot_title = _make_label(
+	_slot_title = PauseMenuStyle.make_label(
 		_slot_page, "SlotTitle", "存档", Vector2(0.0, 58.0), Vector2(640.0, 28.0), 20, Hud.GOLD
 	)
 	_slot_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -373,17 +378,17 @@ func _build_slot_page(panel: Control) -> void:
 		button.add_theme_stylebox_override("disabled", Hud.card_disabled_style())
 		button.pressed.connect(_on_slot_pressed.bind(slot))
 		_slot_page.add_child(button)
-		var title := _make_label(
+		var title := PauseMenuStyle.make_label(
 			button, "SlotTitle_%s" % slot, str(SLOT_LABELS.get(slot, slot)),
 			Vector2(16.0, 8.0), Vector2(448.0, 26.0), 18, Hud.GOLD
 		)
-		var info := _make_label(
+		var info := PauseMenuStyle.make_label(
 			button, "SlotInfo_%s" % slot, "", Vector2(16.0, 34.0),
 			Vector2(448.0, 52.0), 14, Hud.MUTED
 		)
 		slot_cards[slot] = {"button": button, "title": title, "info": info}
 
-	_slot_back = _make_menu_button(
+	_slot_back = PauseMenuStyle.make_menu_button(
 		_slot_page, "SlotBack", "返回", Vector2(270.0, 520.0), Vector2(100.0, 38.0)
 	)
 	_slot_back.pressed.connect(_on_slot_back_pressed)
@@ -424,53 +429,21 @@ func _build_confirm_panel() -> void:
 	_confirm_panel.visible = false
 	_root.add_child(_confirm_panel)
 
-	_confirm_label = _make_label(
+	_confirm_label = PauseMenuStyle.make_label(
 		_confirm_panel, "ConfirmText", "", Vector2(20.0, 34.0),
 		Vector2(400.0, 60.0), 18, Hud.TEXT
 	)
 	_confirm_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_confirm_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
-	var yes := _make_menu_button(
+	var yes := PauseMenuStyle.make_menu_button(
 		_confirm_panel, "ConfirmYes", "确定", Vector2(60.0, 116.0), Vector2(120.0, 38.0)
 	)
 	yes.pressed.connect(_confirm_yes)
-	var no := _make_menu_button(
+	var no := PauseMenuStyle.make_menu_button(
 		_confirm_panel, "ConfirmNo", "取消", Vector2(240.0, 116.0), Vector2(120.0, 38.0)
 	)
 	no.pressed.connect(_hide_confirm)
-
-
-func _make_label(
-	parent: Node, node_name: String, text: String, pos: Vector2,
-	label_size: Vector2, font_size: int, color: Color
-) -> Label:
-	var label := Label.new()
-	label.name = node_name
-	label.text = text
-	label.position = pos
-	label.size = label_size
-	Hud.configure_label(label, font_size, color)
-	parent.add_child(label)
-	return label
-
-
-func _make_menu_button(
-	parent: Node, node_name: String, text: String, pos: Vector2, button_size: Vector2
-) -> Button:
-	var button := Button.new()
-	button.name = node_name
-	button.text = text
-	button.position = pos
-	button.size = button_size
-	button.focus_mode = Control.FOCUS_NONE
-	button.add_theme_font_size_override("font_size", 18)
-	button.add_theme_color_override("font_color", Hud.TEXT)
-	button.add_theme_color_override("font_hover_color", Hud.GOLD_BRIGHT)
-	button.add_theme_color_override("font_pressed_color", Hud.GOLD_BRIGHT)
-	_style_button(button, false)
-	parent.add_child(button)
-	return button
 
 
 # ---------------------------------------------------------------- main actions
@@ -482,24 +455,31 @@ func _on_main_pressed(index: int) -> void:
 
 func _activate_main(index: int) -> void:
 	match index:
-		0:
-			close()
-		1:
-			show_page("save")
-		2:
-			show_page("load")
-		3:
-			show_page("settings")
-		4:
-			_show_confirm("未存档的进度将丢失，确定吗？", Callable(self, "_do_return_title"))
-		5:
-			_show_confirm("确定退出游戏？", Callable(self, "_do_quit"))
+		0: close()
+		1: _do_meditate()
+		2: show_page("save")
+		3: show_page("load")
+		4: show_page("settings")
+		5: _show_confirm("未存档的进度将丢失，确定吗？", Callable(self, "_do_return_title"))
+		6: _show_confirm("确定退出游戏？", Callable(self, "_do_quit"))
+
+
+func _do_meditate() -> void:
+	if not can_meditate:
+		Progression.push_toast("现在不能打坐")
+		return
+	var result: Dictionary = Progression.meditate()
+	if bool(result.get("ok", false)):
+		close()
+	else:
+		Progression.push_toast(str(result.get("reason", "现在不能打坐")))
 
 
 func _set_main_index(index: int) -> void:
 	if _main_buttons.is_empty():
 		return
 	_main_index = clampi(index, 0, _main_buttons.size() - 1)
+	_main_buttons[1].disabled = not can_meditate
 	for i in range(_main_buttons.size()):
 		_style_button(_main_buttons[i], i == _main_index)
 
@@ -566,37 +546,18 @@ func _update_slot_selection() -> void:
 	for item_value in slot_cards.values():
 		var card: Dictionary = item_value
 		var button: Button = card["button"]
-		_style_card(button, false, button.disabled)
+		PauseMenuStyle.style_card(button, false, button.disabled)
 	if _slot_order.is_empty() or _slot_index < 0 or _slot_index >= _slot_order.size():
 		return
 	var selected := _slot_order[_slot_index]
 	var record: Variant = slot_cards.get(selected, null)
 	if record is Dictionary:
 		var card: Dictionary = record
-		_style_card(card["button"], true, false)
+		PauseMenuStyle.style_card(card["button"], true, false)
 
 
 func _style_button(button: Button, selected: bool) -> void:
-	var normal := Hud.card_hover_style() if selected else Hud.card_style(
-		0.52, Color(0.78, 0.65, 0.35, 0.45)
-	)
-	button.add_theme_stylebox_override("normal", normal)
-	button.add_theme_stylebox_override("hover", Hud.card_hover_style())
-	button.add_theme_stylebox_override("pressed", Hud.card_pressed_style())
-	button.add_theme_stylebox_override("focus", Hud.card_style(0.0, Color(0.0, 0.0, 0.0, 0.0)))
-	button.add_theme_color_override("font_color", Hud.GOLD_BRIGHT if selected else Hud.TEXT)
-
-
-func _style_card(button: Button, selected: bool, disabled: bool) -> void:
-	if disabled:
-		button.add_theme_stylebox_override("normal", Hud.card_disabled_style())
-		button.add_theme_stylebox_override("hover", Hud.card_disabled_style())
-		return
-	button.add_theme_stylebox_override(
-		"normal", Hud.card_hover_style() if selected else Hud.card_style(0.82)
-	)
-	button.add_theme_stylebox_override("hover", Hud.card_hover_style())
-	button.add_theme_stylebox_override("pressed", Hud.card_pressed_style())
+	PauseMenuStyle.style_button(button, selected)
 
 
 # ---------------------------------------------------------------- settings

@@ -3,7 +3,7 @@ extends "res://tests/test_case.gd"
 const Interaction = preload("res://shared/gameplay/interaction.gd")
 const GameState = preload("res://core/game_state.gd")
 
-const BUN_VENDOR_PLAYER_POS := Vector2(18.0, 2.4)
+const BUN_VENDOR_PLAYER_POS := Vector2(22.0, 6.4)
 const BOSS_PLAYER_POS := Vector2(8.5, 2.4)
 
 var encounter_count: int = 0
@@ -149,7 +149,7 @@ func test_ordinary_npc_does_not_emit_encounter() -> void:
 func test_npc_turns_to_face_player() -> void:
 	GameState.reset()
 	var town: Variant = _new_town()
-	town.player_pos = Vector2(19.5, 0.6)
+	town.player_pos = Vector2(23.8, 7.6)
 	assert_true(town.try_interact(), "interaction starts")
 	var npc: Variant = town.npc_nodes["bun_vendor"]
 	assert_eq(str(npc.facing), "right", "the npc turns toward the player on its right")

@@ -1,0 +1,13 @@
+{
+	"events": {
+		"hit_perfect": {"sfx": "sfx_parry", "volume": 1.0, "hitstop_ms": 70},
+		"hit_counter": {"sfx": "sfx_parry_soft", "volume": 0.9, "hitstop_ms": 40},
+		"hit_block": {"sfx": "sfx_block", "volume": 0.9, "hitstop_ms": 0},
+		"hit_plain": {"sfx": "sfx_hit", "volume": 1.0, "hitstop_ms": 0},
+		"stun": {"sfx": "sfx_break", "volume": 1.0, "hitstop_ms": 90},
+		"jianyi": {"sfx": "sfx_perfect", "volume": 1.0, "hitstop_ms": 60},
+		"heal": {"sfx": "sfx_heal", "volume": 0.8, "hitstop_ms": 0},
+		"weak_hit": {"sfx": "sfx_weak", "volume": 1.0, "hitstop_ms": 80},
+		"dead": {"sfx": "", "volume": 0.0, "hitstop_ms": 0}
+	}
+}

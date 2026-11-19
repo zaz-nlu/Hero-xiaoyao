@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://features/layouts/layout_walk.gd" id="1_layout_walk"]
+
+[node name="LayoutWalk" type="Node3D"]
+script = ExtResource("1_layout_walk")

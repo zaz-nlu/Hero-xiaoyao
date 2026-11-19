@@ -6,7 +6,9 @@ extends "res://tests/test_case.gd"
 const GameState = preload("res://core/game_state.gd")
 const Progression = preload("res://core/progression.gd")
 const BackdropFactory = preload("res://shared/scenery/backdrop_factory.gd")
+const TownData = preload("res://shared/resources/town_data.gd")
 
+const TOWN_PATH := "res://data/town.json"
 const ALL_WORLDS: Array[String] = ["town", "forest", "tavern"]
 
 
@@ -65,8 +67,13 @@ func test_title_town_keeps_uncollected_pickup_visuals() -> void:
 	if pickup_value is Node3D:
 		var pickup: Node3D = pickup_value
 		assert_true(pickup.visible, "the uncollected pickup is visible")
+		var entry: Dictionary = _town_pickup("old_box")
+		var px := float(entry.get("x", 0.0))
+		var pz := float(entry.get("z", 0.0))
+		var town_data: Dictionary = TownData.load_town(TOWN_PATH)["data"]
+		var expected := Vector3(px, TownData.ground_height(town_data, px, pz), pz)
 		assert_true(
-			pickup.position.is_equal_approx(Vector3(11.5, 0.0, 13.6)),
+			pickup.position.is_equal_approx(expected),
 			"the pickup keeps its data position"
 		)
 	backdrop.free()
@@ -107,7 +114,7 @@ func test_title_backdrop_build_does_not_collect_pickups() -> void:
 
 func test_title_town_uses_explicit_player_anchor_for_npcs() -> void:
 	GameState.reset()
-	var anchor := Vector2(2.6, -1.4)
+	var anchor := Vector2(8.5, -2.6)
 	var provider := func(flag: String) -> bool:
 		return bool(GameState.has_flag(flag))
 	var backdrop: Variant = _make_backdrop("town", _title_options(provider, anchor))
@@ -140,6 +147,15 @@ func _title_options(provider: Callable, anchor: Variant = null) -> Dictionary:
 		"picked_flag_provider": provider,
 		"player_anchor": anchor,
 	}
+
+
+func _town_pickup(pickup_id: String) -> Dictionary:
+	var town_data: Dictionary = TownData.load_town(TOWN_PATH)["data"]
+	for pickup_value in town_data.get("pickups", []):
+		var pickup: Dictionary = pickup_value
+		if str(pickup.get("id", "")) == pickup_id:
+			return pickup
+	return {}
 
 
 func test_backdrop_build_is_idempotent() -> void:

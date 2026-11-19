@@ -168,15 +168,12 @@ func _build_bag_row(item_id: String, count: int, y: float) -> void:
 	)
 	desc.text = str(item.get("desc", ""))
 
-	var raw_perm: Variant = item.get("perm", {})
-	if raw_perm is Dictionary:
-		var perm: Dictionary = raw_perm
-		if not perm.is_empty():
-			var use_button := CharacterPanelStyle.make_small_button(
-				row, "Use_%s" % item_id, "服用", Vector2(506.0, 12.0), Vector2(76.0, 28.0)
-			)
-			use_button.pressed.connect(_on_use_pressed.bind(item_id))
-			return
+	if _has_use_action(item):
+		var use_button := CharacterPanelStyle.make_small_button(
+			row, "Use_%s" % item_id, "服用", Vector2(506.0, 12.0), Vector2(76.0, 28.0)
+		)
+		use_button.pressed.connect(_on_use_pressed.bind(item_id))
+		return
 
 	if not Progression.EQUIP_SLOTS.has(kind):
 		return
@@ -202,8 +199,18 @@ func _on_equip_pressed(item_id: String) -> void:
 
 
 func _on_use_pressed(item_id: String) -> void:
-	Progression.use_permanent_item(item_id)
+	if not Progression.use_restore_item(item_id):
+		Progression.use_permanent_item(item_id)
 	refresh_requested.emit()
+
+
+# 带永久加成（perm）或内力恢复（restore）的消耗品都显示“服用”。
+func _has_use_action(item: Dictionary) -> bool:
+	for key in ["perm", "restore"]:
+		var raw: Variant = item.get(key, {})
+		if raw is Dictionary and not (raw as Dictionary).is_empty():
+			return true
+	return false
 
 
 func _on_unequip_pressed(slot: String) -> void:

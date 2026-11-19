@@ -16,6 +16,8 @@ static var boss_hp_loss: int = 0
 # 前戏结果的缓存：战败重来时套用同一份伤害，不重播前戏、也不重新计算。
 static var prefight_loss_cached: int = 0
 static var battle_backdrop: String = "town"
+# 小镇昼夜时段；暂不存档，由剧情/调试设置。
+static var town_phase: String = "day"
 static var known_moves: Dictionary = {}
 static var stat_bonus: Dictionary = {}
 static var equipment: Dictionary = {}
@@ -30,6 +32,11 @@ static var realm_id: String = "lianti"
 static var realm_stage: int = 1
 static var age: int = 9
 static var playtime: float = 0.0
+# 跨战斗携带的内力剩余；-1 表示未记录（视为满）。
+static var neili_left: int = -1
+# 最小日历：第几天与一天内的时段下标（0 早上 1 白天 2 晚上 3 深夜，见 data/calendar.json）。
+static var day: int = 1
+static var phase: int = 0
 
 
 static func set_flag(key: String, value: bool = true) -> void:
@@ -51,6 +58,7 @@ static func reset() -> void:
 	boss_hp_loss = 0
 	prefight_loss_cached = 0
 	battle_backdrop = "town"
+	town_phase = "day"
 	known_moves.clear()
 	stat_bonus.clear()
 	equipment.clear()
@@ -65,6 +73,9 @@ static func reset() -> void:
 	realm_stage = 1
 	age = 9
 	playtime = 0.0
+	neili_left = -1
+	day = 1
+	phase = 0
 
 
 # ---------------------------------------------------------------- save / load
@@ -90,6 +101,9 @@ static func to_dict() -> Dictionary:
 		"realm_stage": realm_stage,
 		"age": age,
 		"playtime": playtime,
+		"neili_left": neili_left,
+		"day": day,
+		"phase": phase,
 	}
 
 
@@ -119,6 +133,15 @@ static func from_dict(d: Dictionary) -> void:
 	value = d.get("playtime", null)
 	if value is int or value is float:
 		playtime = maxf(0.0, float(value))
+	value = d.get("neili_left", null)
+	if value is int or value is float:
+		neili_left = maxi(-1, int(value))
+	value = d.get("day", null)
+	if value is int or value is float:
+		day = maxi(1, int(value))
+	value = d.get("phase", null)
+	if value is int or value is float:
+		phase = maxi(0, int(value))
 
 
 static func _restore_dict(source: Dictionary, key: String, target: Dictionary) -> void:

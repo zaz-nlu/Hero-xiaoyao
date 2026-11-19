@@ -10,6 +10,7 @@ extends SceneTree
 var game: Node
 var frames: int = 0
 var failed: bool = false
+var expected_units: int = 0
 
 
 func _initialize() -> void:
@@ -64,6 +65,7 @@ func _process(_delta: float) -> bool:
 			guard += 1
 	elif frames == 25:
 		# brawl entrance (about 1.5 s) + the Zixia pre-fight show (about 6 s)
+		expected_units = int(cur.bandit_count()) + 2  # player + Ma Youwei + bandits
 		cur.advance(14.0)
 		if not cur.is_dialogue_active():
 			_fail("the pre-fight/ambush dialogue did not follow the brawl animation")
@@ -87,16 +89,19 @@ func _process(_delta: float) -> bool:
 		if view.size.x < window.x - 1.0 or view.size.y < window.y - 1.0:
 			_fail("battle view %s does not fill the window %s" % [view.size, window])
 			return false
-		var panel: Control = view.get_node("BottomPanel")
-		var bottom: float = panel.global_position.y + panel.size.y
-		if panel.global_position.y < 0.0 or bottom > window.y + 1.0:
-			_fail("bottom panel is off screen (y=%s, bottom=%s, window h=%s)" % [panel.global_position.y, bottom, window.y])
-			return false
 		if view.stage == null or not is_instance_valid(view.stage):
-			_fail("battle has no 3D stage")
+			_fail("the tactics battle has no 3D stage")
 			return false
-		if int(view.battle.enemies.size()) != 6:
-			_fail("the ambush battle should have six enemies, got %d" % int(view.battle.enemies.size()))
+		if view.battle == null:
+			_fail("the tactics battle was not assembled")
+			return false
+		if view.battle.get_unit("ma_youwei") == null:
+			_fail("the ambush battle has no Ma Youwei")
+			return false
+		if int(view.battle.units.size()) != expected_units:
+			_fail(
+				"the tactics battle should have leader + bandits (%d), got %d"
+				% [expected_units, int(view.battle.units.size())])
 			return false
 		print("SMOKE OK")
 		quit(0)

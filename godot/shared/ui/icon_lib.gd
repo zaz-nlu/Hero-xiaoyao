@@ -1,7 +1,7 @@
 extends RefCounted
 
 # 统一的界面图标入口：武学、物品、属性。
-# 图标来自 res://assets/ai/game/（透明 PNG），缺失时返回 null，由调用方回退。
+# 图标来自 res://assets/icons/（透明 PNG），缺失时返回 null，由调用方回退。
 
 const AiAssets = preload("res://shared/resources/ai_assets.gd")
 

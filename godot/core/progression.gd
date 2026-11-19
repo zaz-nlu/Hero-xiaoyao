@@ -1,10 +1,12 @@
 extends RefCounted
 
+const Calendar = preload("res://core/calendar.gd")
 const DataLoader = preload("res://core/data_loader.gd")
 const GameState = preload("res://core/game_state.gd")
 const QuestProgress = preload("res://core/quest_progress.gd")
 const Realms = preload("res://core/realms.gd")
 const Stats = preload("res://core/stats.gd")
+const TacticsEnergy = preload("res://core/tactics/tactics_energy.gd")
 
 const ITEMS_PATH := DataLoader.ITEMS_PATH
 const PLAYER_PATH := DataLoader.PLAYER_PATH
@@ -187,6 +189,27 @@ static func use_permanent_item(id: String) -> bool:
 	return true
 
 
+# 服用回气类丹药（如回气丹）：库存充足且内力未满时消耗一颗，按 restore.neili 恢复。
+static func use_restore_item(id: String) -> bool:
+	var item: Dictionary = item_def(id)
+	var raw_restore: Variant = item.get("restore", {})
+	if not (raw_restore is Dictionary):
+		return false
+	var restore: Dictionary = raw_restore
+	var amount := maxi(0, int(restore.get("neili", 0)))
+	if amount <= 0 or item_count(id) <= 0:
+		return false
+	var cap := TacticsEnergy.max_neili_for(GameState.realm_id)
+	var current := _neili_now(cap)
+	if current >= cap:
+		return false
+	var target := mini(cap, current + amount)
+	GameState.inventory[id] = item_count(id) - 1
+	GameState.neili_left = target
+	push_toast("内力恢复 %d" % (target - current))
+	return true
+
+
 static func item_count(id: String) -> int:
 	return int(GameState.inventory.get(id, 0))
 
@@ -203,3 +226,39 @@ static func take_toasts() -> Array:
 	var out: Array = GameState.toasts.duplicate()
 	GameState.toasts.clear()
 	return out
+
+
+# 内力回满：-1 表示未记录 = 满，下一场战斗按上限恢复。
+static func restore_neili_full() -> void:
+	GameState.neili_left = -1
+
+
+# 打坐：占时段，按 data/calendar.json 的 restore_pct 恢复内力；内力已满时拒绝。
+static func meditate() -> Dictionary:
+	var cap := TacticsEnergy.max_neili_for(GameState.realm_id)
+	var current := _neili_now(cap)
+	if current >= cap:
+		return {"ok": false, "reason": "内力已满，无需打坐", "text": ""}
+	var pct := Calendar.meditate_restore_pct()
+	var target := cap
+	if pct < 100:
+		target = mini(cap, current + ceili(float(cap) * float(pct) / 100.0))
+	GameState.neili_left = -1 if target >= cap else target
+	Calendar.advance(Calendar.meditate_cost())
+	var text := "打坐调息，内力恢复。%s" % Calendar.label()
+	push_toast(text)
+	return {"ok": true, "reason": "", "text": text}
+
+
+# 当前可用内力：-1（未记录）视为满，其余钳到上限内。
+static func _neili_now(cap: int) -> int:
+	if GameState.neili_left < 0:
+		return cap
+	return mini(cap, GameState.neili_left)
+
+
+# 境界突破钩子：记录新境界并回满内力；目前只由剧情调用。
+static func on_breakthrough(realm_id: String, stage: int) -> void:
+	GameState.realm_id = realm_id
+	GameState.realm_stage = stage
+	restore_neili_full()

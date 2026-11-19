@@ -22,6 +22,8 @@ func _new_manager() -> Variant:
 
 func _new_game() -> Variant:
 	Engine.set_meta("skip_title", true)
+	# The battle music and jingle assertions drive the legacy battle view.
+	Engine.set_meta("legacy_battle", true)
 	var game: Variant = load("res://app/game.gd").new()
 	game.show_town()
 	return game

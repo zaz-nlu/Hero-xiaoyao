@@ -6,8 +6,19 @@ extends RefCounted
 const SceneKit = preload("res://shared/scene/scene_kit.gd")
 const Texgen = preload("res://shared/scene/texgen.gd")
 const AiAssets = preload("res://shared/resources/ai_assets.gd")
+const GameState = preload("res://core/game_state.gd")
 const TownData = preload("res://shared/resources/town_data.gd")
 const TownArt = preload("res://shared/scenery/town/town_art.gd")
+const TownPhaseController = preload("res://shared/scenery/town/town_phase_controller.gd")
+const TownTerracesBuild = preload("res://shared/scenery/town/town_terraces_build.gd")
+const TownBorder = preload("res://shared/scenery/town/town_border.gd")
+
+const GROUND_TEXTURES := {
+	"flagstone": "tex_flagstone_large.png",
+	"flagstone_wet": "tex_flagstone_wet.png",
+	"mud": "tex_riverbank_mud.png",
+	"pier": "tex_wood_pier.png",
+}
 
 const VIGNETTE_SHADER := """
 shader_type canvas_item;
@@ -24,6 +35,7 @@ void fragment() {
 
 var sun: DirectionalLight3D = null
 var world_env: WorldEnvironment = null
+var mountain_backdrop: MeshInstance3D = null
 var water_material: StandardMaterial3D = null
 
 
@@ -84,6 +96,14 @@ func build_ground(parent: Node3D, data: Dictionary, art: TownArt) -> void:
 				else:
 					tex = art.get_tex("water")
 				node_name = "WaterSurface"
+			"flagstone", "flagstone_wet", "mud", "pier":
+				y = 0.03 if ground_type == "pier" else 0.01
+				tex = AiAssets.load_texture(
+					str(GROUND_TEXTURES.get(ground_type, "tex_flagstone_large.png"))
+				)
+				uv_scale = Vector2(width / 4.0, depth / 4.0)
+				if tex == null:
+					tex = art.get_tex("stone_street")
 			_:
 				y = 0.0
 				tex = AiAssets.load_texture("tex_grass.png")
@@ -100,6 +120,7 @@ func build_ground(parent: Node3D, data: Dictionary, art: TownArt) -> void:
 			root, plane, mat, Vector3((x0 + x1) * 0.5, y, (z0 + z1) * 0.5), node_name
 		)
 	_build_bridges(root, data, art)
+	TownBorder.new().build(root, data)
 
 
 func _build_bridges(parent: Node3D, data: Dictionary, art: TownArt) -> void:
@@ -219,6 +240,9 @@ func build_stairs(parent: Node3D, data: Dictionary, art: TownArt) -> void:
 					Vector3((px0 + px1) * 0.5, py + 0.03, (pz0 + pz1) * 0.5)
 				)
 
+	var terrace_builder := TownTerracesBuild.new()
+	terrace_builder.build(parent, data)
+
 	var gate_value: Variant = data.get("gate", null)
 	if typeof(gate_value) == TYPE_DICTIONARY:
 		var gate: Dictionary = gate_value
@@ -268,6 +292,7 @@ func build_backdrop(parent: Node3D) -> void:
 			root, quad, mat, Vector3(12.0, 19.0, -29.6), "MountainBackdrop"
 		)
 		backdrop.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mountain_backdrop = backdrop
 		return
 	var layers: Array[Dictionary] = [
 		{"z": -46.0, "seed": 31, "color": Color("#6f7f9a")},
@@ -322,6 +347,12 @@ func build_lighting(parent: Node3D) -> void:
 	world_env.name = "WorldEnvironment"
 	world_env.environment = env
 	parent.add_child(world_env)
+
+	var phase_controller := TownPhaseController.new()
+	phase_controller.name = "TownPhaseController"
+	parent.add_child(phase_controller)
+	phase_controller.setup(sun, env, mountain_backdrop, parent)
+	phase_controller.apply_phase(GameState.town_phase, false)
 
 	SceneKit.build_vignette(parent, VIGNETTE_SHADER)
 

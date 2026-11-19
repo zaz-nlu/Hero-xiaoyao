@@ -302,23 +302,23 @@ func _ensure_overlay() -> void:
 
 
 func show_town() -> void:
-	_prepare_scene()
-	_router.show_town(audio)
+	_router.show_town(_prepare_scene())
 
 
 func show_tavern() -> void:
-	_prepare_scene()
-	_router.show_tavern(audio)
+	_router.show_tavern(_prepare_scene())
 
 
 func show_forest() -> void:
-	_prepare_scene()
-	_router.show_forest(audio)
+	_router.show_forest(_prepare_scene())
 
+func show_layout(map_id: String, return_pos: Variant = null) -> void:
+	_router.show_layout(_prepare_scene(), map_id, return_pos)
 
-func _prepare_scene() -> void:
+func _prepare_scene() -> Node:
 	_ensure_overlay()
 	_ensure_audio()
+	return audio
 
 
 func _set_overlay_enabled(enabled: bool) -> void:

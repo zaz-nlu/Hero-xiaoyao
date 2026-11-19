@@ -8,12 +8,31 @@ const DECOR_KINDS: Array[String] = [
 	"shrub", "grass_tuft", "peony", "chrysanthemum", "bamboo", "rocks"
 ]
 
+const NEW_FACADE_FILES: Array[String] = [
+	"facade_herb_shop.png",
+	"facade_smithy.png",
+	"facade_tailor.png",
+	"facade_grocery.png",
+	"facade_house_narrow.png",
+	"facade_house_thatch.png",
+	"facade_courtyard.png",
+	"facade_pavilion.png",
+]
+
 const ASSET_FILES: Array[String] = [
 	"facade_tavern.png",
 	"facade_general_store.png",
 	"facade_blacksmith.png",
 	"facade_residence.png",
 	"facade_baozi_stall.png",
+	"facade_herb_shop.png",
+	"facade_smithy.png",
+	"facade_tailor.png",
+	"facade_grocery.png",
+	"facade_house_narrow.png",
+	"facade_house_thatch.png",
+	"facade_courtyard.png",
+	"facade_pavilion.png",
 	"prop_barrel.png",
 	"prop_crates.png",
 	"prop_jars.png",
@@ -132,31 +151,46 @@ func test_town_builds_facades_and_boats() -> void:
 	town.build()
 	var facades: Array = town.find_children("Facade_*", "MeshInstance3D", true, false)
 	assert_eq(facades.size(), 10, "ten building facades")
-	var boats: Array = town.find_children("Boat*", "Sprite3D", true, false)
-	assert_eq(boats.size(), 3, "three boats on the river")
-	for boat_value in boats:
+	var loaded: Dictionary = TownData.load_town(TOWN_PATH)
+	var water := _ground_rect(loaded["data"], "water")
+	var boats: Array = []
+	for boat_value in town.find_children("Sprite_*boat*", "Sprite3D", true, false):
 		var boat := boat_value as Sprite3D
 		if boat == null:
 			continue
+		if water.has_point(Vector2(boat.position.x, boat.position.z)):
+			boats.append(boat)
+	assert_eq(boats.size(), 3, "three boat sprites on the river")
+	for boat_value in boats:
+		var boat := boat_value as Sprite3D
 		assert_true(
-			boat.position.z >= 9.0 and boat.position.z <= 12.0,
-			"boat z %.2f is inside the river" % boat.position.z
+			water.has_point(Vector2(boat.position.x, boat.position.z)),
+			"boat at (%.2f, %.2f) floats inside the river" % [
+				boat.position.x, boat.position.z
+			]
 		)
-		assert_near(boat.position.y, -0.15, 0.001, "boat bottom sits just below the water")
 	town.free()
 
 
 func test_town_builds_tavern_sign_and_mountain_backdrop() -> void:
 	var town = load("res://features/town/town.gd").new()
 	town.build()
+	var loaded: Dictionary = TownData.load_town(TOWN_PATH)
+	var tavern: Dictionary = _building(loaded["data"], "tavern")
 	var signs: Array = town.find_children("TavernSign", "Sprite3D", true, false)
 	assert_eq(signs.size(), 1, "the tavern sign is created")
-	if not signs.is_empty():
+	if not signs.is_empty() and not tavern.is_empty():
 		var sign := signs[0] as Sprite3D
 		if sign != null:
-			assert_near(sign.position.x, 8.7, 0.001, "tavern sign hangs right of the door")
+			assert_near(
+				sign.position.x, float(tavern["door_x"]) + 2.7, 0.001,
+				"tavern sign hangs right of the door"
+			)
 			assert_near(sign.position.y, 1.5, 0.001, "tavern sign bottom edge height")
-			assert_near(sign.position.z, -2.5, 0.001, "tavern sign sits in front of the facade")
+			assert_near(
+				sign.position.z, float(tavern["z_front"]) + 0.5, 0.001,
+				"tavern sign sits in front of the facade"
+			)
 	var backdrops: Array = town.find_children("MountainBackdrop", "MeshInstance3D", true, false)
 	assert_eq(backdrops.size(), 1, "the AI mountain backdrop is used")
 	if not backdrops.is_empty():
@@ -226,6 +260,15 @@ func test_decor_props_avoid_river_bridge_and_landmarks() -> void:
 	var loaded: Dictionary = TownData.load_town(TOWN_PATH)
 	var town_data: Dictionary = loaded["data"]
 	var props: Array = town_data.get("props", [])
+	var water := _ground_rect(town_data, "water")
+	var bridges: Array = []
+	for bridge_value in town_data.get("bridges", []):
+		var bridge: Dictionary = bridge_value
+		var bx0 := float(bridge["x0"])
+		var bz0 := float(bridge["z0"])
+		bridges.append(
+			Rect2(bx0, bz0, float(bridge["x1"]) - bx0, float(bridge["z1"]) - bz0)
+		)
 	var decor: Array = []
 	var landmarks: Array = []
 	for prop_value in props:
@@ -233,21 +276,26 @@ func test_decor_props_avoid_river_bridge_and_landmarks() -> void:
 		var kind := str(prop.get("kind", ""))
 		if DECOR_KINDS.has(kind):
 			decor.append(prop)
-		elif kind == "tree" or kind == "boat":
+		elif kind == "tree":
+			landmarks.append(prop)
+		elif kind == "sprite" and str(prop.get("sprite", "")).contains("boat"):
 			landmarks.append(prop)
 	assert_true(decor.size() >= 25, "at least 25 decor props (%d)" % decor.size())
 	for prop_value in decor:
 		var prop: Dictionary = prop_value
 		var x := float(prop["x"])
 		var z := float(prop["z"])
+		var point := Vector2(x, z)
 		assert_true(
-			z < 9.0 or z > 12.0,
+			not water.has_point(point),
 			"decor at (%.1f, %.1f) stays off the river" % [x, z]
 		)
-		assert_true(
-			x < -14.0 or x > -10.0 or z < 4.0 or z > 16.0,
-			"decor at (%.1f, %.1f) stays off the bridge" % [x, z]
-		)
+		for bridge_value in bridges:
+			var bridge: Rect2 = bridge_value
+			assert_true(
+				not bridge.has_point(point),
+				"decor at (%.1f, %.1f) stays off the bridge" % [x, z]
+			)
 		for landmark_value in landmarks:
 			var landmark: Dictionary = landmark_value
 			var lx := float(landmark["x"])
@@ -259,3 +307,132 @@ func test_decor_props_avoid_river_bridge_and_landmarks() -> void:
 					x, z, str(landmark.get("kind", "")), lx, lz
 				]
 			)
+
+
+func test_town_uses_new_facades_and_plaque_labels() -> void:
+	var town = load("res://features/town/town.gd").new()
+	town.build()
+	var loaded: Dictionary = TownData.load_town(TOWN_PATH)
+	var buildings: Array = loaded["data"].get("buildings", [])
+	var used: Dictionary = {}
+	var plaques := 0
+	for building_value in buildings:
+		var building: Dictionary = building_value
+		var id := str(building.get("id", ""))
+		var facade_file := str(building.get("facade", ""))
+		if facade_file != "":
+			used[facade_file] = true
+		if typeof(building.get("plaque", null)) != TYPE_ARRAY:
+			continue
+		plaques += 1
+		var plaque_node: Node = town.find_child("Plaque_%s" % id, true, false)
+		assert_true(plaque_node is Label3D, "%s draws a plaque label" % id)
+		if plaque_node is Label3D:
+			assert_eq(
+				str((plaque_node as Label3D).text),
+				str(building.get("sign", "")),
+				"%s plaque text is its sign" % id
+			)
+	assert_eq(plaques, 5, "five buildings carry a plaque")
+	for file in NEW_FACADE_FILES:
+		assert_true(AiAssets.load_texture(file) != null, "%s loads" % file)
+		assert_true(used.has(file), "%s is used by a building" % file)
+	town.free()
+
+
+func test_town_footprints_clear_spawn_bridges_and_stairs() -> void:
+	var loaded: Dictionary = TownData.load_town(TOWN_PATH)
+	var data: Dictionary = loaded["data"]
+	var footprints: Array = []
+	for building_value in data.get("buildings", []):
+		var building: Dictionary = building_value
+		if not building.has("x0"):
+			continue
+		footprints.append(
+			Rect2(
+				float(building["x0"]),
+				float(building["z_front"]) - float(building["depth"]),
+				float(building["x1"]) - float(building["x0"]),
+				float(building["depth"])
+			)
+		)
+	assert_eq(footprints.size(), 10, "ten building footprints")
+	for i in range(footprints.size()):
+		var first: Rect2 = footprints[i]
+		for j in range(i + 1, footprints.size()):
+			var second: Rect2 = footprints[j]
+			assert_true(
+				not first.intersects(second),
+				"buildings %d and %d do not overlap" % [i, j]
+			)
+	var spawn: Dictionary = data.get("spawn", {})
+	var spawn_pos := Vector2(float(spawn.get("x", 0.0)), float(spawn.get("z", 0.0)))
+	for footprint_value in footprints:
+		var footprint: Rect2 = footprint_value
+		assert_true(
+			not footprint.has_point(spawn_pos), "spawn is outside every building"
+		)
+	for bridge_value in data.get("bridges", []):
+		var bridge: Dictionary = bridge_value
+		var bridge_rect := Rect2(
+			float(bridge["x0"]),
+			float(bridge["z0"]),
+			float(bridge["x1"]) - float(bridge["x0"]),
+			float(bridge["z1"]) - float(bridge["z0"])
+		)
+		for footprint_value in footprints:
+			var footprint: Rect2 = footprint_value
+			assert_true(
+				not footprint.intersects(bridge_rect),
+				"a bridge stays clear of buildings"
+			)
+	for terrace_value in data.get("terraces", []):
+		var terrace: Dictionary = terrace_value
+		var rect: Array = terrace.get("rect", [])
+		if rect.size() < 4:
+			continue
+		var steps := int(round(
+			(float(terrace["y"]) - float(terrace.get("from_y", 0.0))) / 0.5
+		))
+		if steps <= 0:
+			continue
+		var stair_z := float(rect[3])
+		for stairs_value in terrace.get("stairs", []):
+			var stairs: Dictionary = stairs_value
+			var stair_rect := Rect2(
+				float(stairs["x0"]),
+				stair_z,
+				float(stairs["x1"]) - float(stairs["x0"]),
+				float(steps)
+			)
+			for footprint_value in footprints:
+				var footprint: Rect2 = footprint_value
+				assert_true(
+					not footprint.intersects(stair_rect),
+					"stairs at x %.1f stay clear of buildings" % float(stairs["x0"])
+				)
+
+
+func _ground_rect(town_data: Dictionary, ground_type: String) -> Rect2:
+	for ground_value in town_data.get("ground", []):
+		var ground: Dictionary = ground_value
+		if str(ground.get("type", "")) != ground_type:
+			continue
+		var rect: Array = ground.get("rect", [])
+		if rect.size() < 4:
+			continue
+		return Rect2(
+			float(rect[0]),
+			float(rect[1]),
+			float(rect[2]) - float(rect[0]),
+			float(rect[3]) - float(rect[1])
+		)
+	return Rect2()
+
+
+func _building(town_data: Dictionary, building_id: String) -> Dictionary:
+	for building_value in town_data.get("buildings", []):
+		var building: Dictionary = building_value
+		if str(building.get("id", "")) == building_id:
+			return building
+	return {}

@@ -1,11 +1,9 @@
 extends RefCounted
 
-# Loads the AI-painted art pack from res://assets/ai/game/.
+# Loads the AI-painted art pack from res://assets/scenery/, textures/ and icons/.
 # These PNGs are not imported by Godot, so they must be read from disk.
 
 const AssetPaths = preload("res://shared/resources/asset_paths.gd")
-
-const BASE_DIR := AssetPaths.AI_GAME
 
 static var _textures: Dictionary = {}
 
@@ -14,7 +12,7 @@ static func load_texture(file: String) -> ImageTexture:
 	if _textures.has(file):
 		var cached: ImageTexture = _textures[file]
 		return cached
-	var image: Image = _read_image(BASE_DIR + file)
+	var image: Image = _read_image(file)
 	if image == null:
 		_textures[file] = null
 		return null
@@ -84,7 +82,8 @@ static func make_wall_quad(
 	return instance
 
 
-static func _read_image(path: String) -> Image:
+static func _read_image(file: String) -> Image:
+	var path: String = AssetPaths.art_dir(file) + file
 	if not FileAccess.file_exists(path):
 		return null
 	var image: Image = Image.load_from_file(ProjectSettings.globalize_path(path))

@@ -32,6 +32,12 @@
 		"desc": "调养元气的丹药，服下后体质永久 +1。",
 		"perm": {"constitution": 1}
 	},
+	"huiqi_pill": {
+		"name": "回气丹",
+		"kind": "consumable",
+		"desc": "调息回气的丹药，服下后恢复少许内力。",
+		"restore": {"neili": 8}
+	},
 	"iron_ore": {
 		"name": "铁矿石",
 		"kind": "material",

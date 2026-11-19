@@ -10,12 +10,16 @@ signal scene_entered(kind: String, scene: Node)
 const GameState = preload("res://core/game_state.gd")
 const Profile = preload("res://core/profile.gd")
 const Progression = preload("res://core/progression.gd")
+const LayoutTriggers = preload("res://core/layouts/layout_triggers.gd")
+const TownData = preload("res://shared/resources/town_data.gd")
 
 const TOWN_SCENE := "res://features/town/town.gd"
 const TAVERN_SCENE := "res://features/tavern/tavern.gd"
 const FOREST_SCENE := "res://features/forest/forest.gd"
 const BATTLE_SCENE := "res://features/battle/battle_view.gd"
+const TACTICS_SCENE := "res://features/tactics/tactics_view.gd"
 const TITLE_SCREEN_SCENE := "res://features/title/title_screen.gd"
+const LAYOUT_SCENE := "res://features/layouts/layout_walk.gd"
 
 var current: Node = null
 var current_kind: String = ""
@@ -107,6 +111,27 @@ func show_forest(audio: Variant) -> void:
 	_finish_route("forest", forest)
 
 
+# 可复用的布局路由 API：map_id 只能是 data/layouts/<id>.json 的安全 ID。
+# return_pos 用于战斗后回到原布局位置；非法时由 LayoutWalk 自己退回出生点。
+func show_layout(audio: Variant, map_id: String, return_pos: Variant = null) -> bool:
+	var path := LayoutTriggers.layout_path(map_id)
+	if path == "":
+		return false
+	_audio = audio
+	_begin_route()
+	var layout: Variant = load(LAYOUT_SCENE).new()
+	layout.map_path = path
+	layout.playtest_mode = false
+	layout.return_position = return_pos
+	_parent.add_child(layout)
+	if not layout.is_inside_tree():
+		layout.build()
+	layout.connect("encounter_requested", _on_encounter)
+	layout.connect("exit_requested", Callable(self, "_on_layout_exit_requested"))
+	_finish_route("layout", layout)
+	return true
+
+
 func show_battle(
 	audio: Variant,
 	enemy_id: String,
@@ -118,6 +143,16 @@ func show_battle(
 ) -> void:
 	_audio = audio
 	_begin_route()
+	if not _legacy_battle():
+		var tactics: Variant = load(TACTICS_SCENE).new()
+		_parent.add_child(tactics)
+		tactics.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		tactics.set("audio", audio)
+		tactics.connect("battle_finished", on_finished)
+		tactics.start_from_game(enemy_id, count, first_strike, str(GameState.battle_backdrop))
+		_battle_boss = boss
+		_finish_route("battle", tactics)
+		return
 	var view: Variant = load(BATTLE_SCENE).new()
 	_parent.add_child(view)
 	if not view.is_inside_tree():
@@ -129,6 +164,11 @@ func show_battle(
 	view.connect("battle_finished", on_finished)
 	_battle_boss = boss
 	_finish_route("battle", view)
+
+
+# 兼容开关：仍依赖旧战斗的测试在启动处设置 Engine 元数据。
+func _legacy_battle() -> bool:
+	return Engine.has_meta("legacy_battle") and bool(Engine.get_meta("legacy_battle"))
 
 
 func _begin_route() -> void:
@@ -172,6 +212,11 @@ func _present(kind: String, scene: Node) -> void:
 			_audio.play_music("music_forest")
 			_audio.play_ambience("amb_forest_birds")
 			_schedule_autosave.call()
+		"layout":
+			# 布局暂不参与存档槽；存档副作用留给后续正式接入。
+			_set_overlay_enabled.call(true)
+			_audio.play_music("music_town")
+			_audio.play_ambience("")
 		"battle":
 			if _battle_boss:
 				_audio.play_music("music_battle_boss")
@@ -180,10 +225,18 @@ func _present(kind: String, scene: Node) -> void:
 			_audio.play_ambience("")
 
 
+func _town_data() -> Dictionary:
+	if current != null and current_kind == "town":
+		var value: Variant = current.get("data")
+		if value is Dictionary:
+			return value
+	return {}
+
+
 func _on_enter_requested(place: String) -> void:
 	if place == "forest":
 		if current != null and current_kind == "town":
-			GameState.town_return_pos = Vector2(0.0, 19.2)
+			GameState.town_return_pos = TownData.forest_return(_town_data())
 		show_forest(_audio)
 		return
 	if place != "tavern":
@@ -204,6 +257,21 @@ func _on_forest_exit_requested(place: String) -> void:
 		show_town(_audio)
 	elif place == "wasteland":
 		Progression.push_toast("前方荒山，暂时过不去")
+
+
+# 布局出口只接受 town/tavern/forest 或存在的布局 ID；目标已在编辑期校验。
+func _on_layout_exit_requested(target: String) -> void:
+	match target:
+		"town":
+			show_town(_audio)
+		"tavern":
+			_audio.play_sfx("sfx_door")
+			show_tavern(_audio)
+		"forest":
+			show_forest(_audio)
+		_:
+			if LayoutTriggers.layout_path(target) != "":
+				show_layout(_audio, target)
 
 
 func _on_tavern_state_changed(new_state: String) -> void:

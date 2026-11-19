@@ -6,6 +6,8 @@ const SceneKit = preload("res://shared/scene/scene_kit.gd")
 const Texgen = preload("res://shared/scene/texgen.gd")
 const AiAssets = preload("res://shared/resources/ai_assets.gd")
 const TownArt = preload("res://shared/scenery/town/town_art.gd")
+const TownData = preload("res://shared/resources/town_data.gd")
+const TownFacades = preload("res://shared/scenery/town/town_facades.gd")
 
 # Eave height as a fraction of the facade image height, per building kind.
 const EAVE_FRAC := {
@@ -31,8 +33,15 @@ func build_buildings(parent: Node3D, data: Dictionary, art: TownArt) -> bool:
 		var building_root := Node3D.new()
 		building_root.name = str(building.get("id", "building_%d" % i))
 		root.add_child(building_root)
+		building_root.position.y = _building_base_y(data, building)
 		_build_building(building_root, building, art)
 	return tavern_facade
+
+
+func _building_base_y(data: Dictionary, building: Dictionary) -> float:
+	var door_x := float(building.get("door_x", (float(building.get("x0", 0.0)) + float(building.get("x1", 0.0))) * 0.5))
+	var ground: float = TownData.ground_height(data, door_x, float(building.get("z_front", 0.0)) - 0.3)
+	return float(building["y"]) if typeof(building.get("y", null)) in [TYPE_INT, TYPE_FLOAT] else ground
 
 
 func _build_building(parent: Node3D, building: Dictionary, art: TownArt) -> void:
@@ -47,7 +56,9 @@ func _build_building(parent: Node3D, building: Dictionary, art: TownArt) -> void
 	var kind := str(building.get("kind", "house"))
 	if x1 <= x0 or depth <= 0.0:
 		return
-	var facade_height: float = _try_build_facade(parent, building, x0, x1, z_front, kind)
+	var facade_height: float = _try_build_facade(
+		parent, building, x0, x1, z_front, kind, art
+	)
 	if facade_height > 0.0:
 		_build_building_volume(parent, building, facade_height, art)
 		return
@@ -187,48 +198,12 @@ func _build_building(parent: Node3D, building: Dictionary, art: TownArt) -> void
 
 
 func _try_build_facade(
-	parent: Node3D, building: Dictionary, x0: float, x1: float, z_front: float, kind: String
+	parent: Node3D, building: Dictionary, x0: float, x1: float, z_front: float,
+	kind: String, art: TownArt
 ) -> float:
-	var file := _facade_file(kind)
-	if file == "":
-		return 0.0
-	var facade := AiAssets.make_wall_quad(
-		file,
-		(x1 - x0) * 1.08,
-		Vector3((x0 + x1) * 0.5, 0.0, z_front),
-		"Facade_%s" % str(building.get("id", ""))
-	)
-	if facade == null:
-		return 0.0
-	parent.add_child(facade)
-	if kind == "tavern":
-		tavern_facade = true
-		var door_x := float(building.get("door_x", (x0 + x1) * 0.5))
-		var sign := AiAssets.make_sprite(
-			"prop_tavern_sign.png",
-			1.9,
-			Vector3(door_x + 2.7, 1.5, z_front + 0.5),
-			"TavernSign"
-		)
-		if sign != null:
-			parent.add_child(sign)
-	var facade_height := 0.0
-	if facade.mesh is QuadMesh:
-		facade_height = (facade.mesh as QuadMesh).size.y
-	return facade_height
-
-
-func _facade_file(kind: String) -> String:
-	match kind:
-		"tavern":
-			return "facade_tavern.png"
-		"shop":
-			return "facade_general_store.png"
-		"smith":
-			return "facade_blacksmith.png"
-		"house":
-			return "facade_residence.png"
-	return ""
+	var result := TownFacades.build(parent, building, x0, x1, z_front, kind, art)
+	tavern_facade = tavern_facade or bool(result.get("tavern", false))
+	return float(result.get("height", 0.0))
 
 
 # Gives the flat facade a real 3D body behind it: walls, two roof slopes, a
@@ -455,7 +430,9 @@ func _build_lantern(parent: Node3D, x: float, y: float, z: float) -> void:
 	var mesh := SphereMesh.new()
 	mesh.radius = 0.35
 	mesh.height = 0.7
-	SceneKit.add_mesh(parent, mesh, lamp_mat, Vector3(x, y, z))
+	var lamp := SceneKit.add_mesh(parent, mesh, lamp_mat, Vector3(x, y, z))
+	lamp.set_meta("night_light", true)
+	SceneKit.add_omni_light(lamp, Vector3.ZERO, Color("#ffb860"), 7.0, 0.0)
 	var hanger_mat: StandardMaterial3D = SceneKit.solid_material(Color("#3e2a1a"))
 	SceneKit.add_box(parent, Vector3(0.06, 0.6, 0.06), hanger_mat, Vector3(x, y + 0.55, z))
 	SceneKit.add_omni_light(parent, Vector3(x, y, z), Color("#ffb066"), 7.0, 1.4)

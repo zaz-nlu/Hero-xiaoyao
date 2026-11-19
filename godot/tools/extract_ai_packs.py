@@ -1,15 +1,18 @@
 """Slice the user's AI art packs into game-ready files.
 
-Usage (from the repo root):
-    python godot/tools/extract_ai_packs.py forest   # forest props/trees/herbs/chest/camp -> assets/ai/game
+Usage (from anywhere; paths are resolved from this script):
+    python godot/tools/extract_ai_packs.py forest   # forest props/trees/herbs/chest/camp
     python godot/tools/extract_ai_packs.py npc      # NPC portraits + 32x48 strips
 
-forest: reads assets/ai/raw_user/forest_pack/godot/assets/ai/forest/transparent/*.png (alpha cut-outs),
-        finds each connected object and saves it under assets/ai/game/ with a fixed name.
-npc:    reads assets/ai/raw_user/npc_pack/wuxia_npc_downloads/*.png (magenta background; big portrait on
-        the left + four pixel sprites front/back/left/right). Writes
-        assets/portraits/<id>.png and assets/ai/raw_user/npc_strips/<id>/<id>_idle_32x48_alpha.png
-        (128x48: front, back, left, right), which build_ai_sheets.py turns into walking sheets.
+Inputs live under art_source/inputs/, not the runtime assets folder.
+forest: reads art_source/inputs/forest/transparent/*.png (alpha cut-outs), finds each connected
+        object and writes the crops to godot/assets/scenery/<name>.png. Original textures are
+        read from art_source/inputs/forest/tex_*.png and written to godot/assets/textures/.
+npc:    reads art_source/inputs/npc_sheets/<id>_character_sheet.png (magenta background; big
+        portrait on the left + four pixel sprites front/back/left/right). Writes
+        godot/assets/portraits/<id>.png and
+        art_source/inputs/npc_strips/<id>_idle_32x48_alpha.png (128x48: front, back, left,
+        right), which build_ai_sheets.py turns into walking sheets.
 """
 import os
 import sys
@@ -20,12 +23,16 @@ import numpy as np
 from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ASSETS = os.path.normpath(os.path.join(HERE, "..", "assets"))
-RAW = os.path.join(ASSETS, "ai", "raw_user")
-GAME = os.path.join(ASSETS, "ai", "game")
+REPO = os.path.normpath(os.path.join(HERE, "..", ".."))
+ASSETS = os.path.join(REPO, "godot", "assets")
+RAW = os.path.join(REPO, "art_source", "inputs")
 
-FOREST_DIR = os.path.join(RAW, "forest_pack", "godot", "assets", "ai", "forest")
-NPC_DIR = os.path.join(RAW, "npc_pack", "wuxia_npc_downloads")
+SCENERY = os.path.join(ASSETS, "scenery")
+TEXTURES = os.path.join(ASSETS, "textures")
+PORTRAITS = os.path.join(ASSETS, "portraits")
+FOREST_DIR = os.path.join(RAW, "forest")
+NPC_SHEETS = os.path.join(RAW, "npc_sheets")
+NPC_STRIPS = os.path.join(RAW, "npc_strips")
 
 # sheet -> row-major names (rows are discovered by clustering on the object's vertical centre)
 FOREST_SHEETS = {
@@ -41,14 +48,7 @@ FOREST_SHEETS = {
 }
 FOREST_TEXTURES = ["tex_forest_floor", "tex_forest_path"]
 
-NPCS = {
-    "wuxia_npc_downloads/blacksmith_character_asset_sheet.png": "smith",
-    "wuxia_npc_downloads/hunter_character_sheet_with_pixel_sprites.png": "hunter",
-    "wuxia_npc_downloads/wuxia_fisherman_character_and_pixel_sprites.png": "fisherman",
-    "wuxia_npc_downloads/wuxia_peddler_sprite_collection.png": "peddler",
-    "wuxia_npc_downloads/wuxia_tavern_waiter_asset_sheet.png": "waiter",
-    "wuxia_npc_downloads/wuxia_townswoman_character_asset_sheet.png": "townswoman",
-}
+NPCS = ["smith", "hunter", "fisherman", "peddler", "waiter", "townswoman"]
 PORTRAIT_HEIGHT = 768
 CELL_W, CELL_H, SPRITE_H = 32, 48, 46
 
@@ -128,7 +128,8 @@ def trim(im, thresh=10):
 
 
 def do_forest():
-    os.makedirs(GAME, exist_ok=True)
+    os.makedirs(SCENERY, exist_ok=True)
+    os.makedirs(TEXTURES, exist_ok=True)
     for sheet, names in FOREST_SHEETS.items():
         im = Image.open(os.path.join(FOREST_DIR, "transparent", sheet + ".png")).convert("RGBA")
         mask = np.array(im.getchannel("A")) > 20
@@ -140,10 +141,12 @@ def do_forest():
             print("WARNING %s: found %d objects, expected %d" % (sheet, len(boxes), len(names)))
         for name, box in zip(names, boxes):
             piece = trim(despill(im.crop(box)))
-            piece.save(os.path.join(GAME, name + ".png"))
+            piece.save(os.path.join(SCENERY, name + ".png"))
             print("wrote", name, piece.size)
     for tex in FOREST_TEXTURES:
-        Image.open(os.path.join(FOREST_DIR, tex + ".png")).convert("RGB").save(os.path.join(GAME, tex + ".png"))
+        Image.open(os.path.join(FOREST_DIR, tex + ".png")).convert("RGB").save(
+            os.path.join(TEXTURES, tex + ".png")
+        )
         print("wrote", tex)
 
 
@@ -163,10 +166,10 @@ def sprite_cell(sprite):
 
 
 def do_npc():
-    strips_dir = os.path.join(RAW, "npc_strips")
-    portrait_dir = os.path.join(ASSETS, "portraits")
-    for rel, npc_id in NPCS.items():
-        im = Image.open(os.path.join(RAW, "npc_pack", rel)).convert("RGB")
+    os.makedirs(NPC_STRIPS, exist_ok=True)
+    os.makedirs(PORTRAITS, exist_ok=True)
+    for npc_id in NPCS:
+        im = Image.open(os.path.join(NPC_SHEETS, npc_id + "_character_sheet.png")).convert("RGB")
         keyed = key_magenta(im)
         mask = np.array(keyed.getchannel("A")) > 30
         boxes = components(mask, dilate=2)
@@ -178,14 +181,11 @@ def do_npc():
         portrait = trim(keyed.crop(big))
         scale = PORTRAIT_HEIGHT / portrait.height
         portrait = portrait.resize((round(portrait.width * scale), PORTRAIT_HEIGHT), Image.LANCZOS)
-        os.makedirs(portrait_dir, exist_ok=True)
-        portrait.save(os.path.join(portrait_dir, npc_id + ".png"))
+        portrait.save(os.path.join(PORTRAITS, npc_id + ".png"))
         strip = Image.new("RGBA", (CELL_W * 4, CELL_H), (0, 0, 0, 0))
         for i, box in enumerate(smalls[:4]):
             strip.paste(sprite_cell(keyed.crop(box)), (i * CELL_W, 0))
-        out_dir = os.path.join(strips_dir, npc_id)
-        os.makedirs(out_dir, exist_ok=True)
-        strip.save(os.path.join(out_dir, npc_id + "_idle_32x48_alpha.png"))
+        strip.save(os.path.join(NPC_STRIPS, npc_id + "_idle_32x48_alpha.png"))
         print("wrote", npc_id, "portrait", portrait.size)
 
 

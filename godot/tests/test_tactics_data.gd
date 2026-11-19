@@ -107,8 +107,8 @@ func test_stats_rules_boundaries() -> void:
 	assert_near(StatsRules.height_bonus(2, 0), 0.20)
 	assert_near(StatsRules.height_bonus(5, 0), 0.30, 0.0001, "height bonus is capped")
 	assert_near(StatsRules.height_bonus(0, 2), 0.0)
-	assert_near(StatsRules.facing_bonus("back"), 0.30)
-	assert_near(StatsRules.facing_bonus("side"), 0.15)
+	assert_near(StatsRules.facing_bonus("back"), 0.50)
+	assert_near(StatsRules.facing_bonus("side"), 0.20)
 	assert_near(StatsRules.facing_bonus("front"), 0.0)
 	assert_eq(StatsRules.React_SLACK, 5)
 

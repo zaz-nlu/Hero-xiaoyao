@@ -311,3 +311,42 @@ test('场景根绑定脚本不在同目录被拒绝', (t) => {
     'res://features/bar/bar.gd',
   );
 });
+
+test('addons 编辑器插件脚本允许，app import addons 被拒绝', (t) => {
+  const { dir, config } = makeFixture(t);
+  writeFixture(
+    dir,
+    'godot/addons/layout_editor/plugin.gd',
+    '@tool\nextends EditorPlugin\n' +
+      'const State = preload("res://addons/layout_editor/edit_state.gd")\n',
+  );
+  writeFixture(
+    dir,
+    'godot/addons/layout_editor/edit_state.gd',
+    '@tool\nextends RefCounted\n',
+  );
+  writeFixture(
+    dir,
+    'godot/addons/layout_editor/plugin.cfg',
+    '[plugin]\nname="Map"\nscript="plugin.gd"\n',
+  );
+
+  // 插件脚本不是生产脚本：不参与生产依赖/行数预算，但目录本身必须被允许。
+  const allowed = inspectProject(dir, config);
+  assert.deepEqual(allowed.violations, []);
+
+  // 生产脚本 import addons/ 仍然会被拒绝，editor 目录不能被当成运行时依赖。
+  writeFixture(
+    dir,
+    'godot/app/game.gd',
+    'extends Node\n' +
+      'const Plugin = preload("res://addons/layout_editor/plugin.gd")\n',
+  );
+  const rejected = inspectProject(dir, config);
+  assertViolation(
+    rejected,
+    'gd-outside-production-roots',
+    'godot/app/game.gd',
+    'res://addons/layout_editor/plugin.gd',
+  );
+});

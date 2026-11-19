@@ -67,6 +67,8 @@ func test_one_head_label_per_enemy() -> void:
 func test_debug_top_bar_is_hidden_in_game() -> void:
 	GameState.reset()
 	Engine.set_meta("skip_title", true)
+	# The TopBar node only exists on the legacy battle view.
+	Engine.set_meta("legacy_battle", true)
 	var game: Variant = load("res://app/game.gd").new()
 	game.show_town()
 	var town: Variant = game.current

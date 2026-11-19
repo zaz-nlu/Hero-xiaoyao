@@ -61,13 +61,20 @@ static func is_picked(entry: Dictionary) -> bool:
 	return flag != "" and GameState.has_flag(flag)
 
 
-static func spawn(root: Node3D, entry: Dictionary) -> Node3D:
-	return spawn_visual(root, entry, is_picked(entry))
+static func spawn(
+	root: Node3D, entry: Dictionary, ground_fn: Callable = Callable()
+) -> Node3D:
+	return spawn_visual(root, entry, is_picked(entry), ground_fn)
 
 
 # Visual-only spawn: never reads/writes GameState or Progression. Callers that
 # have their own collected-state source pass the answer explicitly.
-static func spawn_visual(root: Node3D, entry: Dictionary, collected: bool = false) -> Node3D:
+static func spawn_visual(
+	root: Node3D,
+	entry: Dictionary,
+	collected: bool = false,
+	ground_fn: Callable = Callable()
+) -> Node3D:
 	if root == null or entry.is_empty() or collected:
 		return null
 	var pos_value: Variant = entry.get("pos", Vector2.ZERO)
@@ -77,7 +84,10 @@ static func spawn_visual(root: Node3D, entry: Dictionary, collected: bool = fals
 	var height := float(entry.get("height", DEFAULT_HEIGHT))
 	var node := Node3D.new()
 	node.name = node_name(entry)
-	node.position = Vector3(pos.x, 0.0, pos.y)
+	var ground_y := 0.0
+	if ground_fn.is_valid():
+		ground_y = float(ground_fn.call(pos.x, pos.y))
+	node.position = Vector3(pos.x, ground_y, pos.y)
 	var sprite := _make_sprite(entry, height)
 	if sprite != null:
 		node.add_child(sprite)

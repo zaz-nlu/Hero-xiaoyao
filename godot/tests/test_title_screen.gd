@@ -176,8 +176,8 @@ func test_continue_loads_the_latest_save_and_position() -> void:
 	var game: Variant = _new_game_in_tree(dir)
 	game.start_new_game()
 	var town: Variant = game.current
-	town.player_pos = Vector2(7.0, 2.5)
-	town.player.position = Vector3(7.0, 0.0, 2.5)
+	town.player_pos = Vector2(7.0, -2.0)
+	town.player.position = Vector3(7.0, 0.0, -2.0)
 	GameState.set_flag("continue_flag")
 	assert_true(bool(game.save_to_slot("1")), "the current town state saves")
 	GameState.flags.erase("continue_flag")
@@ -191,7 +191,7 @@ func test_continue_loads_the_latest_save_and_position() -> void:
 	assert_true(GameState.has_flag("continue_flag"), "the saved state is restored")
 	var back: Variant = game.current
 	assert_true(
-		back.player_pos.distance_to(Vector2(7.0, 2.5)) < 0.01,
+		back.player_pos.distance_to(Vector2(7.0, -2.0)) < 0.01,
 		"the saved position is restored"
 	)
 	game.free()

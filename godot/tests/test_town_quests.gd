@@ -4,8 +4,8 @@ const GameState = preload("res://core/game_state.gd")
 const Progression = preload("res://core/progression.gd")
 const Quests = preload("res://core/quests.gd")
 
-const BUN_VENDOR_PLAYER_POS := Vector2(18.0, 2.4)
-const DISCIPLE_PLAYER_POS := Vector2(22.5, 2.8)
+const BUN_VENDOR_PLAYER_POS := Vector2(22.0, 9.8)
+const DISCIPLE_PLAYER_POS := Vector2(18.5, 9.6)
 
 var encounter_count: int = 0
 var encounter_args: Array = []
@@ -44,7 +44,7 @@ func _marker_text(town: Variant, npc_id: String) -> String:
 	var node: Node = _marker(town, npc_id)
 	if node == null:
 		return "<missing>"
-	return str(node.get("text"))
+	return str(node.get_meta("marker_text", ""))
 
 
 func test_bun_vendor_runs_the_herbs_quest() -> void:
@@ -53,7 +53,7 @@ func test_bun_vendor_runs_the_herbs_quest() -> void:
 	town.player_pos = BUN_VENDOR_PLAYER_POS
 	var marker: Node = _marker(town, "bun_vendor")
 	assert_true(marker != null, "the bun vendor has a quest marker node")
-	assert_eq(str(marker.get("text")), "!", "the marker offers the quest")
+	assert_eq(str(marker.get_meta("marker_text", "")), "!", "the marker offers the quest")
 	assert_true(bool(marker.get("visible")), "the available marker is visible")
 
 	assert_true(town.try_interact(), "the vendor starts the offer dialogue")

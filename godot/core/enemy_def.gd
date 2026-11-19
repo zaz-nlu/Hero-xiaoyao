@@ -18,6 +18,8 @@ var weak_moves: Array[String] = []
 var incorporeal: bool = false
 var ai: String = "rush"
 var move_override: int = -1
+# 显式弱点槽数；-1 表示按 tier 取 data/tactics_rules.json 的默认值。
+var weakness_slots: int = -1
 
 
 static func from_dict(d: Dictionary) -> RefCounted:
@@ -35,6 +37,7 @@ static func from_dict(d: Dictionary) -> RefCounted:
 	e.stun_turns = int(d.get("stun_turns", 0))
 	e.ai = str(d.get("ai", "rush"))
 	e.move_override = int(d.get("move", -1))
+	e.weakness_slots = int(d.get("weakness_slots", -1))
 
 	var parsed_moves: Array = []
 	var raw_moves = d.get("moves", [])

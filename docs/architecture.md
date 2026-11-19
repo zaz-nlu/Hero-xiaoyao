@@ -20,12 +20,14 @@
 | --- | --- |
 | `godot/app/` | 组合根与跨 feature 编排：`game.gd`、`scene_router.gd`、`battle_flow.gd`、`save_coordinator.gd`；`game.tscn` 是默认主场景 |
 | `godot/core/` | 规则、数值、状态、数据读取与存档；不得依赖场景/UI 类型 |
-| `godot/core/tactics/` | 战棋基础规则：网格、朝向、行动序、模式、地图读取、数值规则 |
+| `godot/core/tactics/` | 战棋规则：网格、朝向、行动序、射程图形、地图读取、数值规则（基础层）；`tactics_battle`（行动与结算）、`tactics_reaction`（防守资格与结算）、`tactics_counter_rules`（招式形态 + 几何的破招判定）、`tactics_forms`（招式/武学形态映射）、`tactics_rule_data`（`data/tactics_rules.json` 读取与校验）、`tactics_damage`、`tactics_unit`、`tactics_rules`（次数档位、剑意倍率）、`tactics_setup`（从地图与数据组装战斗）、`tactics_ai`（敌方 AI，含 `plan`）、`tactics_bot`（模拟用玩家 bot） |
+| `godot/core/town_phase.gd` | 小镇昼夜（day/dusk/night）光照预设与插值，纯数据 |
+| `godot/core/calendar.gd` | 最小日历：第几天 + 四时段，时段名与打坐消耗读 `data/calendar.json`，状态在 `GameState.day` / `phase` |
 | `godot/features/` | 按功能划分的场景、控制器与专属辅助 |
 | `godot/shared/` | 跨 feature 复用的资源、场景搭建、玩法、音频与 UI 组件 |
-| `godot/data/` | 内容 JSON：玩家、武学、敌人、遭遇、物品、任务、境界、熟练度、城镇/酒馆/森林、说话人、`dialogues/`、`sprites/`、`maps/` |
-| `godot/assets/` | 运行时原始素材与工具输入；说明见 [assets/README.md](../godot/assets/README.md) |
-| `godot/tools/` | 离线生成、调参、模拟与冒烟测试 |
+| `godot/data/` | 内容 JSON：玩家、武学、敌人、遭遇、物品、任务、境界、熟练度、城镇/酒馆/森林、说话人、战棋人物简介、`calendar.json`（时段名与打坐消耗）、`tactics_rules.json`（战棋形态与破招结果表）、`tactics_encounters.json`（战斗来源到战棋地图的映射）、`tactics_sfx.json`（战棋事件到打击音效/顿帧的映射）、`tactics_balance.json`（战棋平衡场景、属性预设与验收区间）、`dialogues/`、`sprites/`、`maps/` |
+| `godot/assets/` | 运行时原始素材（`scenery/`、`textures/`、`icons/`、`sprites/`、`portraits/`、`audio/`、`fonts/`、`ui/world/`）；工具输入在 `art_source/inputs/`，说明见 [assets/README.md](../godot/assets/README.md) |
+| `godot/tools/` | 离线生成、调参、模拟与冒烟测试；战棋平衡模拟 `tactics_sim.gd`（场景与验收区间读 `data/tactics_balance.json`） |
 | `godot/tests/` | 自动测试，`run_tests.gd` 自动发现 `test_*.gd` |
 
 ### features 细分
@@ -35,12 +37,14 @@
 | `features/battle/` | `battle_view`（界面壳）、`battle_session`（战斗会话）、`battle_stage`、`battle_hud`、`battle_action_bar`、`battle_enemy_heads`、`battle_effects`、`battle_dialogue_flow`、`battle_text`、`skill_slot` |
 | `features/character/` | `character_panel`（外壳、页签切换、左栏与淡入）、`character_attributes_tab`、`character_skills_tab`、`character_equipment_tab`、`character_points_tab`（页签内容与常驻状态）、`character_panel_data`（属性/武学数据读取）、`character_panel_style`（页签共用控件样式）、`status_overlay`（角色/任务面板与 toast） |
 | `features/forest/` | `forest` 控制器、`forest_patrol`、`forest_alert`、`forest_pickups` |
-| `features/pause/` | `pause_menu`（存档、读档、设置、返回标题、退出） |
+| `features/pause/` | `pause_menu`（存档、读档、设置、打坐、返回标题、退出）、`pause_menu_style`（菜单控件样式） |
 | `features/tavern/` | `tavern` 控制器、`tavern_npc_roster`、`tavern_story_director`、`tavern_prefight_show`、`tavern_furniture_system`、`tavern_state_animation` |
 | `features/title/` | `title_screen`（标题/读档/设置）、`title_cinematic`（分镜背景） |
 | `features/town/` | `town` 控制器与 `town.tscn` |
 
-`features/tactics/` 目前还不存在；它是新战棋界面的落点，不要把战棋 UI 塞进现有场景控制器。
+| `features/tactics/` | 战旗视图：`tactics_view` 控制器、`tactics_session`（游戏侧参数 → 战棋战斗、熟练度结算）、`tactics_game_bridge`（胜负担回 `battle_finished`、打击反馈接线）、`tactics_dialogue_flow`（胜利对话：遭遇的 `win` 对话播完再显示结算层）、`tactics_sfx`（事件 → 打击音效与顿帧，读 `data/tactics_sfx.json`）、`tactics_stage`（3D 舞台）与 `tactics_stage_camera`（相机取景）、`tactics_board`（2D 棋盘）、`tactics_panel`（底部技能条）、`tactics_turn_bar`、`tactics_unit_card`、`tactics_log_feed`、`tactics_bio_card`（人物介绍卡）、`tactics_reaction_menu`、`tactics_ui_style`（共用样式）、`tactics_sandbox`（独立运行入口）；人物简介在 `data/tactics_bios.json`；默认战斗入口已由 `scene_router` 接入，`legacy_battle` 元数据可回退旧战斗 |
+
+不要把战棋 UI 塞进现有场景控制器。
 
 ### shared 细分
 
@@ -48,10 +52,24 @@
 | --- | --- |
 | `shared/audio/` | `audio_manager`、`audio_loader`（直接解析 WAV 字节） |
 | `shared/gameplay/` | `player_motion`、`interaction`、`stealth`、`pickups` |
-| `shared/resources/` | `asset_paths`、`ai_assets`、`image_cache`、`sprite_sheet`、`town_data`、`forest_layout` |
+| `shared/resources/` | `asset_paths`、`ai_assets`、`image_cache`、`sprite_sheet`、`town_data`、`town_terraces`（台地高度与挡墙）、`forest_layout` |
 | `shared/scene/` | `scene_kit`、`texgen`、`character_sprite`、`world_camera` |
-| `shared/scenery/` | 小镇/酒馆/森林的搭建与视觉辅助，含 `backdrop_factory`、各场景 `*_backdrop_scene` |
+| `shared/scenery/` | 小镇/酒馆/森林的搭建与视觉辅助，含 `backdrop_factory`、各场景 `*_backdrop_scene`；`town/` 下有 `town_terraces_build`（台地）、`town_facades`（立面与门楣木匾）、`town_fonts`（毛笔字体）、`town_marker_icons`（任务标记徽章）、`town_sprite_props`（JSON 摆放任意素材图）、`town_border`（外围树林）、`town_phase_controller`（昼夜切换） |
 | `shared/ui/` | HUD 样式与基础组件、对话视图、图标映射、装饰面板、共享音频设置面板（`audio_settings_panel`） |
+
+### 放置速查（新增代码先查这张表）
+
+| 要做的事 | 放哪里 |
+| --- | --- |
+| 战斗/战棋的规则、公式、AI、模拟 bot | `core/tactics/`（不得依赖场景类型） |
+| 战旗界面 | `features/tactics/` |
+| 遭遇 → 战棋战斗的参数装配、战后熟练度 | `features/tactics/tactics_session.gd`；来源到地图的映射改 `data/tactics_encounters.json` |
+| 小镇布局（建筑、NPC、道具、台地、边界） | 改 `data/town.json`；大批量调整改 `godot/tools/gen_town_layout.py` 后重新生成 |
+| 小镇新的搭建能力（新种类的道具/地形/光照） | `shared/scenery/town/`，数据读取与几何数学放 `shared/resources/` |
+| 小镇控制器 `features/town/town.gd` | 行数预算内只做编排，**不要增行**；新逻辑放 shared 的新文件 |
+| 新素材 | 原始包放 `art_source/incoming/`，处理脚本放 `godot/tools/`，运行素材放 `godot/assets/` 对应目录并更新素材说明 |
+| 新坐标/数值 | 进 JSON，不写死在 `.gd` 里；测试里的坐标从 JSON 推算 |
+| 调参/模拟 | `godot/tools/` |
 
 ## 依赖方向
 
@@ -83,26 +101,35 @@ flowchart LR
 | 入口 | 自己持有/负责 | 已拆出的模块 |
 | --- | --- | --- |
 | `app/game.gd` | 组合根：overlay、audio、pause menu 的引用，toast 音效去重；对测试和旧调用点保留 facade 字段 | 场景路由 → `scene_router`；存档/自动存档/游玩时长 → `save_coordinator`；战斗进出 → `battle_flow` |
-| `app/scene_router.gd` | `current`、`current_kind`；场景创建、卸载、路由和每类场景的音乐/环境音/自动存档表现 | 各 feature 场景 |
+| `app/scene_router.gd` | `current`、`current_kind`；场景创建、卸载、路由和每类场景的音乐/环境音/自动存档表现；战斗默认进入 `features/tactics`，`legacy_battle` 元数据切回旧战斗 | 各 feature 场景 |
 | `app/save_coordinator.gd` | `save_dir`、`profile_path`、`loading_slot`、自动存档/档案轮询计时器；存档策略与位置格式 | 落盘 → `core/save_system.gd`；持久状态 → `core/game_state.gd` |
-| `app/battle_flow.gd` | 当前战斗的敌人/数量/来源、Boss 判定、战后返回场景与任务/flag 更新 | 战斗界面 → `features/battle/*` |
+| `app/battle_flow.gd` | 当前战斗的敌人/数量/来源、Boss 判定、战后返回场景与任务/flag 更新 | 战斗界面 → `scene_router`（默认 `features/tactics`，`legacy_battle` 切 `features/battle`） |
 | `features/town/town.gd` | 城镇控制器：玩家与位置、NPC 对话流程、交互、遭遇请求、拾取物 | 数据/名册 → `shared/resources/town_data.gd`；场景搭建 → `shared/scenery/town/*` |
 | `features/tavern/tavern.gd` | 酒馆控制器：玩家、房间、交互、当前 NPC、前戏/剧情状态入口 | 家具 → `tavern_furniture_system`；NPC → `tavern_npc_roster`；前戏 → `tavern_prefight_show`；剧情 → `tavern_story_director`；状态动画 → `tavern_state_animation` |
 | `features/forest/forest.gd` | 森林控制器：玩家与位置、对话、交互、遭遇请求 | 布局 → `shared/resources/forest_layout.gd`；视觉 → `shared/scenery/forest/*`；巡逻/警戒/拾取 → `features/forest/*` |
 | `features/battle/battle_view.gd` | 战斗界面壳与对测试/旧调用点的字段转发 | 战斗会话与持久结算 → `battle_session`；HUD/动作条/敌人头像/特效/对话/舞台各自独立 |
 | `features/character/character_panel.gd` | 角色面板外壳：整体遮罩、页签切换与淡入、左栏、对外 `refresh()`/`select_tab()`/`advance()` 与 `tab_index`、`pending_points` 兼容字段 | 四页签内容与常驻状态（含未提交加点、选中武学）→ `character_attributes_tab`、`character_skills_tab`、`character_equipment_tab`、`character_points_tab`；数据/样式 → `character_panel_data`、`character_panel_style` |
 | `features/character/status_overlay.gd` | 角色/任务面板开关与 toast | 角色面板 → `character_panel` |
-| `features/pause/pause_menu.gd` | 暂停菜单、存读档页 | 设置页 → `shared/ui/audio_settings_panel`；存档读写 → `core/save_system.gd` |
+| `features/pause/pause_menu.gd` | 暂停菜单、存读档页、打坐入口（可用性由 `app/game.gd` 注入） | 设置页 → `shared/ui/audio_settings_panel`；存档读写 → `core/save_system.gd`；控件样式 → `pause_menu_style` |
 | `features/title/title_screen.gd` | 标题页、存档槽与信号 | 设置页 → `shared/ui/audio_settings_panel`；3D 分镜 → `title_cinematic` |
-| `core/game_state.gd` | 全局持久状态：flags、背包、装备、任务、境界、熟练度、游玩时长等，`to_dict()` / `from_dict()` | 文件落盘 → `save_system` |
+| `core/game_state.gd` | 全局持久状态：flags、背包、装备、任务、境界、熟练度、游玩时长、跨战斗内力剩余（`neili_left`，`-1` = 未记录 = 满）等，`to_dict()` / `from_dict()` | 文件落盘 → `save_system` |
+
+内力跨战斗：`GameState.neili_left` 由战棋在 `features/tactics/tactics_session.gd` 的
+`build()` 读入（上限走 `core/tactics/tactics_energy.gd` 的 `max_neili_for()`），
+并在 `settle()`（胜利）与 `settle_defeat()`（战败，按 `data/tactics_rules.json` 的
+`energy.defeat_neili_floor_pct` 保底）写回。沙盒与模拟器路径不读写它；紫气每场按 JSON 初值重置。
+
+内力恢复手段：打坐走 `Progression.meditate()`（按 `data/calendar.json` 用时段换内力，
+入口在暂停菜单，可用性由 `app/game.gd` 的 `can_meditate()` 判断）；回气丹等带 `restore` 的
+丹药走 `Progression.use_restore_item()`，角色面板装备页的“服用”按钮会调用它。
 
 原则：状态属于真正使用它的模块。控制器只编排和转发信号，不把控制器当作所有状态的万能 host。
 
 ## 数据、素材与测试
 
 - 数据加载入口：`core/data_loader.gd` 集中常用 JSON 路径和解析；内容 JSON 只放内容，不放逻辑。
-- 运行素材路径入口：`shared/resources/asset_paths.gd`（`AI_GAME`、`SPRITES`、`PORTRAITS`、`AUDIO`）。
-  `shared/resources/ai_assets.gd` 读 `ai/game/`，`shared/resources/image_cache.gd` 读立绘/图集，
+- 运行素材路径入口：`shared/resources/asset_paths.gd`（`SCENERY`、`TEXTURES`、`ICONS`、`SPRITES`、`PORTRAITS`、`AUDIO` 与 `art_dir()`）。
+  `shared/resources/ai_assets.gd` 按 `icon_` / `tex_` 前缀读 `icons/`、`textures/`，其余读 `scenery/`；`shared/resources/image_cache.gd` 读立绘/图集，
   `shared/audio/audio_loader.gd` 读 WAV，`shared/ui/icon_lib.gd` 映射界面图标。
 - 运行素材没有经过 Godot 导入，现有代码用 `Image.load_from_file` / `FileAccess` 直接读原始文件；
   不要擅自改成 `load()` / `preload()`。
@@ -125,13 +152,15 @@ flowchart LR
 2. 用 `core/tactics/map_loader.gd` 的 `load_map()` / `parse_map()` 读取；校验错误要向上返回，不要静默。
 3. 战棋规则放 `core/tactics/`，界面放 `features/tactics/`，地图数据放 `data/maps/`。
 4. 在 `godot/tests/` 增加地图解析/规则测试。
+5. 探索地图（`data/layouts/`）用编辑器插件“地图工坊”可视化编辑，启用、搭建紫霞派与试跑说明见
+   [map-editor.md](map-editor.md)。
 
 ### 新增素材
 
-1. 运行素材放 `godot/assets/` 的对应目录：`ai/game/`、`sprites/`、`portraits/`、`audio/`。
+1. 运行素材放 `godot/assets/` 的对应目录：`scenery/`、`textures/`、`icons/`、`sprites/`、`portraits/`、`audio/`。
 2. 文件名用 snake_case；路径优先收敛到 `shared/resources/asset_paths.gd`。
 3. 图标遵循 `shared/ui/icon_lib.gd` 的命名与 `ITEM_FILES` 映射；角色图集/立绘经 `image_cache`。
-4. 不改 `godot/assets/ai/raw_user/`、`npc_six_preview.jpg` 等工具输入的位置；改名/移动前按
+4. 生成工具的原图/中间产物放 `art_source/inputs/`；改名/移动前按
    [assets/README.md](../godot/assets/README.md) 检查动态加载、JSON、工具和测试。
 5. 涉及存在性/读取的素材，补 `godot/tests/` 中的测试。
 

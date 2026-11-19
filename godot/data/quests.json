@@ -15,6 +15,9 @@
 		"rewards": {
 			"stats": {
 				"recovery": 2
+			},
+			"items": {
+				"huiqi_pill": 1
 			}
 		},
 		"dialogue": {

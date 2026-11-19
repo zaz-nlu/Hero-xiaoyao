@@ -2,13 +2,16 @@
 round gold-ringed style as the AI martial icon pack.
 
 The gold ring is copied from icon_martial_taiji.png; the inside is drawn here
-with PIL at 4x supersampling. Run from the godot/ directory:
-    python3 tools/make_special_icons.py
+with PIL at 4x supersampling. Run from anywhere:
+    python3 godot/tools/make_special_icons.py
 """
 import math
+import os
+
 from PIL import Image, ImageDraw, ImageFilter
 
-GAME = "assets/ai/game/"
+HERE = os.path.dirname(os.path.abspath(__file__))
+GAME = os.path.normpath(os.path.join(HERE, "..", "assets", "icons"))
 SIZE = 96
 SS = 4
 CENTER = SIZE * SS / 2.0
@@ -120,7 +123,7 @@ def paint_foresight():
 
 def finish(inner_big, name):
     inner = inner_big.resize((SIZE, SIZE), Image.LANCZOS)
-    ring_src = Image.open(GAME + "icon_martial_taiji.png").convert("RGBA")
+    ring_src = Image.open(os.path.join(GAME, "icon_martial_taiji.png")).convert("RGBA")
     out = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
     ip, rp, op = inner.load(), ring_src.load(), out.load()
     cen = (SIZE - 1) / 2.0
@@ -139,8 +142,9 @@ def finish(inner_big, name):
                     op[x, y] = rp[x, y]
             else:
                 op[x, y] = ip[x, y]
-    out.save(GAME + name)
-    print("wrote", GAME + name)
+    out_path = os.path.join(GAME, name)
+    out.save(out_path)
+    print("wrote", out_path)
 
 
 if __name__ == "__main__":

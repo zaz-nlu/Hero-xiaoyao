@@ -243,7 +243,7 @@ func test_tavern_decor_and_rug_states() -> void:
 			"LightShaft_%d exists" % i
 		)
 	assert_true(tavern.find_child("Dust", true, false) != null, "dust particles exist")
-	if FileAccess.file_exists("res://assets/ai/game/prop_tavern_sign.png"):
+	if FileAccess.file_exists("res://assets/scenery/prop_tavern_sign.png"):
 		assert_true(tavern.find_child("WallSign", true, false) != null, "the wall sign exists")
 	var decor_count: int = _decor_node_count(tavern)
 	tavern.set_state("brawl", false)

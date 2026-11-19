@@ -11,7 +11,6 @@ const SPEAKERS_PATH := DataLoader.SPEAKERS_PATH
 const CAMERA_OFFSET := Vector3(0.0, 16.7, 37.5)
 # Look slightly north of the player so the characters sit in the lower half of the frame.
 const LOOK_AHEAD := Vector3(0.0, 1.0, -4.0)
-const FOREST_EXIT_RECT := Rect2(-4.0, 20.0, 8.0, 1.8)
 const DEFEATED_NPC_IDS: Array[String] = ["ma_youwei", "bandit_1", "bandit_2"]
 
 const TownData = preload("res://shared/resources/town_data.gd")
@@ -117,7 +116,7 @@ func build() -> void:
 	var buildings := TownBuildings.new()
 	var tavern_facade: bool = buildings.build_buildings(self, data, _art)
 	_props.build_props(self, data, _art, tavern_facade)
-	_props.build_forest_sign(self, _art)
+	_props.build_forest_sign(self, _art, data)
 	_ground.build_stairs(self, data, _art)
 	_ground.build_backdrop(self)
 	_ground.build_lighting(self)
@@ -155,8 +154,8 @@ func _build_camera() -> void:
 
 func update_camera(delta: float) -> void:
 	_focus = WorldCamera.update(
-		camera, follow_target, _focus, CAMERA_OFFSET, LOOK_AHEAD, delta, _spawn_position()
-	)
+		camera, follow_target, _focus, CAMERA_OFFSET, LOOK_AHEAD, delta,
+		_spawn_position(), TownData.camera_clamp(data))
 
 
 func snap_camera() -> void:
@@ -179,7 +178,7 @@ func _build_npcs() -> void:
 		skip_ids = DEFEATED_NPC_IDS
 	var npcs: Array = data.get("npcs", [])
 	_roster.build(
-		self, npcs, bounds_rect, blockers, skip_ids, Callable(self, "_marker_info")
+		self, npcs, bounds_rect, blockers, skip_ids, Callable(self, "_marker_info"), data
 	)
 
 
@@ -264,7 +263,7 @@ func _build_pickups() -> void:
 		if not (pickup_value is Dictionary):
 			continue
 		var pickup: Dictionary = pickup_value
-		Pickups.spawn(root, pickup)
+		Pickups.spawn(root, pickup, func(x: float, z: float) -> float: return TownData.ground_height(data, x, z))
 
 
 func _nearest_pickup() -> Dictionary:
@@ -468,7 +467,7 @@ func _try_enter_tavern() -> bool:
 
 
 func is_in_forest_exit() -> bool:
-	return FOREST_EXIT_RECT.has_point(player_pos)
+	return TownData.forest_exit_rect(data).has_point(player_pos)
 
 
 func _try_enter_forest() -> bool:

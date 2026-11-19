@@ -1,0 +1,156 @@
+{
+  "game": "HD-2D Wuxia RPG",
+  "requested_file_count": 28,
+  "main_path": "godot/assets/ai/ui/",
+  "format": "RGBA PNG, nearest-neighbor game-size exports",
+  "assets": {
+    "banner_break.png": [
+      320,
+      96
+    ],
+    "banner_perfect.png": [
+      320,
+      96
+    ],
+    "banner_weak.png": [
+      320,
+      96
+    ],
+    "bar_hp.png": [
+      256,
+      24
+    ],
+    "bar_hp_bg.png": [
+      256,
+      24
+    ],
+    "bar_toughness.png": [
+      256,
+      16
+    ],
+    "energy_neili.png": [
+      64,
+      64
+    ],
+    "energy_xianqi.png": [
+      64,
+      64
+    ],
+    "energy_ziqi.png": [
+      64,
+      64
+    ],
+    "form_chop.png": [
+      64,
+      64
+    ],
+    "form_point.png": [
+      64,
+      64
+    ],
+    "form_sweep.png": [
+      64,
+      64
+    ],
+    "form_thrust.png": [
+      64,
+      64
+    ],
+    "panel_frame.png": [
+      512,
+      256
+    ],
+    "panel_frame_wood_filled.png": [
+      512,
+      256
+    ],
+    "pip_jianyi.png": [
+      24,
+      24
+    ],
+    "pip_jianyi_empty.png": [
+      24,
+      24
+    ],
+    "pip_toughness.png": [
+      24,
+      24
+    ],
+    "pip_toughness_empty.png": [
+      24,
+      24
+    ],
+    "release.png": [
+      64,
+      64
+    ],
+    "skill_button.png": [
+      128,
+      128
+    ],
+    "skill_button_disabled.png": [
+      128,
+      128
+    ],
+    "skill_button_selected.png": [
+      128,
+      128
+    ],
+    "turn_card.png": [
+      112,
+      128
+    ],
+    "turn_card_active.png": [
+      112,
+      128
+    ],
+    "unit_card.png": [
+      520,
+      320
+    ],
+    "weak_neili.png": [
+      64,
+      64
+    ],
+    "weak_xianqi.png": [
+      64,
+      64
+    ],
+    "weak_ziqi.png": [
+      64,
+      64
+    ]
+  },
+  "recommended_nine_patch_margins_px": {
+    "panel_frame.png": {
+      "left": 30,
+      "right": 30,
+      "top": 24,
+      "bottom": 24
+    },
+    "unit_card.png": {
+      "left": 38,
+      "right": 38,
+      "top": 30,
+      "bottom": 30
+    },
+    "turn_card.png": {
+      "left": 20,
+      "right": 20,
+      "top": 22,
+      "bottom": 22
+    },
+    "skill_button.png": {
+      "left": 18,
+      "right": 18,
+      "top": 18,
+      "bottom": 18
+    }
+  },
+  "notes": [
+    "Hand-painted image sources are approximate; actual stretch margins should be tested.",
+    "The 21 icons/bars/banners were cropped from a generated contact sheet; off-white checker pixels removed by color mask.",
+    "Some icons may need pixel-level cleanup at 24x24 scale; review in-engine.",
+    "The three banner assets intentionally contain no text."
+  ]
+}

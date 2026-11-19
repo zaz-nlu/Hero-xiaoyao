@@ -1,12 +1,15 @@
 extends "res://tests/test_case.gd"
 
 const GameState = preload("res://core/game_state.gd")
+const TownData = preload("res://shared/resources/town_data.gd")
 
 var battle_finished_count: int = 0
 
 
 func _new_game() -> Variant:
 	Engine.set_meta("skip_title", true)
+	# This suite asserts the legacy battle contract; the tactics flow has its own tests.
+	Engine.set_meta("legacy_battle", true)
 	var game: Variant = load("res://app/game.gd").new()
 	game.show_town()
 	return game
@@ -65,7 +68,7 @@ func test_town_encounter_still_returns_to_town() -> void:
 	GameState.reset()
 	var game: Variant = _new_game()
 	var town: Variant = game.current
-	town.player_pos = Vector2(7.0, 2.5)
+	town.player_pos = Vector2(7.0, -2.0)
 	town.encounter_requested.emit("bandit", 1, false)
 	var view: Variant = game.current
 	view.battle.player.hp = 0
@@ -73,7 +76,7 @@ func test_town_encounter_still_returns_to_town() -> void:
 	view.press_return()
 	assert_eq(str(game.current_kind), "town", "a town encounter still returns to the town")
 	var back: Variant = game.current
-	assert_eq(back.player_pos, Vector2(7.0, 2.5), "the player returns to the saved position")
+	assert_eq(back.player_pos, Vector2(7.0, -2.0), "the player returns to the saved position")
 	game.free()
 
 
@@ -177,8 +180,9 @@ func test_town_forest_round_trip() -> void:
 	forest.exit_requested.emit("town")
 	assert_eq(str(game.current_kind), "town", "leaving the forest returns to the town")
 	var back: Variant = game.current
+	var expected_return: Vector2 = TownData.forest_return(back.data)
 	assert_true(
-		back.player_pos.distance_to(Vector2(0.0, 19.2)) < 0.01,
+		back.player_pos.distance_to(expected_return) < 0.01,
 		"the player comes back to the spot in front of the forest exit"
 	)
 	game.free()

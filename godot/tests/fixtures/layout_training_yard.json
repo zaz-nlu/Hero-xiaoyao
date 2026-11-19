@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "id": "training_yard",
+  "name": "测试练功场",
+  "width": 12,
+  "depth": 10,
+  "ground": "grass",
+  "tiles": [
+    {"asset": "stone", "x": 4, "z": 6},
+    {"asset": "stone", "x": 5, "z": 6},
+    {"asset": "stone", "x": 6, "z": 6},
+    {"asset": "stone", "x": 7, "z": 6},
+    {"asset": "stone", "x": 4, "z": 7},
+    {"asset": "stone", "x": 5, "z": 7},
+    {"asset": "stone", "x": 6, "z": 7},
+    {"asset": "stone", "x": 7, "z": 7}
+  ],
+  "objects": [
+    {"asset": "main_hall", "x": 3, "z": 1, "turn": 0, "label": ""},
+    {"asset": "practice_dummy", "x": 1, "z": 1, "turn": 1, "label": ""},
+    {"asset": "pine_tree", "x": 10, "z": 8, "turn": 0, "label": ""},
+    {"asset": "sect_gate", "x": 4, "z": 5, "turn": 0, "label": ""},
+    {"asset": "disciple", "x": 5, "z": 6, "turn": 0, "label": "守门弟子"},
+    {"asset": "sect_exit", "x": 4, "z": 8, "turn": 0, "label": "下山"}
+  ],
+  "spawn": {"x": 14, "z": 16},
+  "regions": [
+    {"name": "前院", "x": 3, "z": 5, "width": 6, "depth": 4}
+  ]
+}

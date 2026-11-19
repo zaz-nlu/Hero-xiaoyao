@@ -158,6 +158,9 @@ function checkDirectories(root, godotRoot, config, addViolation) {
     'tools',
     'data',
     'assets',
+    // Godot 编辑器插件按引擎约定放在 addons/；与 tools/ 一样不是游戏生产脚本，
+    // 不参与生产依赖与行数预算扫描。
+    'addons',
   ]);
   const legacyTopDirs = new Set(
     config.oldRoots.map((prefix) => prefix.slice('res://'.length).replace(/\/$/, '')),

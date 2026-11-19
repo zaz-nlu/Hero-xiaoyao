@@ -37,7 +37,7 @@ func test_town_save_and_load_restores_state_and_position() -> void:
 	var game: Variant = _new_game(dir)
 	game.show_town()
 	var town: Variant = game.current
-	town.player_pos = Vector2(7.0, 2.5)
+	town.player_pos = Vector2(7.0, -2.0)
 	GameState.stat_bonus["power"] = 2
 	GameState.unspent_points = 1
 	GameState.set_flag("saved_in_town")
@@ -58,7 +58,7 @@ func test_town_save_and_load_restores_state_and_position() -> void:
 	assert_eq(str(game.current_kind), "town", "loading a town save returns to the town")
 	var back: Variant = game.current
 	assert_true(
-		back.player_pos.distance_to(Vector2(7.0, 2.5)) < 0.01,
+		back.player_pos.distance_to(Vector2(7.0, -2.0)) < 0.01,
 		"the player position is restored"
 	)
 	game.free()

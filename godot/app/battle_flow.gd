@@ -16,6 +16,8 @@ var _audio: Variant = null
 var _battle_enemy: String = ""
 var _battle_count: int = 0
 var _battle_origin: String = ""
+var _layout_return_id: String = ""
+var _layout_return_pos: Variant = null
 
 
 func _init(router: Variant) -> void:
@@ -42,6 +44,13 @@ func record_encounter_origin(scene: Node, kind: String) -> void:
 			GameState.forest_return_pos = origin.player_pos
 			_battle_origin = "forest"
 			GameState.battle_backdrop = "forest"
+		"layout":
+			# 正式布局战斗：记住地图 ID 与合法返回位置，打完回到同一张地图。
+			_layout_return_id = str(origin.call("document_id"))
+			var layout_pos: Variant = origin.get("player_pos")
+			_layout_return_pos = layout_pos if layout_pos is Vector2 else null
+			_battle_origin = "layout"
+			GameState.battle_backdrop = "town"
 
 
 func show_battle(
@@ -82,7 +91,16 @@ func _on_battle_finished(result: String) -> void:
 	_battle_origin = ""
 	GameState.battle_backdrop = "town"
 	GameState.pending_forest_encounter = null
-	if origin == "forest":
+	if origin == "layout":
+		var return_id := _layout_return_id
+		var return_pos: Variant = _layout_return_pos
+		_layout_return_id = ""
+		_layout_return_pos = null
+		# 返回位置由 LayoutWalk 校验；进入圈在返回时先视为已在圈内，不会立即重触发。
+		var shown: bool = _router.show_layout(_audio, return_id, return_pos)
+		if not shown:
+			_router.show_town(_audio)
+	elif origin == "forest":
 		if result != "won":
 			# A loss drops the player back at the forest spawn; the patrol resets.
 			GameState.forest_return_pos = null

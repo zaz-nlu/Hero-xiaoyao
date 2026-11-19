@@ -17,6 +17,8 @@ func _new_tavern() -> Variant:
 
 func _new_game() -> Variant:
 	Engine.set_meta("skip_title", true)
+	# The return/aftermath assertions inspect the legacy battle view.
+	Engine.set_meta("legacy_battle", true)
 	var game: Variant = load("res://app/game.gd").new()
 	game.show_town()
 	return game

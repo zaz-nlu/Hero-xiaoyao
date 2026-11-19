@@ -1,0 +1,145 @@
+{
+	"sheets": {
+		"vfx_slash": 3,
+		"vfx_thrust_sweep": 2,
+		"vfx_combo": 2,
+		"vfx_heavy_charge": 2,
+		"vfx_projectile": 3,
+		"vfx_counter": 3,
+		"vfx_taiji_parry": 2,
+		"vfx_jianyi": 3,
+		"vfx_hit": 2,
+		"vfx_stun": 2,
+		"vfx_support": 3,
+		"vfx_dust": 2
+	},
+	"martials": {
+		"basic_sword": {
+			"cast": {"sheet": "vfx_slash", "row": 0, "at": "target", "scale": 2.2, "fps": 16, "tint": "#ffffff"},
+			"hit": {"sheet": "vfx_hit", "row": 0, "scale": 1.6}
+		},
+		"parry": {
+			"cast": {"sheet": "vfx_taiji_parry", "row": 1, "at": "target", "scale": 1.9, "fps": 16, "tint": "#cfe6ff"},
+			"hit": {"sheet": "vfx_hit", "row": 0, "scale": 1.4}
+		},
+		"sidestep": {
+			"cast": {"sheet": "vfx_dust", "row": 0, "at": "attacker", "scale": 1.2, "fps": 18, "tint": "#e6ecff"},
+			"hit": {"sheet": "vfx_hit", "row": 0, "scale": 1.3}
+		},
+		"taiji": {
+			"cast": {"sheet": "vfx_taiji_parry", "row": 0, "at": "target", "scale": 2.0, "fps": 14, "tint": "#a8e8ff"},
+			"hit": {"sheet": "vfx_hit", "row": 0, "scale": 1.4}
+		},
+		"qingyun": {
+			"cast": {"sheet": "vfx_thrust_sweep", "row": 0, "at": "line", "scale": 2.0, "fps": 18, "tint": "#d8f2ff", "step_delay": 0.04},
+			"hit": {"sheet": "vfx_hit", "row": 0, "scale": 1.5}
+		},
+		"huifeng": {
+			"cast": {"sheet": "vfx_thrust_sweep", "row": 1, "at": "target", "scale": 2.6, "fps": 18, "tint": "#8ef0b0"},
+			"hit": {"sheet": "vfx_hit", "row": 0, "scale": 1.5}
+		},
+		"lianhuan": {
+			"cast": [
+				{"sheet": "vfx_combo", "row": 0, "at": "target", "scale": 2.0, "fps": 16, "tint": "#ffffff"},
+				{"sheet": "vfx_combo", "row": 1, "at": "target", "scale": 2.0, "fps": 16, "tint": "#ffffff", "delay": 0.12}
+			],
+			"hit": {"sheet": "vfx_hit", "row": 0, "scale": 1.5}
+		},
+		"duanshi": {
+			"cast": [
+				{"sheet": "vfx_heavy_charge", "row": 0, "at": "target", "scale": 2.4, "fps": 14, "tint": "#ff7a5c"},
+				{"sheet": "vfx_hit", "row": 1, "at": "target", "scale": 2.0, "fps": 16, "tint": "#ffd8c0", "delay": 0.16}
+			],
+			"hit": {"sheet": "vfx_hit", "row": 1, "scale": 2.0}
+		},
+		"liuxing": {
+			"cast": {"sheet": "vfx_projectile", "row": 0, "at": "projectile", "scale": 1.4, "fps": 18, "tint": "#ffe08a", "flight": 0.3},
+			"hit": {"sheet": "vfx_hit", "row": 0, "scale": 1.8}
+		},
+		"jueshi": {
+			"cast": [
+				{"sheet": "vfx_slash", "row": 2, "at": "line", "scale": 2.6, "fps": 18, "tint": "#ffffff", "step_delay": 0.04},
+				{"sheet": "vfx_jianyi", "row": 0, "at": "line", "scale": 2.2, "fps": 16, "tint": "#d8b8ff", "step_delay": 0.04, "delay": 0.08}
+			],
+			"hit": {"sheet": "vfx_hit", "row": 0, "scale": 1.8}
+		}
+	},
+	"enemy_moves": {
+		"bandit_sweep": {
+			"cast": {"sheet": "vfx_slash", "row": 1, "at": "target", "scale": 2.0, "fps": 16, "tint": "#ffd0b0"},
+			"hit": {"sheet": "vfx_hit", "row": 0, "scale": 1.4}
+		},
+		"bandit_heavy": {
+			"cast": {"sheet": "vfx_heavy_charge", "row": 0, "at": "target", "scale": 2.2, "fps": 14, "tint": "#ff6a4a"},
+			"hit": {"sheet": "vfx_hit", "row": 1, "scale": 1.8}
+		},
+		"kaishan": {
+			"cast": {"sheet": "vfx_heavy_charge", "row": 0, "at": "target", "scale": 2.4, "fps": 14, "tint": "#ff6a4a"},
+			"hit": {"sheet": "vfx_hit", "row": 1, "scale": 1.8}
+		},
+		"luandao": {
+			"cast": {"sheet": "vfx_slash", "row": 1, "at": "target", "scale": 2.2, "fps": 16, "tint": "#ffb890"},
+			"hit": {"sheet": "vfx_hit", "row": 0, "scale": 1.5}
+		},
+		"cihou": {
+			"cast": {"sheet": "vfx_thrust_sweep", "row": 0, "at": "target", "scale": 1.9, "fps": 18, "tint": "#ffe0c0"},
+			"hit": {"sheet": "vfx_hit", "row": 0, "scale": 1.5}
+		},
+		"scout_thrust": {
+			"cast": {"sheet": "vfx_thrust_sweep", "row": 0, "at": "target", "scale": 1.7, "fps": 18, "tint": "#ffe0c0"},
+			"hit": {"sheet": "vfx_hit", "row": 0, "scale": 1.4}
+		},
+		"scout_dart": {
+			"cast": {"sheet": "vfx_projectile", "row": 0, "at": "projectile", "scale": 1.2, "fps": 18, "tint": "#ffe08a", "flight": 0.3},
+			"hit": {"sheet": "vfx_hit", "row": 0, "scale": 1.6}
+		},
+		"disciple_thrust": {
+			"cast": {"sheet": "vfx_thrust_sweep", "row": 0, "at": "target", "scale": 1.7, "fps": 18, "tint": "#e8d8ff"},
+			"hit": {"sheet": "vfx_hit", "row": 0, "scale": 1.4}
+		},
+		"disciple_sweep": {
+			"cast": {"sheet": "vfx_slash", "row": 1, "at": "target", "scale": 1.9, "fps": 16, "tint": "#e8d8ff"},
+			"hit": {"sheet": "vfx_hit", "row": 0, "scale": 1.4}
+		},
+		"heavy": {
+			"cast": {"sheet": "vfx_heavy_charge", "row": 0, "at": "target", "scale": 2.2, "fps": 14, "tint": "#ff6a4a"},
+			"hit": {"sheet": "vfx_hit", "row": 1, "scale": 1.8}
+		},
+		"sweep": {
+			"cast": {"sheet": "vfx_slash", "row": 1, "at": "target", "scale": 2.0, "fps": 16, "tint": "#ffd0b0"},
+			"hit": {"sheet": "vfx_hit", "row": 0, "scale": 1.4}
+		},
+		"thrust": {
+			"cast": {"sheet": "vfx_thrust_sweep", "row": 0, "at": "target", "scale": 1.8, "fps": 18, "tint": "#ffe0c0"},
+			"hit": {"sheet": "vfx_hit", "row": 0, "scale": 1.4}
+		},
+		"ranged": {
+			"cast": {"sheet": "vfx_projectile", "row": 0, "at": "projectile", "scale": 1.2, "fps": 18, "tint": "#ffe08a", "flight": 0.3},
+			"hit": {"sheet": "vfx_hit", "row": 0, "scale": 1.6}
+		},
+		"default": {
+			"cast": {"sheet": "vfx_slash", "row": 0, "at": "target", "scale": 2.0, "fps": 16, "tint": "#ffffff"},
+			"hit": {"sheet": "vfx_hit", "row": 0, "scale": 1.5}
+		}
+	},
+	"events": {
+		"counter_barely": {"sheet": "vfx_counter", "row": 1, "at": "defender", "scale": 1.8, "fps": 16, "tint": "#7fb8ff"},
+		"counter_advantage": {"sheet": "vfx_counter", "row": 0, "at": "defender", "scale": 2.0, "fps": 16, "tint": "#ffffff"},
+		"counter_perfect": [
+			{"sheet": "vfx_counter", "row": 2, "at": "defender", "scale": 2.2, "fps": 16, "tint": "#ffd24a"},
+			{"sheet": "vfx_taiji_parry", "row": 0, "at": "defender", "scale": 2.0, "fps": 16, "tint": "#ffe6a0", "delay": 0.06}
+		],
+		"stun": {"sheet": "vfx_stun", "row": 0, "at": "unit", "scale": 1.4, "fps": 14, "tint": "#cfe0ff"},
+		"stun_broken": {"sheet": "vfx_stun", "row": 1, "at": "unit", "scale": 1.6, "fps": 14, "tint": "#ffe0a0"},
+		"jianyi": [
+			{"sheet": "vfx_jianyi", "row": 1, "at": "target", "scale": 2.0, "fps": 16, "tint": "#c9a6ff"},
+			{"sheet": "vfx_jianyi", "row": 2, "at": "target", "scale": 2.2, "fps": 16, "tint": "#e8d0ff", "delay": 0.12}
+		],
+		"dead": {"sheet": "vfx_dust", "row": 1, "at": "unit", "scale": 1.8, "fps": 14, "tint": "#ffffff"},
+		"move_dust": {"sheet": "vfx_dust", "row": 0, "at": "to", "scale": 0.7, "fps": 18, "tint": "#d8c8b0"}
+	},
+	"default": {
+		"cast": {"sheet": "vfx_slash", "row": 0, "at": "target", "scale": 2.0, "fps": 16, "tint": "#ffffff"},
+		"hit": {"sheet": "vfx_hit", "row": 0, "scale": 1.5}
+	}
+}

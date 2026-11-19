@@ -1,8 +1,8 @@
 extends RefCounted
 
 const React_SLACK := 5
-const BACK_BONUS := 0.30
-const SIDE_BONUS := 0.15
+const BACK_BONUS := 0.50
+const SIDE_BONUS := 0.20
 const HEIGHT_BONUS_PER_LEVEL := 0.10
 const HEIGHT_BONUS_MAX := 0.30
 

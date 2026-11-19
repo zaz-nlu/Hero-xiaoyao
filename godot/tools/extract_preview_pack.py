@@ -1,4 +1,5 @@
-"""Cut the villager contact sheet (assets/npc_six_preview.jpg, 6 panels) into portraits and sprites.
+"""Cut the villager contact sheet (art_source/inputs/contact_sheets/villager_reference_sheet.jpg,
+6 panels) into portraits and sprites.
 
 Usage (repo root):  python godot/tools/extract_preview_pack.py
 
@@ -10,8 +11,9 @@ sprites (bottom: front, front-variant, left 3/4, left profile). The sheet is a J
     profile, and the right view is its mirror,
   * the back view is synthesised from the front view by painting skin pixels of the head with the
     hair colour.
-Outputs (under assets/ai/raw_user/preview_strips/<id>/<id>_idle_32x48_alpha.png, 128x48:
-front, back, left, right) and assets/portraits/<id>.png, then run build_ai_sheets.py on them.
+Outputs art_source/inputs/preview_strips/<id>_idle_32x48_alpha.png (128x48:
+front, back, left, right) and godot/assets/portraits/<id>.png, then run
+build_ai_sheets.py on them.
 """
 import colorsys
 import os
@@ -26,8 +28,9 @@ from extract_ai_packs import components, trim, despill  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.normpath(os.path.join(HERE, "..", "assets"))
-SRC = os.path.join(ASSETS, "npc_six_preview.jpg")
-OUT_STRIPS = os.path.join(ASSETS, "ai", "raw_user", "preview_strips")
+INPUTS = os.path.normpath(os.path.join(HERE, "..", "..", "art_source", "inputs"))
+SRC = os.path.join(INPUTS, "contact_sheets", "villager_reference_sheet.jpg")
+OUT_STRIPS = os.path.join(INPUTS, "preview_strips")
 OUT_PORTRAITS = os.path.join(ASSETS, "portraits")
 
 PANELS = [
@@ -128,9 +131,8 @@ def make_strip(front, left):
 
 
 def save_strip(npc_id, strip):
-    d = os.path.join(OUT_STRIPS, npc_id)
-    os.makedirs(d, exist_ok=True)
-    strip.save(os.path.join(d, npc_id + "_idle_32x48_alpha.png"))
+    os.makedirs(OUT_STRIPS, exist_ok=True)
+    strip.save(os.path.join(OUT_STRIPS, npc_id + "_idle_32x48_alpha.png"))
 
 
 def main():

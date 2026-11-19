@@ -6,6 +6,8 @@ extends RefCounted
 const GameState = preload("res://core/game_state.gd")
 const SaveSystem = preload("res://core/save_system.gd")
 const Profile = preload("res://core/profile.gd")
+const DataLoader = preload("res://core/data_loader.gd")
+const TownData = preload("res://shared/resources/town_data.gd")
 
 const AUTOSAVE_INTERVAL := 120.0
 const PROFILE_POLL_INTERVAL := 0.5
@@ -17,6 +19,8 @@ var loading_slot: bool = false
 var autosave_timer: float = 0.0
 var profile_timer: float = 0.0
 var gate_profile_checked: bool = false
+var _town_data: Dictionary = {}
+var _town_data_loaded: bool = false
 
 
 func is_save_kind(kind: String) -> bool:
@@ -107,10 +111,18 @@ func tick_profile(delta: float, kind: String, player_pos: Variant) -> void:
 	if not (player_pos is Vector2):
 		return
 	var pos: Vector2 = player_pos
-	if pos.x < -36.0:
-		Profile.unlock("west_street", profile_path)
-	if pos.x > 22.0:
-		Profile.unlock("gate", profile_path)
+	for zone_value in TownData.unlocked_zones(_read_town_data(), pos):
+		Profile.unlock(str(zone_value), profile_path)
+
+
+func _read_town_data() -> Dictionary:
+	if not _town_data_loaded:
+		_town_data_loaded = true
+		var loaded: Dictionary = TownData.load_town(DataLoader.TOWN_PATH)
+		var value: Variant = loaded.get("data", {})
+		if value is Dictionary:
+			_town_data = value
+	return _town_data
 
 
 func _read_location_pos(value: Variant) -> Variant:

@@ -18,6 +18,14 @@ func _tick(town, seconds: float, step_seconds: float = 0.05) -> void:
 		town.tick_player(step_seconds)
 
 
+func _covers(rects: Array, point: Vector2) -> bool:
+	for value in rects:
+		var rect: Rect2 = value
+		if rect.has_point(point):
+			return true
+	return false
+
+
 func test_facing_from_input() -> void:
 	assert_eq(
 		PlayerMotion.facing_from_input(Vector2(1.0, 0.0), "down"), "right", "east is right"
@@ -100,17 +108,32 @@ func test_ground_height_values() -> void:
 	var loaded: Dictionary = TownData.load_town(TOWN_PATH)
 	var town_data: Dictionary = loaded["data"]
 	assert_near(
-		TownData.ground_height(town_data, -12.0, 10.5), 0.25, 0.0001, "bridge deck is raised"
-	)
-	assert_near(TownData.ground_height(town_data, 0.0, 1.0), 0.0, 0.0001, "street is flat")
-	assert_near(
-		TownData.ground_height(town_data, 30.0, -5.5), 1.5, 0.0001, "third stair step"
+		TownData.ground_height(town_data, 0.0, 4.0), 0.25, 0.0001, "bridge A deck is raised"
 	)
 	assert_near(
-		TownData.ground_height(town_data, 30.0, -16.5), 7.0, 0.0001, "top of the stairs"
+		TownData.ground_height(town_data, -18.0, 4.0), 0.25, 0.0001, "bridge B deck is raised"
+	)
+	assert_near(TownData.ground_height(town_data, 0.0, -2.0), 0.0, 0.0001, "street is flat")
+	assert_near(
+		TownData.ground_height(town_data, 0.0, -7.5), 0.5, 0.0001, "first step to T2"
 	)
 	assert_near(
-		TownData.ground_height(town_data, 28.0, -20.0), 7.0, 0.0001, "platform is high"
+		TownData.ground_height(town_data, 0.0, -8.5), 1.0, 0.0001, "second step to T2"
+	)
+	assert_near(
+		TownData.ground_height(town_data, 0.0, -9.5), 1.5, 0.0001, "third step reaches T2"
+	)
+	assert_near(
+		TownData.ground_height(town_data, 0.0, -12.0), 1.5, 0.0001, "T2 terrace is level"
+	)
+	assert_near(
+		TownData.ground_height(town_data, 0.0, -17.5), 2.0, 0.0001, "first step to T3"
+	)
+	assert_near(
+		TownData.ground_height(town_data, 0.0, -19.5), 3.0, 0.0001, "third step reaches T3"
+	)
+	assert_near(
+		TownData.ground_height(town_data, 0.0, -22.0), 3.0, 0.0001, "T3 gate terrace is level"
 	)
 
 
@@ -119,16 +142,14 @@ func test_extra_blockers_cover_cliff() -> void:
 	var town_data: Dictionary = loaded["data"]
 	var extra: Array = TownData.extra_blockers(town_data)
 	assert_true(extra.size() > 0, "cliff blocker exists")
-	var covers_cliff := false
-	var covers_stairs := false
-	for value in extra:
-		var rect: Rect2 = value
-		if rect.has_point(Vector2(27.0, -20.0)):
-			covers_cliff = true
-		if rect.has_point(Vector2(30.5, -10.0)):
-			covers_stairs = true
-	assert_true(covers_cliff, "cliff blocks the platform edge")
-	assert_true(not covers_stairs, "stairs stay open")
+	assert_true(
+		_covers(extra, Vector2(8.0, -10.0)), "T2 south wall blocks outside the stairs"
+	)
+	assert_true(not _covers(extra, Vector2(0.0, -10.0)), "T2 stairs gap stays open")
+	assert_true(
+		_covers(extra, Vector2(8.0, -20.0)), "T3 south wall blocks outside the stairs"
+	)
+	assert_true(not _covers(extra, Vector2(0.0, -20.0)), "T3 stairs gap stays open")
 
 
 func test_player_spawns_at_spawn_point() -> void:
@@ -167,7 +188,7 @@ func test_player_cannot_enter_tavern_wall() -> void:
 	_tick(town, 3.0)
 	assert_true(town.player_pos.y < -1.5, "player walks north toward the tavern")
 	assert_true(
-		town.player_pos.y >= -3.0 + PlayerMotion.RADIUS - 0.001,
+		town.player_pos.y >= -5.0 + PlayerMotion.RADIUS - 0.001,
 		"tavern front wall stops the player, z is %.3f" % town.player_pos.y
 	)
 	town.free()
@@ -189,11 +210,20 @@ func test_player_cannot_walk_into_river() -> void:
 func test_player_can_cross_bridge() -> void:
 	var town = _new_town()
 	town.build()
-	town.player_pos = Vector2(-12.0, 5.0)
+	town.player_pos = Vector2(0.0, 1.0)
 	town.set_input_override(Vector2(0.0, 1.0))
-	_tick(town, 4.0)
+	_tick(town, 2.0)
 	assert_true(
-		town.player_pos.y > 12.0, "player crosses the bridge, z is %.3f" % town.player_pos.y
+		town.player_pos.y > 7.0, "player crosses bridge A, z is %.3f" % town.player_pos.y
+	)
+	town.player_pos = Vector2(10.0, 1.0)
+	_tick(town, 2.0)
+	assert_true(
+		town.player_pos.y > 1.0, "player walks toward the river, z is %.3f" % town.player_pos.y
+	)
+	assert_true(
+		town.player_pos.y <= 2.2 - PlayerMotion.RADIUS + 0.01,
+		"the river bank stops the player off the bridge, z is %.3f" % town.player_pos.y
 	)
 	town.free()
 
@@ -201,34 +231,40 @@ func test_player_can_cross_bridge() -> void:
 func test_player_climbs_stairs() -> void:
 	var town = _new_town()
 	town.build()
-	town.player_pos = Vector2(30.5, -2.0)
+	town.player_pos = Vector2(0.0, -6.0)
 	town.set_input_override(Vector2(0.0, -1.0))
-	_tick(town, 4.0)
+	_tick(town, 1.5)
 	assert_true(
-		town.player_pos.y < -10.0, "player walks up the stairs, z is %.3f" % town.player_pos.y
+		town.player_pos.y < -10.0, "player walks up the T2 stairs, z is %.3f" % town.player_pos.y
 	)
+	assert_near(town.player.position.y, 1.5, 0.1, "player rises onto the T2 terrace")
+	_tick(town, 2.0)
 	assert_true(
-		town.player.position.y > 3.0,
-		"player rises with the stairs, y is %.3f" % town.player.position.y
+		town.player_pos.y < -20.0, "player walks up the T3 stairs, z is %.3f" % town.player_pos.y
 	)
+	assert_near(town.player.position.y, 3.0, 0.1, "player reaches the T3 gate terrace")
 	town.free()
 
 
 func test_cliff_blocks_player() -> void:
 	var town = _new_town()
 	town.build()
-	town.player_pos = Vector2(27.5, -10.0)
+	town.player_pos = Vector2(4.0, -6.0)
 	town.set_input_override(Vector2(0.0, -1.0))
-	_tick(town, 3.0)
-	assert_true(
-		town.player_pos.y >= -17.0 + PlayerMotion.RADIUS - 0.01,
-		"cliff keeps the player off the platform, z is %.3f" % town.player_pos.y
-	)
-	town.player_pos = Vector2(27.5, -15.0)
 	_tick(town, 2.0)
-	assert_true(town.player_pos.y < -15.0, "player walks toward the cliff edge")
+	assert_true(town.player_pos.y < -6.0, "player walks toward the T2 cliff")
 	assert_true(
-		town.player_pos.y >= -17.0 + PlayerMotion.RADIUS - 0.01,
-		"cliff line blocks the player, z is %.3f" % town.player_pos.y
+		town.player_pos.y >= -9.8 + PlayerMotion.RADIUS - 0.01,
+		"the T2 south wall keeps the player off the terrace, z is %.3f" % town.player_pos.y
+	)
+	town.player_pos = Vector2(4.0, -12.0)
+	_tick(town, 2.0)
+	assert_true(
+		town.player_pos.y < -12.0,
+		"player walks north across the T2 terrace, z is %.3f" % town.player_pos.y
+	)
+	assert_true(
+		town.player_pos.y >= -19.8 + PlayerMotion.RADIUS - 0.01,
+		"the T3 south wall blocks the player, z is %.3f" % town.player_pos.y
 	)
 	town.free()

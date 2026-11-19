@@ -33,11 +33,15 @@ static func update(
 	offset: Vector3,
 	look_ahead: Vector3,
 	delta: float,
-	fallback_position: Vector3 = Vector3.ZERO
+	fallback_position: Vector3 = Vector3.ZERO,
+	clamp_rect: Rect2 = Rect2()
 ) -> Vector3:
 	if camera == null:
 		return focus
 	var target_pos := follow_position(target, fallback_position)
+	if clamp_rect.size != Vector2.ZERO:
+		target_pos.x = clampf(target_pos.x, clamp_rect.position.x, clamp_rect.end.x)
+		target_pos.z = clampf(target_pos.z, clamp_rect.position.y, clamp_rect.end.y)
 	var weight: float = 1.0 - exp(-8.0 * delta)
 	focus = focus.lerp(target_pos, weight)
 	camera.position = camera.position.lerp(target_pos + offset, weight)
@@ -50,11 +54,15 @@ static func snap(
 	target: Node3D,
 	offset: Vector3,
 	look_ahead: Vector3,
-	fallback_position: Vector3 = Vector3.ZERO
+	fallback_position: Vector3 = Vector3.ZERO,
+	clamp_rect: Rect2 = Rect2()
 ) -> Vector3:
 	if camera == null:
 		return Vector3.ZERO
 	var target_pos := follow_position(target, fallback_position)
+	if clamp_rect.size != Vector2.ZERO:
+		target_pos.x = clampf(target_pos.x, clamp_rect.position.x, clamp_rect.end.x)
+		target_pos.z = clampf(target_pos.z, clamp_rect.position.y, clamp_rect.end.y)
 	camera.position = target_pos + offset
 	camera.look_at_from_position(camera.position, target_pos + look_ahead, Vector3.UP)
 	return target_pos

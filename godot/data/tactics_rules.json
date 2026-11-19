@@ -1,0 +1,50 @@
+{
+	"forms": {
+		"thrust": "刺",
+		"chop": "劈",
+		"sweep": "扫",
+		"point": "点"
+	},
+	"legacy_type_to_form": {
+		"thrust": "thrust",
+		"heavy": "chop",
+		"sweep": "sweep",
+		"ranged": "point",
+		"combo": "thrust",
+		"charge": "chop"
+	},
+	"result_table": {
+		"perfect": {"damage_pct": 0, "counter_pct": 50, "jianyi": 1},
+		"counter": {"damage_pct": 0, "counter_pct": 20, "jianyi": 0},
+		"scrape": {"damage_pct": 50, "counter_pct": 0, "jianyi": 0},
+		"none": {"damage_pct": 100, "counter_pct": 0, "jianyi": 0}
+	},
+	"basic_block": {
+		"id": "_block",
+		"name": "基础格挡",
+		"outcome": "scrape"
+	},
+	"energy": {
+		"colors": ["neili", "ziqi", "xianqi"],
+		"names": {"neili": "内力", "ziqi": "紫气", "xianqi": "仙气"},
+		"initial": {"neili": 14, "ziqi": 4, "xianqi": 0},
+		"locked": ["xianqi"],
+		"grade_cost": {"common": 1, "fine": 1, "rare": 2, "epic": 3, "legendary": 4},
+		"damage_pct": {"neili": 100, "ziqi": 60, "xianqi": 100},
+		"free_martials": ["basic_sword"],
+		"ziqi_heal_ratio": 1.5,
+		"ziqi_heal_scale": 100,
+		"defeat_neili_floor_pct": 50,
+		"xianqi": {"effects": []}
+	},
+	"ziqi_release": {"cost": 1, "heal_pct": 20},
+	"weakness": {
+		"colors": ["neili", "ziqi", "xianqi"],
+		"weak_damage_pct": 125,
+		"toughness_hit": 1,
+		"toughness_weak": 2,
+		"empower_after_turns": 3,
+		"empower_pct": 125,
+		"slots_by_tier": {"minion": 0, "elite": 1, "boss": 2}
+	}
+}

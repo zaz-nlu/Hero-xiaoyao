@@ -1,0 +1,9 @@
+{
+	"origin_to_map": {
+		"tavern": "tavern_brawl",
+		"forest": "forest_clearing"
+	},
+	"fallback_map": "tavern_brawl",
+	"wounded_enemy": "ma_youwei",
+	"seed": 1
+}

@@ -1,0 +1,56 @@
+[gd_scene load_steps=7 format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wood"]
+albedo_color = Color(0.44, 0.29, 0.15, 1)
+roughness = 0.9
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_base"]
+top_radius = 0.5
+bottom_radius = 0.55
+height = 0.18
+radial_segments = 16
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_post"]
+top_radius = 0.11
+bottom_radius = 0.14
+height = 1.7
+radial_segments = 12
+
+[sub_resource type="BoxMesh" id="BoxMesh_cross_arm"]
+size = Vector3(1.2, 0.12, 0.12)
+
+[sub_resource type="BoxMesh" id="BoxMesh_side_arm"]
+size = Vector3(0.12, 0.12, 0.7)
+
+[sub_resource type="SphereMesh" id="SphereMesh_head"]
+radius = 0.16
+height = 0.32
+radial_segments = 12
+rings = 6
+
+[node name="TrainingDummy" type="Node3D"]
+
+[node name="Base" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.09, 0)
+mesh = SubResource("CylinderMesh_base")
+material_override = SubResource("StandardMaterial3D_wood")
+
+[node name="Post" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.03, 0)
+mesh = SubResource("CylinderMesh_post")
+material_override = SubResource("StandardMaterial3D_wood")
+
+[node name="CrossArm" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+mesh = SubResource("BoxMesh_cross_arm")
+material_override = SubResource("StandardMaterial3D_wood")
+
+[node name="SideArm" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+mesh = SubResource("BoxMesh_side_arm")
+material_override = SubResource("StandardMaterial3D_wood")
+
+[node name="Head" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.04, 0)
+mesh = SubResource("SphereMesh_head")
+material_override = SubResource("StandardMaterial3D_wood")

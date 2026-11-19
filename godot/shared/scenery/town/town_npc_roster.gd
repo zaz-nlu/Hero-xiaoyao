@@ -5,9 +5,12 @@ extends RefCounted
 
 const CharacterSprite = preload("res://shared/scene/character_sprite.gd")
 const Interaction = preload("res://shared/gameplay/interaction.gd")
+const TownData = preload("res://shared/resources/town_data.gd")
+const TownMarkerIcons = preload("res://shared/scenery/town/town_marker_icons.gd")
 
 const QUEST_MARKER_HEIGHT := 3.0
 const QUEST_MARKER_INTERVAL := 0.5
+const QUEST_MARKER_WIDTH := 1.15
 
 var nodes: Dictionary = {}
 var wander: Dictionary = {}
@@ -24,7 +27,8 @@ func build(
 	_bounds: Rect2,
 	_blockers: Array,
 	skip_ids: Array,
-	marker_info: Callable
+	marker_info: Callable,
+	data: Dictionary = {}
 ) -> void:
 	_marker_info = marker_info
 	var root := Node3D.new()
@@ -41,9 +45,9 @@ func build(
 		var character: Variant = CharacterSprite.new()
 		character.name = id
 		character.setup(str(npc.get("sprite", "")))
-		character.position = Vector3(
-			float(npc.get("x", 0.0)), 0.0, float(npc.get("z", 0.0))
-		)
+		var x := float(npc.get("x", 0.0))
+		var z := float(npc.get("z", 0.0))
+		character.position = Vector3(x, TownData.ground_height(data, x, z), z)
 		character.set_facing(str(npc.get("facing", "down")))
 		root.add_child(character)
 		nodes[id] = character
@@ -160,21 +164,19 @@ func _add_quest_marker(npc_id: String, parent: Node3D, index: int) -> void:
 		supported = bool(info.get("supported", false))
 	if not supported:
 		return
-	var label := Label3D.new()
-	label.name = "QuestMarker_%s" % npc_id
-	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.no_depth_test = true
-	label.render_priority = 10
-	label.font_size = 96
-	label.pixel_size = 0.024
-	label.outline_size = 22
-	label.outline_modulate = Color(0.0, 0.0, 0.0)
-	label.modulate = Color("#ffd24a")
-	label.text = ""
-	label.visible = false
-	label.position = Vector3(0.0, QUEST_MARKER_HEIGHT, 0.0)
-	parent.add_child(label)
-	_markers[npc_id] = label
+	var sprite := Sprite3D.new()
+	sprite.name = "QuestMarker_%s" % npc_id
+	sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	sprite.no_depth_test = true
+	sprite.render_priority = 10
+	sprite.shaded = false
+	sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR
+	sprite.pixel_size = QUEST_MARKER_WIDTH / 128.0
+	sprite.visible = false
+	sprite.set_meta("marker_text", "")
+	sprite.position = Vector3(0.0, QUEST_MARKER_HEIGHT, 0.0)
+	parent.add_child(sprite)
+	_markers[npc_id] = sprite
 	_marker_phases[npc_id] = float(index) * 1.3
 
 
@@ -183,21 +185,27 @@ func refresh_markers() -> void:
 		return
 	for raw_id in _markers.keys():
 		var npc_id := str(raw_id)
-		var label_value: Variant = _markers[raw_id]
-		if not is_instance_valid(label_value) or not (label_value is Label3D):
+		var sprite_value: Variant = _markers[raw_id]
+		if not is_instance_valid(sprite_value) or not (sprite_value is Sprite3D):
 			continue
-		var label: Label3D = label_value
+		var sprite: Sprite3D = sprite_value
 		var info_value: Variant = _marker_info.call(npc_id)
 		var text := ""
 		if info_value is Dictionary:
 			var info: Dictionary = info_value
 			text = str(info.get("text", ""))
-		label.text = text
-		label.visible = text != ""
+		var texture := TownMarkerIcons.texture_for(text)
+		sprite.texture = texture
+		if texture != null:
+			var size: Vector2 = texture.get_size()
+			if size.x > 0.0:
+				sprite.pixel_size = QUEST_MARKER_WIDTH / size.x
+		sprite.visible = texture != null
+		sprite.set_meta("marker_text", text)
 		if text == "…":
-			label.modulate = Color(0.72, 0.72, 0.72)
+			sprite.modulate = Color(1.0, 1.0, 1.0, 0.7)
 		else:
-			label.modulate = Color("#ffd24a")
+			sprite.modulate = Color.WHITE
 
 
 func update_markers(delta: float, elapsed: float) -> void:
@@ -206,11 +214,13 @@ func update_markers(delta: float, elapsed: float) -> void:
 		_marker_timer = 0.0
 		refresh_markers()
 	for raw_id in _markers.keys():
-		var label_value: Variant = _markers[raw_id]
-		if not is_instance_valid(label_value) or not (label_value is Label3D):
+		var sprite_value: Variant = _markers[raw_id]
+		if not is_instance_valid(sprite_value) or not (sprite_value is Sprite3D):
 			continue
-		var label: Label3D = label_value
-		if not label.visible:
+		var sprite: Sprite3D = sprite_value
+		if not sprite.visible:
 			continue
 		var phase := float(_marker_phases.get(raw_id, 0.0))
-		label.position.y = QUEST_MARKER_HEIGHT + sin(elapsed * 2.0 + phase) * 0.08
+		sprite.position.y = QUEST_MARKER_HEIGHT + sin(elapsed * 2.0 + phase) * 0.08
+		var breath := 1.0 + sin(elapsed * 2.0 + phase) * 0.05
+		sprite.scale = Vector3(breath, breath, 1.0)

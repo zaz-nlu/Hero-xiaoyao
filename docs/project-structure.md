@@ -1,8 +1,7 @@
 # 项目结构与放置规范
 
 主游戏在 `godot/`（早期 Web 原型已移除，git 标签 `web-prototype-final` 可取回）。运行素材在
-`godot/assets/`；原始包和历史备份在 `art_source/`。现有生成工具依赖的 `ai/raw_user/` 和预览 JPG
-暂留原位，详见素材说明。完整架构、状态归属和技术债见 [architecture.md](architecture.md)。
+`godot/assets/`；原始包、生成工具输入和历史备份在 `art_source/`。详见素材说明。完整架构、状态归属和技术债见 [architecture.md](architecture.md)。
 
 相关文档：[架构说明](architecture.md) · [运行素材说明](../godot/assets/README.md) · [原始素材归档](../art_source/README.md)
 
@@ -23,11 +22,11 @@
 | --- | --- | --- |
 | `godot/app/` | 组合根与跨 feature 编排 | `game.gd`、`scene_router.gd`、`battle_flow.gd`、`save_coordinator.gd`；`game.tscn` 是默认主场景 |
 | `godot/core/` | 规则、状态与数据服务 | 战斗、伤害、招式克制、境界、属性、熟练度、任务、存档、前戏、模拟支持；`data_loader.gd` 是数据入口 |
-| `godot/core/tactics/` | 战棋基础规则 | `grid.gd`、`facing.gd`、`turn_queue.gd`、`pattern.gd`、`stats_rules.gd`、`map_loader.gd` |
-| `godot/features/` | 按功能划分的场景与界面 | `battle/`、`character/`、`forest/`、`pause/`、`tavern/`、`title/`、`town/` |
+| `godot/core/tactics/` | 战棋规则 | 基础层 `grid/facing/turn_queue/pattern/stats_rules/map_loader`；结算层 `tactics_battle/reaction/damage/unit/rules/setup`；`tactics_ai`、`tactics_bot` |
+| `godot/features/` | 按功能划分的场景与界面 | `battle/`、`character/`、`forest/`、`pause/`、`tactics/`、`tavern/`、`title/`、`town/` |
 | `godot/shared/` | 跨 feature 复用件 | 资源入口、场景辅助、玩法、音频、HUD/图标/装饰组件，以及小镇/酒馆/森林的搭建辅助 |
-| `godot/data/` | 游戏内容 | 玩家、武学、敌人、遭遇、物品、成长、境界、熟练度、任务、说话人、城镇/森林/酒馆配置；`dialogues/` 对话，`sprites/` 角色配色定义，`maps/` 战棋地图 |
-| `godot/assets/` | 运行素材 | `ai/game/`、`sprites/`、`portraits/`、`audio/` 等，读取约定见素材说明 |
+| `godot/data/` | 游戏内容 | 玩家、武学、敌人、遭遇、物品、成长、境界、熟练度、任务、说话人、城镇/森林/酒馆配置、战棋遭遇地图映射；`dialogues/` 对话，`sprites/` 角色配色定义，`maps/` 战棋地图 |
+| `godot/assets/` | 运行素材 | `scenery/`、`textures/`、`icons/`、`sprites/`、`portraits/`、`audio/`，读取约定见素材说明 |
 | `godot/tools/` | 离线生成与调试 | 像素化、角色图集、立绘、图标、音乐生成脚本；数值模拟、Boss/酒馆调参、难度报告、冒烟测试 |
 | `godot/tests/` | 自动测试 | `run_tests.gd` 自动发现并执行 `test_*.gd` |
 
@@ -52,10 +51,10 @@ flowchart LR
 
 当前共享入口，新代码优先复用：
 
-- `godot/shared/resources/asset_paths.gd`：运行素材目录常量 `AI_GAME`、`SPRITES`、`PORTRAITS`、`AUDIO`，以及 `sprite_path()`。角色图集、立绘、音频和 AI 素材的路径从这里取；JSON 里已有的显式立绘完整路径（如 `data/speakers.json`）属于内容数据，继续保留。
+- `godot/shared/resources/asset_paths.gd`：运行素材目录常量 `SCENERY`、`TEXTURES`、`ICONS`、`SPRITES`、`PORTRAITS`、`AUDIO`，分类函数 `art_dir()` 和 `sprite_path()`。角色图集、立绘、音频和场景/材质/图标素材的路径从这里取；JSON 里已有的显式立绘完整路径（如 `data/speakers.json`）属于内容数据，继续保留。
 - `godot/core/data_loader.gd`：顶部集中常用 JSON 的 `*_PATH` 常量，并提供武学/敌人/玩家/物品的读取与校验。新增通用数据路径放这里；与某份内容 JSON 绑定的对话路径可以继续写在内容文件里。
 - `godot/shared/scene/scene_kit.gd`：小镇、酒馆、森林共用的网格、材质、灯光和暗角搭建函数。多场景重复的 3D 搭建逻辑应进这里，而不是各自复制。
-- `godot/shared/resources/ai_assets.gd` / `image_cache.gd`：分别用 `Image.load_from_file` 读取 `ai/game/` 与立绘/图集，并做纹理缓存。
+- `godot/shared/resources/ai_assets.gd` / `image_cache.gd`：前者按文件名前缀读取 `scenery/`、`textures/`、`icons/`，后者读取立绘/图集，两者都用 `Image.load_from_file` 并做纹理缓存。
 - `godot/shared/audio/audio_loader.gd`：用 `FileAccess` 解析 WAV 字节，不经过 Godot 导入。
 - `godot/shared/ui/icon_lib.gd`：武学/物品/属性图标的统一映射与缓存入口。
 

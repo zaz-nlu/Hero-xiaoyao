@@ -1,0 +1,53 @@
+{
+	"map": "tavern_brawl",
+	"profiles": {
+		"initial": {},
+		"mid": {
+			"power": 7,
+			"speed": 9,
+			"defense": 5,
+			"recovery": 4,
+			"skill": 14,
+			"constitution": 5
+		},
+		"trained": {
+			"power": 8,
+			"speed": 9,
+			"defense": 5,
+			"recovery": 5,
+			"skill": 17,
+			"constitution": 6
+		}
+	},
+	"scenarios": {
+		"unprepared": {
+			"profile": "initial",
+			"bandits": 5,
+			"boss_loss": 100
+		},
+		"half": {
+			"profile": "mid",
+			"bandits": 3,
+			"boss_loss": 100
+		},
+		"prepared": {
+			"profile": "trained",
+			"bandits": 2,
+			"boss_loss": 100
+		}
+	},
+	"targets": {
+		"unprepared": {
+			"best": {"win_max": 15},
+			"never": {"win_max": 5}
+		},
+		"half": {
+			"best": {"win_min": 25, "win_max": 65},
+			"never": {"win_max": 20}
+		},
+		"prepared": {
+			"best": {"win_min": 90, "hp_min": 30},
+			"never": {"win_max": 50}
+		}
+	}
+}

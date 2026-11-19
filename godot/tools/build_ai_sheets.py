@@ -4,10 +4,15 @@ from the AI turnaround strips (128x48: front, back, left, right).
 Usage (from the repo root):
     python godot/tools/build_ai_sheets.py <strip_dir> [id=file_prefix ...]
 
-Default mapping (game id -> strip file prefix inside <strip_dir>):
+With no id=file_prefix arguments, the default mappings are:
     zixia, zixia_disciple, vendor=baozi_vendor, ma_youwei, bandit
 
-Each strip is <strip_dir>/<prefix>/<prefix>_idle_32x48_alpha.png.
+Each strip is <strip_dir>/<prefix>_idle_32x48_alpha.png. The older
+<strip_dir>/<prefix>/<prefix>_idle_32x48_alpha.png layout (one directory per
+character, used by the five-character packs) is also accepted; the flat file wins.
+Example:
+    python godot/tools/build_ai_sheets.py art_source/inputs/character_sheets
+    python godot/tools/build_ai_sheets.py art_source/inputs/npc_strips smith=smith
 Steps: despill magenta fringe -> split 4 views -> synthesize walk frames -> save
 godot/assets/sprites/<id>.png
 """
@@ -117,17 +122,24 @@ def build(game_id, strip_path):
     print("wrote", os.path.normpath(out))
 
 
+def strip_path(strip_dir, prefix):
+    flat = os.path.join(strip_dir, prefix + "_idle_32x48_alpha.png")
+    if os.path.exists(flat):
+        return flat
+    return os.path.join(strip_dir, prefix, prefix + "_idle_32x48_alpha.png")
+
+
 def main():
     if len(sys.argv) < 2:
         print(__doc__)
         sys.exit(1)
     strip_dir = sys.argv[1]
-    mapping = dict(DEFAULT)
+    mapping = {} if len(sys.argv) > 2 else DEFAULT
     for arg in sys.argv[2:]:
         k, v = arg.split("=")
         mapping[k] = v
     for game_id, prefix in mapping.items():
-        path = os.path.join(strip_dir, prefix, prefix + "_idle_32x48_alpha.png")
+        path = strip_path(strip_dir, prefix)
         build(game_id, path)
 
 

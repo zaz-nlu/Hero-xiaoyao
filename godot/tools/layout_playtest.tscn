@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://features/layouts/layout_walk.tscn" id="1_layout_walk"]
+
+[node name="LayoutPlaytest" type="Node"]
+
+[node name="LayoutWalk" parent="." instance=ExtResource("1_layout_walk")]
+map_path = "user://map_editor_playtest.json"
+playtest_mode = true

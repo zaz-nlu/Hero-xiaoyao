@@ -1,0 +1,242 @@
+{
+ "banner_break.png": {
+  "size": [
+   320,
+   96
+  ]
+ },
+ "banner_perfect.png": {
+  "size": [
+   320,
+   96
+  ]
+ },
+ "banner_weak.png": {
+  "size": [
+   320,
+   96
+  ]
+ },
+ "bar_hp.png": {
+  "size": [
+   160,
+   15
+  ],
+  "margins": {
+   "left": 8,
+   "right": 8,
+   "top": 4,
+   "bottom": 4
+  }
+ },
+ "bar_hp_bg.png": {
+  "size": [
+   160,
+   15
+  ],
+  "margins": {
+   "left": 8,
+   "right": 8,
+   "top": 4,
+   "bottom": 4
+  }
+ },
+ "bar_toughness.png": {
+  "size": [
+   160,
+   10
+  ],
+  "margins": {
+   "left": 8,
+   "right": 8,
+   "top": 2,
+   "bottom": 2
+  }
+ },
+ "energy_neili.png": {
+  "size": [
+   64,
+   64
+  ]
+ },
+ "energy_xianqi.png": {
+  "size": [
+   64,
+   64
+  ]
+ },
+ "energy_ziqi.png": {
+  "size": [
+   64,
+   64
+  ]
+ },
+ "form_chop.png": {
+  "size": [
+   64,
+   64
+  ]
+ },
+ "form_point.png": {
+  "size": [
+   64,
+   64
+  ]
+ },
+ "form_sweep.png": {
+  "size": [
+   64,
+   64
+  ]
+ },
+ "form_thrust.png": {
+  "size": [
+   64,
+   64
+  ]
+ },
+ "panel_frame.png": {
+  "size": [
+   340,
+   170
+  ],
+  "margins": {
+   "left": 20,
+   "right": 20,
+   "top": 16,
+   "bottom": 16
+  }
+ },
+ "panel_frame_wood_filled.png": {
+  "size": [
+   340,
+   170
+  ],
+  "margins": {
+   "left": 20,
+   "right": 20,
+   "top": 16,
+   "bottom": 16
+  }
+ },
+ "pip_jianyi.png": {
+  "size": [
+   24,
+   24
+  ]
+ },
+ "pip_jianyi_empty.png": {
+  "size": [
+   24,
+   24
+  ]
+ },
+ "pip_toughness.png": {
+  "size": [
+   24,
+   24
+  ]
+ },
+ "pip_toughness_empty.png": {
+  "size": [
+   24,
+   24
+  ]
+ },
+ "release.png": {
+  "size": [
+   64,
+   64
+  ]
+ },
+ "skill_button.png": {
+  "size": [
+   64,
+   64
+  ],
+  "margins": {
+   "left": 9,
+   "right": 9,
+   "top": 9,
+   "bottom": 9
+  }
+ },
+ "skill_button_disabled.png": {
+  "size": [
+   64,
+   64
+  ],
+  "margins": {
+   "left": 9,
+   "right": 9,
+   "top": 9,
+   "bottom": 9
+  }
+ },
+ "skill_button_selected.png": {
+  "size": [
+   64,
+   64
+  ],
+  "margins": {
+   "left": 9,
+   "right": 9,
+   "top": 9,
+   "bottom": 9
+  }
+ },
+ "turn_card.png": {
+  "size": [
+   84,
+   98
+  ],
+  "margins": {
+   "left": 15,
+   "right": 15,
+   "top": 17,
+   "bottom": 17
+  }
+ },
+ "turn_card_active.png": {
+  "size": [
+   84,
+   98
+  ],
+  "margins": {
+   "left": 15,
+   "right": 15,
+   "top": 17,
+   "bottom": 17
+  }
+ },
+ "unit_card.png": {
+  "size": [
+   300,
+   185
+  ],
+  "margins": {
+   "left": 22,
+   "right": 22,
+   "top": 17,
+   "bottom": 17
+  }
+ },
+ "weak_neili.png": {
+  "size": [
+   64,
+   64
+  ]
+ },
+ "weak_xianqi.png": {
+  "size": [
+   64,
+   64
+  ]
+ },
+ "weak_ziqi.png": {
+  "size": [
+   64,
+   64
+  ]
+ }
+}

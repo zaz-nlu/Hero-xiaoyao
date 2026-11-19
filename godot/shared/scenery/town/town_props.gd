@@ -7,6 +7,8 @@ const SceneKit = preload("res://shared/scene/scene_kit.gd")
 const Texgen = preload("res://shared/scene/texgen.gd")
 const AiAssets = preload("res://shared/resources/ai_assets.gd")
 const TownArt = preload("res://shared/scenery/town/town_art.gd")
+const TownSpriteProps = preload("res://shared/scenery/town/town_sprite_props.gd")
+const TownData = preload("res://shared/resources/town_data.gd")
 
 const FOREST_SIGN_POS := Vector2(5.4, 20.7)
 const DECOR_FILES := {
@@ -86,12 +88,17 @@ func build_props(
 				_build_notice_board(root, x, z, art)
 			"shrub", "grass_tuft", "peony", "chrysanthemum", "bamboo", "rocks":
 				_build_decor(root, kind, x, z, i)
+			"sprite":
+				TownSpriteProps.build(root, data, prop, i)
 
 
-func build_forest_sign(parent: Node3D, art: TownArt) -> void:
+func build_forest_sign(
+	parent: Node3D, art: TownArt, data: Dictionary = {}
+) -> void:
 	var root := Node3D.new()
 	root.name = "ForestSign"
-	root.position = Vector3(FOREST_SIGN_POS.x, 0.0, FOREST_SIGN_POS.y)
+	var sign_pos: Vector2 = TownData.forest_sign(data)
+	root.position = Vector3(sign_pos.x, 0.0, sign_pos.y)
 	parent.add_child(root)
 	var wood_mat: StandardMaterial3D = Texgen.make_material(
 		art.get_tex("wood_planks"), Vector2(0.5, 2.0)
@@ -182,13 +189,17 @@ func _build_lamp_post(parent: Node3D, x: float, z: float, art: TownArt) -> void:
 	if sprite != null:
 		parent.add_child(sprite)
 		SceneKit.add_omni_light(parent, Vector3(x, 1.6, z), Color("#ffb870"), 8.0, 0.9)
+		sprite.set_meta("night_light", true)
+		SceneKit.add_omni_light(sprite, Vector3(0.0, 1.6, 0.0), Color("#ffb860"), 7.0, 0.0)
 		return
 	var wood_mat: StandardMaterial3D = Texgen.make_material(
 		art.get_tex("wood_planks"), Vector2(0.5, 4.0)
 	)
 	SceneKit.add_box(parent, Vector3(0.12, 3.2, 0.12), wood_mat, Vector3(x, 1.6, z))
 	var lamp_mat: StandardMaterial3D = SceneKit.emissive_material(Color("#ffc070"), 1.6)
-	SceneKit.add_box(parent, Vector3(0.35, 0.45, 0.35), lamp_mat, Vector3(x, 3.35, z))
+	var lamp := SceneKit.add_box(parent, Vector3(0.35, 0.45, 0.35), lamp_mat, Vector3(x, 3.35, z))
+	lamp.set_meta("night_light", true)
+	SceneKit.add_omni_light(lamp, Vector3.ZERO, Color("#ffb860"), 7.0, 0.0)
 	var cap_mat: StandardMaterial3D = SceneKit.solid_material(Color("#3e2a1a"))
 	SceneKit.add_box(parent, Vector3(0.45, 0.08, 0.45), cap_mat, Vector3(x, 3.62, z))
 	SceneKit.add_omni_light(parent, Vector3(x, 3.35, z), Color("#ffb870"), 8.0, 0.9)

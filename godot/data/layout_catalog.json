@@ -1,0 +1,177 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "grass",
+      "name": "草地",
+      "category": "terrain",
+      "kind": "ground",
+      "size": [1, 1],
+      "texture": "res://assets/textures/tex_grass.png",
+      "blocking": false
+    },
+    {
+      "id": "stone",
+      "name": "石板",
+      "category": "terrain",
+      "kind": "ground",
+      "size": [1, 1],
+      "texture": "res://assets/textures/tex_flagstone_large.png",
+      "blocking": false
+    },
+    {
+      "id": "dirt",
+      "name": "泥土",
+      "category": "terrain",
+      "kind": "ground",
+      "size": [1, 1],
+      "texture": "res://assets/textures/tex_dirt.png",
+      "blocking": false
+    },
+    {
+      "id": "sect_gate",
+      "name": "山门牌坊",
+      "category": "architecture",
+      "kind": "billboard",
+      "size": [4, 1],
+      "sprite": "res://assets/scenery/town_gate_paifang.png",
+      "height": 6.0,
+      "blocking": false,
+      "billboard": false
+    },
+    {
+      "id": "main_hall",
+      "name": "大殿",
+      "category": "architecture",
+      "kind": "billboard",
+      "size": [6, 3],
+      "sprite": "res://assets/scenery/facade_pavilion.png",
+      "height": 8.0,
+      "blocking": true,
+      "billboard": false
+    },
+    {
+      "id": "stone_wall",
+      "name": "石墙",
+      "category": "wall",
+      "kind": "box",
+      "size": [2, 1],
+      "texture": "res://assets/textures/tex_stone_wall.png",
+      "height": 1.2,
+      "blocking": true
+    },
+    {
+      "id": "wood_fence",
+      "name": "木围栏",
+      "category": "wall",
+      "kind": "box",
+      "size": [2, 1],
+      "texture": "res://assets/textures/tex_dark_wood.png",
+      "height": 1.1,
+      "blocking": true
+    },
+    {
+      "id": "wood_pillar",
+      "name": "木柱",
+      "category": "architecture",
+      "kind": "box",
+      "size": [1, 1],
+      "texture": "res://assets/textures/tex_dark_wood.png",
+      "height": 3.5,
+      "blocking": true
+    },
+    {
+      "id": "pine_tree",
+      "name": "松树",
+      "category": "vegetation",
+      "kind": "billboard",
+      "size": [1, 1],
+      "sprite": "res://assets/scenery/tree_pine.png",
+      "height": 5.0,
+      "blocking": true,
+      "billboard": true
+    },
+    {
+      "id": "stone_lantern",
+      "name": "石灯",
+      "category": "prop",
+      "kind": "billboard",
+      "size": [1, 1],
+      "sprite": "res://assets/scenery/town_stone_lantern_a.png",
+      "height": 2.2,
+      "blocking": true,
+      "billboard": true
+    },
+    {
+      "id": "rock",
+      "name": "山石",
+      "category": "prop",
+      "kind": "billboard",
+      "size": [1, 1],
+      "sprite": "res://assets/scenery/prop_boulder.png",
+      "height": 1.4,
+      "blocking": true,
+      "billboard": true
+    },
+    {
+      "id": "disciple",
+      "name": "紫霞派弟子",
+      "category": "npc",
+      "kind": "npc",
+      "size": [1, 1],
+      "sprite": "res://assets/sprites/zixia_disciple.png",
+      "blocking": true
+    },
+    {
+      "id": "sect_exit",
+      "name": "山门出口",
+      "category": "exit",
+      "kind": "exit",
+      "size": [2, 1],
+      "sprite": "res://assets/scenery/town_signpost.png",
+      "height": 2.2,
+      "blocking": false
+    },
+    {
+      "id": "training_plaque",
+      "name": "练功场名牌",
+      "category": "sign",
+      "kind": "billboard",
+      "size": [2, 1],
+      "sprite": "res://assets/scenery/town_signboard.png",
+      "height": 2.2,
+      "blocking": false,
+      "billboard": false
+    },
+    {
+      "id": "practice_dummy",
+      "name": "木人桩",
+      "category": "prop",
+      "kind": "scene",
+      "size": [1, 1],
+      "scene": "res://shared/scenery/layouts/prefabs/training_dummy.tscn",
+      "texture": "res://assets/scenery/town_wooden_dummy.png",
+      "blocking": true
+    },
+    {
+      "id": "weapon_rack",
+      "name": "兵器架",
+      "category": "prop",
+      "kind": "billboard",
+      "size": [2, 1],
+      "sprite": "res://assets/scenery/town_weapon_rack.png",
+      "height": 1.8,
+      "blocking": true,
+      "billboard": true
+    },
+    {
+      "id": "flagstone",
+      "name": "青石板",
+      "category": "terrain",
+      "kind": "ground",
+      "size": [1, 1],
+      "texture": "res://assets/textures/tex_flagstone_wet.png",
+      "blocking": false
+    }
+  ]
+}
