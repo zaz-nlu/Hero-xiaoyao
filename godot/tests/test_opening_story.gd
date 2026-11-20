@@ -2,7 +2,7 @@ extends "res://tests/test_case.gd"
 
 const GameState = preload("res://core/game_state.gd")
 const OpeningData = preload("res://core/opening_data.gd")
-const OpeningStoryScene = preload("res://features/opening/opening_story_scene.gd")
+const TownStoryteller = preload("res://features/opening/town_storyteller.gd")
 
 const SPRITES_DIR := "res://assets/sprites/"
 const FADE_IN_TIME := 1.0
@@ -117,89 +117,58 @@ func test_storyteller_validation_reports_bad_data() -> void:
 	assert_true(_errors_text(no_dialogue_result).contains("dialogue"), "the error names dialogue")
 
 
-func test_scene_builds_headless_with_expected_actors() -> void:
-	var data := OpeningData.load_opening()
-	var scene: Variant = OpeningStoryScene.new()
-	scene.build(data)
-	var crowd: Array = _storyteller(data).get("crowd", [])
-	assert_eq(scene.actors.size(), 2 + crowd.size(), "ren, the scholar and every crowd member")
-	assert_true(scene.scholar != null, "the scholar node is built")
-	scene.advance(FADE_IN_TIME)
-	assert_true(scene.is_dialogue_active(), "the dialogue starts after the fade-in")
-	scene.advance(0.5)
-	assert_true(not scene.is_finished(), "the scene keeps running while the dialogue plays")
-	scene.skip_all()
-	assert_true(scene.is_finished(), "the scene can be skipped")
-	scene.free()
-
-
-func test_dialogue_finish_emits_finished_once() -> void:
-	var count := [0]
-	var scene: Variant = OpeningStoryScene.new()
-	scene.connect("finished", func() -> void: count[0] += 1)
-	scene.build(OpeningData.load_opening())
-	scene.advance(FADE_IN_TIME)
-	var guard := 0
-	while scene.is_dialogue_active() and guard < 200:
-		scene.dialogue_view.advance()
-		guard += 1
-	assert_true(not scene.is_dialogue_active(), "the dialogue plays to the end")
-	scene.advance(1.0)
-	assert_true(scene.is_finished(), "the story scene finishes after the fade-out")
-	assert_eq(count[0], 1, "finished is emitted once")
-	scene.advance(1.0)
-	assert_eq(count[0], 1, "finished is not repeated after the scene ended")
-	scene.free()
-
-
-func test_escape_skips_the_whole_scene() -> void:
-	var count := [0]
-	var scene: Variant = OpeningStoryScene.new()
-	scene.connect("finished", func() -> void: count[0] += 1)
-	scene.build(OpeningData.load_opening())
-	var event := InputEventKey.new()
-	event.keycode = KEY_ESCAPE
-	event.pressed = true
-	scene._unhandled_input(event)
-	assert_true(scene.is_finished(), "escape finishes the scene immediately")
-	assert_eq(count[0], 1, "escape emits finished")
-	scene._unhandled_input(event)
-	assert_eq(count[0], 1, "escape does not repeat finished")
-	scene.free()
-
-
-func test_build_plays_the_story_cue() -> void:
-	var fake := FakeAudio.new()
-	var scene: Variant = OpeningStoryScene.new()
-	scene.audio = fake
-	scene.build(OpeningData.load_opening())
-	assert_eq(fake.cues.size(), 1, "the storyteller cue plays when the scene starts")
-	assert_eq(str(fake.cues[0]), "opening_town", "the cue id comes from music.town")
-	scene.free()
-
-
-func test_new_game_flow_runs_subtitles_then_story_then_town() -> void:
-	_clear_skip_meta()
+func _town_with_story(audio: Variant) -> Dictionary:
 	GameState.reset()
 	var game: Variant = load("res://app/game.gd").new()
-	game.save_dir = _temp_dir("flow")
-	var save_dir := str(game.save_dir)
-	game.start_new_game()
-	assert_eq(str(game.current_kind), "opening", "the subtitle slides play first")
-	var opening: Variant = game.current
-	opening.advance(opening.total_duration())
-	assert_eq(str(game.current_kind), "battle", "the tutorial duel follows the subtitles")
-	game.current.emit_signal("battle_finished", "won")
-	game.current.advance(game.current.total_duration())
-	assert_eq(
-		str(game.current_kind), "opening_story", "the storyteller scene follows the subtitles"
-	)
-	var story: Variant = game.current
-	assert_true(story.has_method("advance"), "the second stage is the storyteller scene")
-	story.skip_all()
-	assert_eq(str(game.current_kind), "town", "the town comes after both opening stages")
-	assert_true(GameState.has_flag("opening_done"), "the finished opening sets opening_done")
-	assert_true(GameState.has_flag("intro_hint_shown"), "the intro hints follow the opening")
-	game.free()
-	_cleanup(save_dir)
-	_clear_skip_meta()
+	game.save_dir = _temp_dir("town")
+	game.show_town()
+	var town: Variant = game.current
+	var story: Node = TownStoryteller.new()
+	town.add_child(story)
+	story.begin(town, audio, OpeningData.load_opening())
+	return {"game": game, "town": town, "story": story}
+
+
+func test_storyteller_gathers_the_crowd_in_the_real_town() -> void:
+	var fake := FakeAudio.new()
+	var ctx := _town_with_story(fake)
+	var story: Node = ctx["story"]
+	var town: Variant = ctx["town"]
+	assert_eq(story.crowd.size(), 5, "five townsfolk gather around the scholar")
+	assert_true(town.input_blocked, "the player waits during the story")
+	assert_eq(str(fake.cues[0]), "opening_town", "the storyteller cue plays")
+	var scholar: Node3D = town.npc_nodes["scholar"]
+	assert_true(not town.npc_wander.has("scholar"), "the scholar stands still while telling")
+	assert_true(scholar.position.distance_to(Vector3(-21.0, 0.0, 20.2)) < 0.5, "he tells stories at the new tea stall")
+	assert_true(story.crowd[0].position.distance_to(scholar.position) < 6.0, "the crowd stands near him")
+	ctx["game"].free()
+
+
+func test_storyteller_fades_in_runs_the_dialogue_then_hands_back() -> void:
+	var ctx := _town_with_story(null)
+	var story: Node = ctx["story"]
+	var town: Variant = ctx["town"]
+	var done := [0]
+	story.finished.connect(func() -> void: done[0] += 1)
+	story.advance(FADE_IN_TIME + 0.05)
+	assert_true(town.is_dialogue_active(), "the dialogue starts after the fade-in")
+	for i in range(60):
+		if not town.is_dialogue_active():
+			break
+		town.dialogue_view.advance()
+	assert_eq(done[0], 1, "finished fires once")
+	assert_true(not town.input_blocked, "the player gets control back")
+	assert_true(town.npc_nodes.has("scholar"), "the scholar stays at his tea stall")
+	assert_eq(story.crowd.size(), 0, "the temporary crowd is gone")
+	ctx["game"].free()
+
+
+func test_escape_skips_the_story() -> void:
+	var ctx := _town_with_story(null)
+	var story: Node = ctx["story"]
+	var done := [0]
+	story.finished.connect(func() -> void: done[0] += 1)
+	story.finish()
+	story.finish()
+	assert_eq(done[0], 1, "skipping finishes only once")
+	ctx["game"].free()

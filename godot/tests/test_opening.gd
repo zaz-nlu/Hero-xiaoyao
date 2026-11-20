@@ -206,13 +206,11 @@ func test_start_new_game_plays_opening_then_enters_town() -> void:
 	game.current.emit_signal("battle_finished", "won")
 	assert_eq(str(game.current_kind), "opening", "the epilogue slides follow the duel")
 	game.current.advance(game.current.total_duration())
-	assert_eq(
-		str(game.current_kind), "opening_story", "the prologue hands over to the storyteller"
-	)
-	var story: Variant = game.current
-	assert_true(story.has_method("advance"), "the storyteller scene is the second stage")
-	story.skip_all()
-	assert_eq(str(game.current_kind), "town", "the storyteller hands over to the town")
+	assert_eq(str(game.current_kind), "town", "the storyteller happens in the real town")
+	var story: Node = game.current.get_node_or_null("TownStoryteller")
+	assert_true(story != null, "the storyteller runs inside the town")
+	story.finish()
+	assert_eq(str(game.current_kind), "town", "and the game stays in the town afterwards")
 	assert_true(GameState.has_flag("opening_done"), "finishing the prologue sets opening_done")
 	game.free()
 	_cleanup(save_dir)
@@ -241,27 +239,23 @@ func test_continue_skips_the_opening() -> void:
 	_clear_skip_meta()
 
 
-func test_domain_stage_plays_recover_and_domain_effects() -> void:
+func test_domain_stage_plays_recover_and_the_3d_domain() -> void:
 	var DomainStage = load("res://features/opening/opening_domain_stage.gd")
 	var recover: Variant = DomainStage.new()
-	recover.size = Vector2(1152.0, 648.0)
 	recover.build({"stage": "recover"}, 8.0)
-	recover.advance(0.5)
-	assert_true(recover.effect_count() > 0, "the first sword cut spawns slash effects")
-	recover.advance(1.0)
-	assert_true(recover.figure("yun").rotation > 0.1, "the defeated enemy lies down")
+	recover.advance(1.5)
+	assert_true(absf(recover.figure("yun").rotation.z) > 0.1, "the defeated enemy lies down")
 	recover.advance(0.7)
-	assert_true(absf(recover.figure("yun").rotation) < 0.1, "and stands up again, healed")
+	assert_true(absf(recover.figure("yun").rotation.z) < 0.1, "and stands up again, healed")
 	recover.free()
 	var domain: Variant = DomainStage.new()
-	domain.size = Vector2(1152.0, 648.0)
 	domain.build({"stage": "domain"}, 9.0)
-	for i in range(12):
+	for i in range(30):
 		domain.advance(0.1)
-	assert_true(domain.effect_count() > 0, "the domain expansion effect plays")
-	for i in range(20):
-		domain.advance(0.1)
-	assert_true(domain.effect_count() > 0, "gravity effects follow")
+	assert_eq(domain.controller.state_name(), "opening", "the Emperor Century controller is running")
+	assert_true(domain.effect_count() > 0, "domain effects are on stage")
+	assert_true(domain.controller.pressed_count() > 0, "the enemies are visually pressed")
 	for i in range(60):
 		domain.advance(0.1)
+	assert_eq(domain.controller.state_name(), "active", "the opening settles into the stable domain")
 	domain.free()

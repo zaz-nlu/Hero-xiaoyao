@@ -92,5 +92,18 @@ func apply_frame() -> void:
 	sprite.frame = current_frame_index()
 
 
+# 躺倒：节点绕 Z 轴旋转时，精灵不能再做“绕 Y 轴朝向相机”的公告板，否则永远是站着的。
+# 躺倒期间改成固定朝向（相机从 +Z 看）并隐藏脚下的圆形阴影，起身后恢复。
+func _sync_lying() -> void:
+	if sprite == null:
+		return
+	var lying := absf(rotation.z) > 0.01
+	sprite.billboard = BaseMaterial3D.BILLBOARD_DISABLED if lying else BaseMaterial3D.BILLBOARD_FIXED_Y
+	var shadow: Node = get_node_or_null("BlobShadow")
+	if shadow is Node3D:
+		(shadow as Node3D).visible = not lying
+
+
 func _process(delta: float) -> void:
+	_sync_lying()
 	advance(delta)

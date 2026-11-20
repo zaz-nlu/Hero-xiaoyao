@@ -21,7 +21,7 @@ const BATTLE_SCENE := "res://features/battle/battle_view.gd"
 const TACTICS_SCENE := "res://features/tactics/tactics_view.gd"
 const TITLE_SCREEN_SCENE := "res://features/title/title_screen.gd"
 const OPENING_SCENE := "res://features/opening/opening_sequence.gd"
-const OPENING_STORY_SCENE := "res://features/opening/opening_story_scene.gd"
+const TOWN_STORYTELLER := "res://features/opening/town_storyteller.gd"
 const LAYOUT_SCENE := "res://features/layouts/layout_walk.gd"
 const TOWN_ENDING := "res://features/ending/town_ending.gd"
 const ENDING_TAVERN_DIALOGUE := "res://data/dialogues/ending_tavern.json"
@@ -123,25 +123,21 @@ func _on_opening_duel_finished(result: String, audio: Variant, on_finished: Call
 		_start_opening_duel(audio, on_finished, data)
 
 
-# 序幕第二段：书生讲故事。独立小场景，不经过 town 的搭建逻辑。
-func show_opening_story(audio: Variant, on_finished: Callable) -> void:
-	_audio = audio
-	_begin_route()
-	var story: Variant = load(OPENING_STORY_SCENE).new()
-	story.name = "OpeningStoryScene"
-	story.set("audio", audio)
-	_parent.add_child(story)
-	var data := OpeningData.load_opening()
-	if not bool(data.get("ok", false)):
-		for message in data.get("errors", []):
-			Progression.push_toast(str(message))
-	story.connect("finished", on_finished)
-	story.build(data)
-	_finish_route("opening_story", story)
-
-
+# 序幕第二段：书生讲故事。直接在紫霞镇地图上演出（不另开场景），讲完后玩家拿回控制权。
 func _continue_to_opening_story(audio: Variant, on_finished: Callable) -> void:
-	show_opening_story(audio, on_finished)
+	show_town(audio)
+	_set_overlay_enabled.call(false)
+	var story: Node = load(TOWN_STORYTELLER).new()
+	story.name = "TownStoryteller"
+	current.add_child(story)
+	story.connect("finished", Callable(self, "_on_town_story_finished").bind(on_finished))
+	story.call("begin", current, audio, OpeningData.load_opening())
+
+
+func _on_town_story_finished(on_finished: Callable) -> void:
+	_set_overlay_enabled.call(true)
+	_audio.play_music("music_town")
+	on_finished.call()
 
 
 func show_town(audio: Variant) -> void:
@@ -295,9 +291,6 @@ func _present(kind: String, scene: Node) -> void:
 			_audio.play_music("music_title")
 			_audio.play_ambience("")
 		"opening":
-			_set_overlay_enabled.call(false)
-			_audio.play_ambience("")
-		"opening_story":
 			_set_overlay_enabled.call(false)
 			_audio.play_ambience("")
 		"town":

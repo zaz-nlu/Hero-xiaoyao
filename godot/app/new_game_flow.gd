@@ -14,9 +14,12 @@ static func start(game: Variant) -> void:
 	if _skip_requested():
 		_enter_town(game)
 		return
+	# 序章最后一段（书生讲故事）已经在小镇里演完：这里不再重建小镇，只收尾。
 	var on_finished := func() -> void:
 		GameState.set_flag("opening_done")
-		_enter_town(game)
+		Quests.start("zixia_recruit")
+		show_intro_hints()
+		game.call("_schedule_autosave")
 	game.show_opening(on_finished)
 
 
