@@ -1,0 +1,550 @@
+{
+  "version": 1,
+  "key": [
+    0.22,
+    0.6
+  ],
+  "sequences": {
+    "domain_expansion": {
+      "name": "domain_expansion",
+      "anchor": "center",
+      "expected_frames": 6,
+      "found_frames": 6,
+      "needs_review": false,
+      "source": "emperor_century_domain_expansion_sequence.png",
+      "canvas": [
+        419,
+        177
+      ],
+      "frames": [
+        {
+          "file": "domain_expansion_00.png",
+          "source_rect": [
+            26,
+            116,
+            191,
+            153
+          ]
+        },
+        {
+          "file": "domain_expansion_01.png",
+          "source_rect": [
+            207,
+            104,
+            393,
+            155
+          ]
+        },
+        {
+          "file": "domain_expansion_02.png",
+          "source_rect": [
+            396,
+            79,
+            592,
+            159
+          ]
+        },
+        {
+          "file": "domain_expansion_03.png",
+          "source_rect": [
+            594,
+            60,
+            821,
+            166
+          ]
+        },
+        {
+          "file": "domain_expansion_04.png",
+          "source_rect": [
+            823,
+            16,
+            1100,
+            163
+          ]
+        },
+        {
+          "file": "domain_expansion_05.png",
+          "source_rect": [
+            1106,
+            0,
+            1525,
+            177
+          ]
+        }
+      ]
+    },
+    "slash_arc": {
+      "name": "slash_arc",
+      "anchor": "bottom",
+      "expected_frames": 7,
+      "found_frames": 7,
+      "needs_review": false,
+      "source": "emperor_century_slash_arc_sequence.png",
+      "canvas": [
+        334,
+        162
+      ],
+      "frames": [
+        {
+          "file": "slash_arc_00.png",
+          "source_rect": [
+            70,
+            96,
+            153,
+            168
+          ]
+        },
+        {
+          "file": "slash_arc_01.png",
+          "source_rect": [
+            220,
+            88,
+            306,
+            168
+          ]
+        },
+        {
+          "file": "slash_arc_02.png",
+          "source_rect": [
+            357,
+            70,
+            476,
+            168
+          ]
+        },
+        {
+          "file": "slash_arc_03.png",
+          "source_rect": [
+            503,
+            57,
+            668,
+            168
+          ]
+        },
+        {
+          "file": "slash_arc_04.png",
+          "source_rect": [
+            680,
+            25,
+            882,
+            168
+          ]
+        },
+        {
+          "file": "slash_arc_05.png",
+          "source_rect": [
+            895,
+            6,
+            1179,
+            168
+          ]
+        },
+        {
+          "file": "slash_arc_06.png",
+          "source_rect": [
+            1191,
+            7,
+            1525,
+            168
+          ]
+        }
+      ]
+    },
+    "auto_cut": {
+      "name": "auto_cut",
+      "anchor": "center",
+      "expected_frames": 10,
+      "found_frames": 10,
+      "needs_review": false,
+      "source": "emperor_century_auto_cut_sequence.png",
+      "canvas": [
+        259,
+        132
+      ],
+      "frames": [
+        {
+          "file": "auto_cut_00.png",
+          "source_rect": [
+            10,
+            86,
+            219,
+            118
+          ]
+        },
+        {
+          "file": "auto_cut_01.png",
+          "source_rect": [
+            31,
+            35,
+            219,
+            58
+          ]
+        },
+        {
+          "file": "auto_cut_02.png",
+          "source_rect": [
+            228,
+            85,
+            421,
+            121
+          ]
+        },
+        {
+          "file": "auto_cut_03.png",
+          "source_rect": [
+            236,
+            36,
+            425,
+            59
+          ]
+        },
+        {
+          "file": "auto_cut_04.png",
+          "source_rect": [
+            441,
+            18,
+            684,
+            69
+          ]
+        },
+        {
+          "file": "auto_cut_05.png",
+          "source_rect": [
+            445,
+            72,
+            704,
+            131
+          ]
+        },
+        {
+          "file": "auto_cut_06.png",
+          "source_rect": [
+            726,
+            18,
+            944,
+            130
+          ]
+        },
+        {
+          "file": "auto_cut_07.png",
+          "source_rect": [
+            965,
+            17,
+            1118,
+            133
+          ]
+        },
+        {
+          "file": "auto_cut_08.png",
+          "source_rect": [
+            1135,
+            13,
+            1306,
+            131
+          ]
+        },
+        {
+          "file": "auto_cut_09.png",
+          "source_rect": [
+            1322,
+            0,
+            1524,
+            132
+          ]
+        }
+      ]
+    },
+    "gravity_crack": {
+      "name": "gravity_crack",
+      "anchor": "center",
+      "expected_frames": 7,
+      "found_frames": 7,
+      "needs_review": false,
+      "source": "emperor_century_gravity_crack_sequence.png",
+      "canvas": [
+        215,
+        139
+      ],
+      "frames": [
+        {
+          "file": "gravity_crack_00.png",
+          "source_rect": [
+            44,
+            47,
+            165,
+            106
+          ]
+        },
+        {
+          "file": "gravity_crack_01.png",
+          "source_rect": [
+            228,
+            41,
+            370,
+            111
+          ]
+        },
+        {
+          "file": "gravity_crack_02.png",
+          "source_rect": [
+            424,
+            38,
+            590,
+            120
+          ]
+        },
+        {
+          "file": "gravity_crack_03.png",
+          "source_rect": [
+            627,
+            28,
+            817,
+            142
+          ]
+        },
+        {
+          "file": "gravity_crack_04.png",
+          "source_rect": [
+            857,
+            19,
+            1061,
+            133
+          ]
+        },
+        {
+          "file": "gravity_crack_05.png",
+          "source_rect": [
+            1083,
+            12,
+            1298,
+            133
+          ]
+        },
+        {
+          "file": "gravity_crack_06.png",
+          "source_rect": [
+            1319,
+            3,
+            1521,
+            142
+          ]
+        }
+      ]
+    },
+    "gravity_floating_rocks": {
+      "name": "gravity_floating_rocks",
+      "anchor": "bottom",
+      "expected_frames": 12,
+      "found_frames": 12,
+      "needs_review": false,
+      "source": "emperor_century_gravity_floating_rocks_sequence.png",
+      "canvas": [
+        161,
+        131
+      ],
+      "frames": [
+        {
+          "file": "gravity_floating_rocks_00.png",
+          "source_rect": [
+            47,
+            71,
+            80,
+            111
+          ]
+        },
+        {
+          "file": "gravity_floating_rocks_01.png",
+          "source_rect": [
+            115,
+            53,
+            180,
+            112
+          ]
+        },
+        {
+          "file": "gravity_floating_rocks_02.png",
+          "source_rect": [
+            203,
+            50,
+            273,
+            112
+          ]
+        },
+        {
+          "file": "gravity_floating_rocks_03.png",
+          "source_rect": [
+            300,
+            40,
+            379,
+            105
+          ]
+        },
+        {
+          "file": "gravity_floating_rocks_04.png",
+          "source_rect": [
+            391,
+            49,
+            431,
+            106
+          ]
+        },
+        {
+          "file": "gravity_floating_rocks_05.png",
+          "source_rect": [
+            451,
+            28,
+            547,
+            109
+          ]
+        },
+        {
+          "file": "gravity_floating_rocks_06.png",
+          "source_rect": [
+            568,
+            22,
+            690,
+            124
+          ]
+        },
+        {
+          "file": "gravity_floating_rocks_07.png",
+          "source_rect": [
+            709,
+            8,
+            855,
+            129
+          ]
+        },
+        {
+          "file": "gravity_floating_rocks_08.png",
+          "source_rect": [
+            906,
+            29,
+            1022,
+            100
+          ]
+        },
+        {
+          "file": "gravity_floating_rocks_09.png",
+          "source_rect": [
+            1049,
+            23,
+            1183,
+            115
+          ]
+        },
+        {
+          "file": "gravity_floating_rocks_10.png",
+          "source_rect": [
+            1197,
+            9,
+            1354,
+            121
+          ]
+        },
+        {
+          "file": "gravity_floating_rocks_11.png",
+          "source_rect": [
+            1362,
+            0,
+            1523,
+            131
+          ]
+        }
+      ]
+    },
+    "gravity_impact": {
+      "name": "gravity_impact",
+      "anchor": "bottom",
+      "expected_frames": 4,
+      "found_frames": 4,
+      "needs_review": false,
+      "source": "emperor_century_gravity_impact_sequence.png",
+      "canvas": [
+        612,
+        253
+      ],
+      "frames": [
+        {
+          "file": "gravity_impact_00.png",
+          "source_rect": [
+            0,
+            35,
+            276,
+            237
+          ]
+        },
+        {
+          "file": "gravity_impact_01.png",
+          "source_rect": [
+            284,
+            0,
+            573,
+            249
+          ]
+        },
+        {
+          "file": "gravity_impact_02.png",
+          "source_rect": [
+            582,
+            0,
+            913,
+            236
+          ]
+        },
+        {
+          "file": "gravity_impact_03.png",
+          "source_rect": [
+            924,
+            0,
+            1536,
+            253
+          ]
+        }
+      ]
+    }
+  },
+  "full_sheet": {
+    "name": "full_sheet",
+    "status": "unverified",
+    "needs_review": true,
+    "elements": [
+      {
+        "file": "full_00.png",
+        "source_rect": [
+          47,
+          698,
+          81,
+          739
+        ]
+      },
+      {
+        "file": "full_01.png",
+        "source_rect": [
+          42,
+          533,
+          166,
+          593
+        ]
+      },
+      {
+        "file": "full_02.png",
+        "source_rect": [
+          226,
+          527,
+          371,
+          598
+        ]
+      },
+      {
+        "file": "full_03.png",
+        "source_rect": [
+          0,
+          6,
+          1536,
+          1018
+        ]
+      }
+    ]
+  }
+}

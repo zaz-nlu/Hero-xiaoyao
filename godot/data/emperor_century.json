@@ -1,0 +1,43 @@
+{
+	"values": {
+		"opening_duration": 1.2,
+		"expansion_duration": 1.6,
+		"gravity_duration": 1.7,
+		"slash_duration": 2.0,
+		"settle_duration": 1.5,
+		"closing_duration": 1.2,
+		"domain_radius": 7.0,
+		"domain_opacity": 0.85,
+		"boundary_brightness": 0.55,
+		"gravity_visual_strength": 1.0,
+		"screen_shake_strength": 0.6,
+		"gravity_particle_count": 28,
+		"auto_cut_visual_frequency": 1.4,
+		"auto_cut_line_width": 0.08,
+		"auto_cut_duration": 0.7,
+		"slash_flash_strength": 1.0,
+		"camera_zoom_strength": 1.0,
+		"cinematic_speed": 1.0,
+		"preview_cut_count": 4,
+		"dim_amount": 0.22,
+		"press_sink": 0.14,
+		"rock_count": 14,
+		"arc_chance": 0.25,
+		"unit_width": 1.0,
+		"seed": 20251120
+	},
+	"roles": {
+		"ring_stages": ["domain_expansion_00", "domain_expansion_01", "domain_expansion_02"],
+		"rays": "domain_expansion_03",
+		"dome": "domain_expansion_04",
+		"cracks": ["gravity_crack_00", "gravity_crack_01", "gravity_crack_02", "gravity_crack_03", "gravity_crack_04", "gravity_crack_05", "gravity_crack_06"],
+		"rocks": ["gravity_floating_rocks_00", "gravity_floating_rocks_01", "gravity_floating_rocks_02", "gravity_floating_rocks_03", "gravity_floating_rocks_04", "gravity_floating_rocks_05", "gravity_floating_rocks_06", "gravity_floating_rocks_07"],
+		"star_rings": ["gravity_floating_rocks_08", "gravity_floating_rocks_09", "gravity_floating_rocks_10", "gravity_floating_rocks_11"],
+		"impact_pillar": "gravity_impact_00",
+		"impact_burst": ["gravity_impact_01", "gravity_impact_02"],
+		"cut_lines": ["auto_cut_00", "auto_cut_01", "auto_cut_02", "auto_cut_03", "auto_cut_04", "auto_cut_05"],
+		"cut_sparks": ["auto_cut_06", "auto_cut_07", "auto_cut_08", "auto_cut_09"],
+		"slash_arcs": ["slash_arc_00", "slash_arc_01", "slash_arc_02", "slash_arc_03", "slash_arc_04", "slash_arc_05", "slash_arc_06"]
+	},
+	"not_used": ["domain_expansion_05 (自带废墟场景背景)", "gravity_impact_03 (自带整幅场景背景)", "full_sheet 候选元素（未核对）"]
+}
