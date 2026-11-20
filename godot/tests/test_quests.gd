@@ -91,7 +91,7 @@ func test_list_by_state_in_json_order() -> void:
 	assert_eq(
 		Quests.list_by_state("none"),
 		[
-			"herbs", "spar", "smith_whet", "hunter_hunt", "fisher_box",
+			"zixia_recruit", "herbs", "spar", "smith_whet", "hunter_hunt", "fisher_box",
 			"woman_pin", "peddler_deliver", "herb_order",
 		],
 		"none list keeps the JSON order"
@@ -126,4 +126,19 @@ func test_reward_item_advances_another_quest_in_order() -> void:
 		Progression.take_toasts(), ["获得 草药", "任务完成：草药"],
 		"the pickup toast precedes the quest completion toast"
 	)
+	GameState.reset()
+
+
+func test_recruit_schedule_and_keeper_gate() -> void:
+	GameState.reset()
+	Quests.reload()
+	var Calendar = load("res://core/calendar.gd")
+	Quests.start("zixia_recruit")
+	assert_eq(Quests.state("zixia_recruit"), "active")
+	assert_true(not Calendar.recruit_due(), "day 1 morning is before the recruit day")
+	assert_eq(Calendar.phases_until(3, 1), 9, "two days and one phase away")
+	Calendar.advance(9)
+	assert_true(Calendar.recruit_due(), "the recruit time has arrived")
+	Quests.notify("defeat", "ma_youwei", 1)
+	assert_eq(Quests.state("zixia_recruit"), "done", "the main quest turns itself in")
 	GameState.reset()

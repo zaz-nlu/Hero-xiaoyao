@@ -35,11 +35,17 @@ static func start(id: String) -> bool:
 			var key := str(objective.get("key", ""))
 			progress_map[key] = Progression.item_count(key)
 	GameState.quests[id] = {"state": "active", "progress": progress_map}
+	# 目标物品已在背包里（先捡后接任务）：直接转为可交付。
+	QuestProgress.check_ready(id)
 	return true
 
 
 static func notify(kind: String, key: String, amount: int = 1) -> void:
 	QuestProgress.notify(kind, key, amount)
+	# 没有交付人的主线任务：目标达成即自动交付。
+	for id in list_by_state("ready"):
+		if bool(load_all().get(id, {}).get("auto_turn_in", false)):
+			turn_in(str(id))
 
 
 static func progress(id: String) -> Array:

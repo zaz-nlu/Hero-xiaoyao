@@ -74,3 +74,29 @@ static func meditate_cost() -> int:
 
 static func meditate_restore_pct() -> int:
 	return clampi(int(_meditate_block().get("restore_pct", DEFAULT_RESTORE_PCT)), 0, 100)
+
+
+# 距离 (day, phase) 还有多少个时段；已到或已过返回 0。
+static func phases_until(day: int, phase: int) -> int:
+	var count := phase_count()
+	var now := (maxi(1, GameState.day) - 1) * count + maxi(0, GameState.phase)
+	var target := (maxi(1, day) - 1) * count + maxi(0, phase)
+	return maxi(0, target - now)
+
+
+# 紫霞派在酒馆收徒的时间（data/calendar.json 的 recruit 段）。
+static func recruit_day() -> int:
+	return int(_recruit_block().get("day", 3))
+
+
+static func recruit_phase() -> int:
+	return int(_recruit_block().get("phase", 1))
+
+
+static func recruit_due() -> bool:
+	return phases_until(recruit_day(), recruit_phase()) <= 0
+
+
+static func _recruit_block() -> Dictionary:
+	var raw: Variant = _config().get("recruit", {})
+	return raw if raw is Dictionary else {}

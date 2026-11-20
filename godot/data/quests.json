@@ -1,5 +1,18 @@
 [
 	{
+		"id": "zixia_recruit",
+		"name": "紫霞收徒",
+		"giver": "",
+		"summary": "说书先生说，两天后紫霞派要在镇上的酒馆收徒。到时去酒馆找掌柜，看看出了什么事。",
+		"main": true,
+		"auto_turn_in": true,
+		"due": {"day": 3, "phase": 1},
+		"objectives": [
+			{"kind": "defeat", "key": "ma_youwei", "count": 1, "text": "在酒馆帮紫霞派击退马匪"}
+		],
+		"rewards": {}
+	},
+	{
 		"id": "herbs",
 		"name": "草药",
 		"giver": "bun_vendor",

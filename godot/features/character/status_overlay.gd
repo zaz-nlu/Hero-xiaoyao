@@ -8,6 +8,10 @@ const Quests = preload("res://core/quests.gd")
 const DataLoader = preload("res://core/data_loader.gd")
 const Hud = preload("res://shared/ui/battle_hud_style.gd")
 const CharacterPanel = preload("res://features/character/character_panel.gd")
+const InventoryPanel = preload("res://features/character/inventory_panel.gd")
+const QuestTracker = preload("res://features/character/quest_tracker.gd")
+const StatusButtons = preload("res://features/character/status_buttons.gd")
+const StatusToasts = preload("res://features/character/status_toasts.gd")
 
 const MARTIALS_PATH := DataLoader.MARTIALS_PATH
 
@@ -23,18 +27,16 @@ const STAT_NAMES := {
 
 const PANEL_WIDTH := 640.0
 const PANEL_HEIGHT := 420.0
-const TOAST_MAX := 3
-const TOAST_FADE_IN := 0.15
-const TOAST_HOLD := 2.2
-const TOAST_FADE_OUT := 0.4
 
 var character_panel: Variant = null
 var quest_panel: Control = null
-var toast_box: VBoxContainer = null
+var inventory_panel: Control = null
+var buttons: Control = null
+var tracker: Control = null
+var toasts := StatusToasts.new()
 var enabled: bool = true
 
 var _built: bool = false
-var _toasts: Array = []
 var _martial_defs: Dictionary = {}
 
 var _quest_list_root: Control = null
@@ -56,8 +58,12 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_ensure_built()
-	if toast_box != null:
-		toast_box.visible = enabled
+	if toasts.box != null:
+		toasts.box.visible = enabled
+	if buttons != null:
+		buttons.visible = enabled
+	if tracker != null:
+		tracker.visible = enabled and not is_panel_open()
 	if enabled:
 		for text in Progression.take_toasts():
 			show_toast(str(text))
@@ -83,6 +89,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				return
 			KEY_J:
 				toggle_quests()
+				_consume_input()
+				return
+			KEY_K:
+				toggle_inventory()
 				_consume_input()
 				return
 			KEY_ESCAPE:
@@ -117,6 +127,7 @@ func toggle_character() -> void:
 	_ensure_built()
 	var opening: bool = not character_panel.visible
 	quest_panel.visible = false
+	inventory_panel.visible = false
 	character_panel.visible = opening
 	if opening:
 		refresh()
@@ -128,7 +139,20 @@ func toggle_quests() -> void:
 	_ensure_built()
 	var opening: bool = not quest_panel.visible
 	character_panel.visible = false
+	inventory_panel.visible = false
 	quest_panel.visible = opening
+	if opening:
+		refresh()
+
+
+func toggle_inventory() -> void:
+	if not enabled:
+		return
+	_ensure_built()
+	var opening: bool = not inventory_panel.visible
+	character_panel.visible = false
+	quest_panel.visible = false
+	inventory_panel.visible = opening
 	if opening:
 		refresh()
 
@@ -138,10 +162,14 @@ func close_all() -> void:
 		character_panel.visible = false
 	if quest_panel != null:
 		quest_panel.visible = false
+	if inventory_panel != null:
+		inventory_panel.visible = false
 
 
 func is_panel_open() -> bool:
 	if character_panel != null and character_panel.visible:
+		return true
+	if inventory_panel != null and inventory_panel.visible:
 		return true
 	return quest_panel != null and quest_panel.visible
 
@@ -152,54 +180,19 @@ func refresh() -> void:
 		character_panel.refresh()
 	if quest_panel.visible:
 		_refresh_quests()
+	if inventory_panel.visible:
+		inventory_panel.refresh()
 
 
 func show_toast(text: String) -> void:
 	_ensure_built()
-	while _toasts.size() >= TOAST_MAX:
-		_remove_toast(0)
-	var panel := PanelContainer.new()
-	panel.name = "Toast"
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	var style: StyleBoxFlat = Hud.panel_style(0.9, Hud.GOLD, 6)
-	style.content_margin_left = 14.0
-	style.content_margin_right = 14.0
-	style.content_margin_top = 4.0
-	style.content_margin_bottom = 4.0
-	panel.add_theme_stylebox_override("panel", style)
-	var label := Label.new()
-	label.text = text
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	Hud.configure_label(label, 18, Hud.TEXT)
-	panel.add_child(label)
-	panel.modulate = Color(1.0, 1.0, 1.0, 0.0)
-	toast_box.add_child(panel)
-	_toasts.append({"node": panel, "t": 0.0})
+	toasts.show_toast(text)
 
 
 func advance(delta: float) -> void:
 	if character_panel != null:
 		character_panel.advance(delta)
-	var i: int = _toasts.size() - 1
-	while i >= 0:
-		var record: Dictionary = _toasts[i]
-		var t: float = float(record.get("t", 0.0)) + delta
-		record["t"] = t
-		if t >= TOAST_FADE_IN + TOAST_HOLD + TOAST_FADE_OUT:
-			_remove_toast(i)
-			i -= 1
-			continue
-		var alpha := 1.0
-		if t < TOAST_FADE_IN:
-			alpha = t / TOAST_FADE_IN
-		elif t > TOAST_FADE_IN + TOAST_HOLD:
-			alpha = 1.0 - (t - TOAST_FADE_IN - TOAST_HOLD) / TOAST_FADE_OUT
-		var node_value: Variant = record.get("node", null)
-		if node_value is CanvasItem:
-			var item: CanvasItem = node_value
-			item.modulate = Color(1.0, 1.0, 1.0, clampf(alpha, 0.0, 1.0))
-		i -= 1
+	toasts.advance(delta)
 
 
 # ---------------------------------------------------------------- construction
@@ -208,25 +201,17 @@ func _ensure_built() -> void:
 	if _built:
 		return
 	_built = true
-	_build_toast_box()
+	toasts.build(self)
 	_build_character_panel()
 	_build_quest_panel()
-
-
-func _build_toast_box() -> void:
-	toast_box = VBoxContainer.new()
-	toast_box.name = "ToastBox"
-	toast_box.anchor_left = 0.5
-	toast_box.anchor_right = 0.5
-	toast_box.anchor_top = 0.0
-	toast_box.anchor_bottom = 0.0
-	toast_box.offset_left = -260.0
-	toast_box.offset_right = 260.0
-	toast_box.offset_top = 8.0
-	toast_box.offset_bottom = 158.0
-	toast_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	toast_box.add_theme_constant_override("separation", 6)
-	add_child(toast_box)
+	inventory_panel = InventoryPanel.new()
+	inventory_panel.visible = false
+	add_child(inventory_panel)
+	tracker = QuestTracker.new()
+	add_child(tracker)
+	buttons = StatusButtons.new()
+	buttons.pressed_key.connect(_on_button_key)
+	add_child(buttons)
 
 
 func _build_character_panel() -> void:
@@ -305,6 +290,12 @@ func _build_quest_panel() -> void:
 	)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.text = "按 J 关闭"
+
+
+func _on_button_key(key: String) -> void:
+	if key == "C": toggle_character()
+	elif key == "J": toggle_quests()
+	elif key == "K": toggle_inventory()
 
 
 # ---------------------------------------------------------------- quest data
@@ -554,20 +545,6 @@ func _consume_input() -> void:
 	var viewport: Viewport = get_viewport()
 	if viewport != null:
 		viewport.set_input_as_handled()
-
-
-func _remove_toast(index: int) -> void:
-	if index < 0 or index >= _toasts.size():
-		return
-	var record: Dictionary = _toasts[index]
-	_toasts.remove_at(index)
-	var node_value: Variant = record.get("node", null)
-	if node_value is Node:
-		var node: Node = node_value
-		var parent: Node = node.get_parent()
-		if parent != null:
-			parent.remove_child(node)
-		node.queue_free()
 
 
 func _clear_children(parent: Node) -> void:

@@ -87,19 +87,19 @@ func test_toasts_consume_queue_and_respect_enabled() -> void:
 
 	Progression.give_item("plain_sword")
 	overlay._process(0.0)
-	assert_true(overlay.toast_box.get_child_count() >= 1, "a pickup toast is shown")
+	assert_true(overlay.toasts.box.get_child_count() >= 1, "a pickup toast is shown")
 	overlay.advance(3.5)
-	assert_eq(overlay.toast_box.get_child_count(), 0, "toasts are removed after fading out")
+	assert_eq(overlay.toasts.box.get_child_count(), 0, "toasts are removed after fading out")
 
 	overlay.enabled = false
 	Progression.give_item("herb")
 	overlay._process(0.0)
-	assert_eq(overlay.toast_box.get_child_count(), 0, "toasts are not shown while disabled")
+	assert_eq(overlay.toasts.box.get_child_count(), 0, "toasts are not shown while disabled")
 	assert_true(GameState.toasts.size() >= 1, "the queue keeps the toast while disabled")
 
 	overlay.enabled = true
 	overlay._process(0.0)
-	assert_true(overlay.toast_box.get_child_count() >= 1, "the queued toast shows after re-enabling")
+	assert_true(overlay.toasts.box.get_child_count() >= 1, "the queued toast shows after re-enabling")
 	overlay.advance(3.5)
 	overlay.free()
 	GameState.reset()
@@ -140,3 +140,27 @@ func test_game_syncs_input_blocked_and_battle_disables_overlay() -> void:
 	assert_true(not bool(overlay.is_panel_open()), "C is ignored during battle")
 	game.free()
 	GameState.reset()
+
+
+func test_k_opens_the_inventory_and_buttons_use_the_same_path() -> void:
+	_reset()
+	GameState.inventory["herb"] = 2
+	var overlay: Variant = StatusOverlay.new()
+	_press(overlay, KEY_K)
+	assert_true(bool(overlay.inventory_panel.visible), "K opens the inventory")
+	assert_eq(overlay.inventory_panel.item_ids(), ["herb"], "owned items are listed")
+	assert_true(overlay.inventory_panel.find_child("Cell_herb", true, false) != null, "the item has a cell")
+	_press(overlay, KEY_C)
+	assert_true(not bool(overlay.inventory_panel.visible), "opening another panel closes the inventory")
+	overlay._on_button_key("K")
+	assert_true(bool(overlay.inventory_panel.visible), "the top-right K button opens the inventory")
+	var btn: Node = overlay.buttons.find_child("Btn_J", true, false)
+	assert_true(btn != null and str(btn.get("text")).contains("[J]"), "buttons show their hotkeys")
+	overlay.free()
+
+
+func test_item_found_before_accepting_the_quest_is_ready_at_once() -> void:
+	_reset()
+	GameState.inventory["jade_hairpin"] = 1
+	assert_true(Quests.start("woman_pin"), "the quest starts")
+	assert_eq(Quests.state("woman_pin"), "ready", "the hairpin is already in the bag")

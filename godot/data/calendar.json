@@ -1,5 +1,9 @@
 {
 	"phases": ["早上", "白天", "晚上", "深夜"],
+	"recruit": {
+		"day": 3,
+		"phase": 1
+	},
 	"meditate": {
 		"cost_phases": 1,
 		"restore_pct": 100
