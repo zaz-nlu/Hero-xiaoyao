@@ -166,6 +166,10 @@ static func _build_player(player: Variant, martials: Dictionary, errors: Array[S
 		energy = player_data.get("energy")
 	var tactics_unit: Variant = TacticsUnit.create(
 		PLAYER_ID, core_unit, "player", Vector2i.ZERO, Facing.DOWN, loadout, energy)
+	tactics_unit.sprite_id = str(player_data.get("sprite", ""))
+	var only: Variant = player_data.get("attack_energies", [])
+	if only is Array:
+		tactics_unit.attack_energies = only
 	return {"unit": tactics_unit, "mastery": mastery}
 
 

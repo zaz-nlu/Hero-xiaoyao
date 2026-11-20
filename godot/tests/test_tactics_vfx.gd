@@ -119,7 +119,7 @@ func test_all_martials_resolve_effects() -> void:
 	if not (raw is Array):
 		return
 	var martials: Array = raw
-	assert_eq(martials.size(), 10, "the game defines ten martials")
+	assert_eq(martials.size(), 14, "the game defines fourteen martials")
 	for raw_entry in martials:
 		if not (raw_entry is Dictionary):
 			continue

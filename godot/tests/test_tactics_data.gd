@@ -11,7 +11,7 @@ func test_martials_have_normalized_ranges() -> void:
 	var result: Dictionary = DataLoader.load_martials("res://data/martials.json")
 	assert_eq(result["errors"].size(), 0, "the shipped martials file is valid")
 	var defs: Dictionary = result["defs"]
-	assert_eq(defs.size(), 10, "ten martials load")
+	assert_eq(defs.size(), 14, "fourteen martials load")
 	for martial_id in defs.keys():
 		var martial: Variant = defs[martial_id]
 		assert_true(martial.range is Dictionary, "martial '%s' has a range dictionary" % str(martial_id))

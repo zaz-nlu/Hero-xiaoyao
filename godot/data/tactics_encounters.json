@@ -1,9 +1,16 @@
 {
 	"origin_to_map": {
 		"tavern": "tavern_brawl",
-		"forest": "forest_clearing"
+		"forest": "forest_clearing",
+		"opening_duel": "opening_duel"
 	},
 	"fallback_map": "tavern_brawl",
 	"wounded_enemy": "ma_youwei",
-	"seed": 1
+	"seed": 1,
+	"origin_player": {
+		"opening_duel": "res://data/player_dongfang_yang.json"
+	},
+	"tutorial_origins": [
+		"opening_duel"
+	]
 }

@@ -22,7 +22,7 @@ const RING_PLAYER := Color(0.36, 0.84, 1.0, 0.9)
 const RING_ENEMY := Color(1.0, 0.34, 0.30, 0.9)
 const RING_ACTIVE := Color(1.0, 0.82, 0.30, 0.95)
 const STUN_COLOR := Color(0.65, 0.80, 1.0)
-const TOUGH_ON := Color(0.95, 0.80, 0.35)
+const TOUGH_ON := Color(0.35, 0.65, 1.0)
 const TOUGH_OFF := Color(0.30, 0.28, 0.24)
 const HIT_TINT := Color(1.0, 0.55, 0.55)
 
@@ -435,7 +435,7 @@ func _facing_name(direction: Vector2i) -> String:
 
 func _sprite_id(unit) -> String:
 	if unit.side == "player":
-		return PLAYER_SPRITE
+		return str(unit.sprite_id) if str(unit.sprite_id) != "" else PLAYER_SPRITE
 	if unit.unit != null and unit.unit.def != null:
 		var sprite := str(unit.unit.def.sprite)
 		if sprite != "":

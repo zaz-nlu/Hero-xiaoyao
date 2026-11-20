@@ -69,9 +69,14 @@ func _enemy(tier := "boss", speed := 10, toughness := 5, stun_turns := 1,
 		Facing.LEFT, [], {})
 
 
-func _battle(units: Array, seed_value := 1) -> Variant:
-	return TacticsBattle.create(
+# 手写弱点的用例不关心方向：清空 weak_dirs（空 = 任意方向可命中）。
+func _battle(units: Array, seed_value := 1, keep_dirs := false) -> Variant:
+	var out: Variant = TacticsBattle.create(
 		_grid(), units, _martials(), Mastery.new(), "defeat_all", "", seed_value)
+	if not keep_dirs:
+		for raw in units:
+			raw.weak_dirs = []
+	return out
 
 
 func _first_event(events: Array, event_type: String) -> Dictionary:
@@ -112,11 +117,13 @@ func test_slots_follow_tier_and_override() -> void:
 func test_initial_weaknesses_are_distinct_and_available() -> void:
 	var player = _player()
 	var boss = _enemy("boss")
-	var b: Variant = _battle([player, boss], 5)
+	var b: Variant = _battle([player, boss], 5, true)
 	assert_eq(boss.weaknesses.size(), 2)
-	assert_true(["neili", "ziqi"].has(str(boss.weaknesses[0])), "only available pools")
-	assert_true(["neili", "ziqi"].has(str(boss.weaknesses[1])), "only available pools")
-	assert_true(str(boss.weaknesses[0]) != str(boss.weaknesses[1]), "slots are distinct")
+	assert_eq(str(boss.weaknesses[0]), "neili", "only neili is open for weaknesses for now")
+	assert_eq(str(boss.weaknesses[1]), "neili", "a short color pool repeats in another direction")
+	assert_eq(boss.weak_dirs.size(), 2)
+	assert_true(boss.weak_dirs[0] != Vector2i.ZERO, "each slot gets a direction")
+	assert_true(boss.weak_dirs[0] != boss.weak_dirs[1], "directions are distinct")
 	assert_true(b != null)
 
 
@@ -125,7 +132,7 @@ func test_locked_and_empty_pools_are_not_drawn() -> void:
 	var boss = _enemy("boss")
 	_battle([player, boss], 7)
 	assert_eq(str(boss.weaknesses[0]), "neili", "the only available color fills one slot")
-	assert_eq(str(boss.weaknesses[1]), "none", "exhausted colors leave a neutral slot")
+	assert_eq(str(boss.weaknesses[1]), "neili", "with one color left both slots use it")
 
 
 func test_same_seed_reproduces_weaknesses() -> void:
@@ -160,7 +167,7 @@ func test_weak_hit_boosts_damage_chips_two_and_refreshes() -> void:
 		maxi(1, floori(float(base) * 1.25)), "weak hits deal 125% damage")
 	assert_near(float(boss.unit.toughness_left), 3.0, 0.0001, "a weak hit chips two")
 	assert_near(float(hit.get("toughness_left", -1)), 3.0, 0.0001)
-	assert_eq(str(boss.weaknesses[0]), "ziqi", "the hit slot refreshes to another color")
+	assert_eq(str(boss.weaknesses[0]), "neili", "with one open color the slot re-rolls its direction")
 	assert_eq(str(boss.weaknesses[1]), "none", "other slots are unchanged")
 
 
@@ -258,7 +265,7 @@ func test_stun_end_refills_toughness_and_redraws_weaknesses() -> void:
 	assert_near(float(boss.unit.toughness_left), 2.0, 0.0001, "toughness refills after stun")
 	assert_eq(boss.weaknesses.size(), 2, "weakness slots are drawn again")
 	assert_true(str(boss.weaknesses[0]) != "none", "the refreshed slots are usable again")
-	assert_true(str(boss.weaknesses[0]) != str(boss.weaknesses[1]))
+	assert_true(boss.weak_dirs[0] != boss.weak_dirs[1], "the redrawn slots face different directions")
 
 
 func test_empower_triggers_after_three_quiet_turns() -> void:
@@ -311,3 +318,16 @@ func test_sfx_key_prefers_perfect_then_weak() -> void:
 	assert_eq(TacticsSfx.key_for({"type": "hit", "outcome": "none", "weak": false}),
 		"hit_plain")
 	assert_eq(TacticsSfx.key_for({"type": "heal"}), "heal", "healing has its own sound")
+
+
+func test_weak_hit_needs_the_matching_direction() -> void:
+	var player = _player()
+	var boss = _enemy("boss")
+	var b: Variant = _battle([player, boss], 3)
+	boss.weaknesses = ["neili", "none"]
+	boss.weak_dirs = [Vector2i.UP, Vector2i.ZERO]
+	assert_eq(TacticsWeakness.weak_color(b, player, boss, "neili"), "",
+		"attacking from the wrong side is not a weak hit")
+	boss.weak_dirs = [Facing.from_delta(player.pos - boss.pos, Facing.DOWN), Vector2i.ZERO]
+	assert_eq(TacticsWeakness.weak_color(b, player, boss, "neili"), "neili",
+		"attacking from the marked side breaks the slot")

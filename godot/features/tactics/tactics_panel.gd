@@ -13,7 +13,7 @@ const UI = preload("res://features/tactics/tactics_ui_style.gd")
 const Metrics = preload("res://features/tactics/tactics_panel_metrics.gd")
 const TacticsEnergy = preload("res://core/tactics/tactics_energy.gd")
 const TacticsRelease = preload("res://core/tactics/tactics_release.gd")
-const MoveTypes = preload("res://core/move_types.gd")
+const TacticsTooltip = preload("res://features/tactics/tactics_tooltip.gd")
 
 const BUTTON_SIZE := Vector2(64.0, 64.0)
 const ICON_SIZE := 36
@@ -21,13 +21,6 @@ const ENERGY_ICON_SIZE := 28
 const ENERGY_SIZE := Vector2(88.0, 30.0)
 const DEFAULT_SEPARATION := 8
 const ENERGY_ORDER: Array[String] = ["neili", "ziqi", "xianqi"]
-const GRADE_NAMES := {
-	"common": "凡品",
-	"fine": "精品",
-	"rare": "珍品",
-	"epic": "秘传",
-	"legendary": "绝世",
-}
 
 var battle: Variant = null
 var actor_id: String = ""
@@ -49,10 +42,7 @@ var _bar: PanelContainer = null
 var _center: CenterContainer = null
 var _button_box: HBoxContainer = null
 var _energy_box: HBoxContainer = null
-var _tooltip: PanelContainer = null
-var _tooltip_name: Label = null
-var _tooltip_stats: Label = null
-var _tooltip_desc: Label = null
+var _tooltip: TacticsTooltip = null
 var _uses_badges: Dictionary = {}
 var _built_for: String = ""
 var _selected_mode: String = ""
@@ -108,28 +98,8 @@ func _init() -> void:
 	_button_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_bar.add_child(_button_box)
 
-	_tooltip = PanelContainer.new()
-	_tooltip.visible = false
-	_tooltip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_tooltip.add_theme_stylebox_override("panel", UI.tooltip_style())
+	_tooltip = TacticsTooltip.new()
 	add_child(_tooltip)
-
-	var tooltip_box := VBoxContainer.new()
-	tooltip_box.add_theme_constant_override("separation", 2)
-	tooltip_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_tooltip.add_child(tooltip_box)
-
-	_tooltip_name = Label.new()
-	UI.configure_label(_tooltip_name, 15, UI.GOLD_BRIGHT)
-	tooltip_box.add_child(_tooltip_name)
-
-	_tooltip_stats = Label.new()
-	UI.configure_label(_tooltip_stats, 12, UI.TEXT)
-	tooltip_box.add_child(_tooltip_stats)
-
-	_tooltip_desc = Label.new()
-	UI.configure_label(_tooltip_desc, 11, UI.MUTED)
-	tooltip_box.add_child(_tooltip_desc)
 
 
 func setup(p_battle, p_actor_id: String) -> void:
@@ -298,7 +268,7 @@ func _make_energy_button(color: String) -> Button:
 func select_energy(color: String) -> void:
 	if not _interactive:
 		return
-	if not ENERGY_ORDER.has(color) or TacticsEnergy.is_locked(color):
+	if not ENERGY_ORDER.has(color) or _blocked(color):
 		return
 	energy = color
 	_apply_energy()
@@ -307,11 +277,19 @@ func select_energy(color: String) -> void:
 	energy_changed.emit(energy)
 
 
+# 当前不可选的出招能量：全局锁定，或该单位不能用它出招（如东方阳的紫气只能主动释放）。
+func _blocked(color: String) -> bool:
+	if TacticsEnergy.is_locked(color):
+		return true
+	var unit = battle.get_unit(actor_id) if battle != null else null
+	return unit != null and not unit.can_attack_with(color)
+
+
 func cycle_energy() -> void:
 	var start := ENERGY_ORDER.find(energy)
 	for step in range(1, ENERGY_ORDER.size() + 1):
 		var color := ENERGY_ORDER[(start + step) % ENERGY_ORDER.size()]
-		if not TacticsEnergy.is_locked(color):
+		if not _blocked(color):
 			select_energy(color)
 			return
 
@@ -324,7 +302,7 @@ func _apply_energy() -> void:
 		button.set_meta("selected", selected)
 		button.add_theme_stylebox_override("normal", UI.energy_style(selected))
 		button.modulate = Color.WHITE
-		if TacticsEnergy.is_locked(color):
+		if _blocked(color):
 			button.modulate = Color(0.55, 0.55, 0.55, 0.9)
 
 
@@ -332,7 +310,7 @@ func _update_energy_buttons(unit) -> void:
 	for raw_color in energy_buttons.keys():
 		var color := str(raw_color)
 		var button: Button = energy_buttons[color]
-		var locked := TacticsEnergy.is_locked(color)
+		var locked := _blocked(color)
 		var left := 0
 		var maximum := 0
 		if unit != null:
@@ -396,20 +374,8 @@ func _uses_text(martial_id: String) -> String:
 func _on_martial_hover(button: Button, martial_id: String) -> void:
 	if battle == null or not battle.martials.has(martial_id):
 		return
-	var data: Dictionary = battle.martials[martial_id]
-	var range_data: Dictionary = data.get("range", {})
-	var min_range := int(range_data.get("min", 1))
-	var max_range := int(range_data.get("max", min_range))
-	var range_text := str(max_range)
-	if min_range != max_range:
-		range_text = "%d-%d" % [min_range, max_range]
-	_tooltip_name.text = str(data.get("name", martial_id))
-	_tooltip_stats.text = "威力 %d   ·   射程 %s   ·   %s消耗 %s" % [
-		int(data.get("power", 0)), range_text, TacticsEnergy.name_of(energy),
-		_uses_text(martial_id)]
-	_tooltip_desc.text = _describe(data)
-	_tooltip.visible = true
-	_tooltip.reset_size()
+	_tooltip.show_for(battle.martials[martial_id], martial_id,
+		TacticsEnergy.name_of(energy), _uses_text(martial_id))
 	var origin := button.get_global_rect().position - get_global_rect().position
 	_tooltip.position = origin + Vector2(0.0, -_tooltip.size.y - 8.0)
 
@@ -417,19 +383,6 @@ func _on_martial_hover(button: Button, martial_id: String) -> void:
 func _hide_tooltip() -> void:
 	if _tooltip != null:
 		_tooltip.visible = false
-
-
-# 用 martials 数据里已有的字段拼一句描述：品阶 + 克制的招式类型。
-func _describe(data: Dictionary) -> String:
-	var grade := str(data.get("grade", "common"))
-	var parts: Array[String] = [str(GRADE_NAMES.get(grade, "凡品")) + "武学"]
-	var counters: Variant = data.get("counters", [])
-	if counters is Array and not counters.is_empty():
-		var names := PackedStringArray()
-		for raw in counters:
-			names.append(str(MoveTypes.NAMES.get(str(raw), str(raw))))
-		parts.append("克制" + "、".join(names))
-	return "，".join(PackedStringArray(parts)) + "。"
 
 
 func _on_mode_pressed(mode: String, martial_id: String) -> void:

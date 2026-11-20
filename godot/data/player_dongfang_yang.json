@@ -1,0 +1,35 @@
+{
+	"name": "东方阳",
+	"realm": "jiyi",
+	"stats_override": {
+		"power": 85,
+		"speed": 70,
+		"defense": 90,
+		"recovery": 70,
+		"skill": 85,
+		"constitution": 60
+	},
+	"jianyi_max": 6,
+	"foresight_max": 2,
+	"energy": {
+		"neili": 4000,
+		"ziqi": 4,
+		"xianqi": 0
+	},
+	"loadout": [
+		"yushen_thrust",
+		"yushen_chop",
+		"yushen_sweep",
+		"yushen_point"
+	],
+	"learned": [
+		"yushen_thrust",
+		"yushen_chop",
+		"yushen_sweep",
+		"yushen_point"
+	],
+	"sprite": "dongfang_yang",
+	"attack_energies": [
+		"neili"
+	]
+}

@@ -35,6 +35,11 @@ static func move_damage(
 	return _apply_defense(raw, defender)
 
 
+# 剑意用的威力：武学声明了 jianyi_power 就用它，否则沿用 power。
+static func jianyi_power_of(martial) -> int:
+	return int(martial.jianyi_power) if int(martial.jianyi_power) >= 0 else int(martial.power)
+
+
 # 剑意真实伤害：无视防御，不可愈合伤。
 static func jianyi_damage(
 	attacker_stats: Dictionary,

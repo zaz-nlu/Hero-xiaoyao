@@ -20,6 +20,8 @@ var ai: String = "rush"
 var move_override: int = -1
 # 显式弱点槽数；-1 表示按 tier 取 data/tactics_rules.json 的默认值。
 var weakness_slots: int = -1
+# 无限回复：玩家回合结束时回复最大气血的百分比（0 = 无）；击破眩晕期间无效，伤口（剑意）不可回复。
+var regen_pct: int = 0
 
 
 static func from_dict(d: Dictionary) -> RefCounted:
@@ -38,6 +40,7 @@ static func from_dict(d: Dictionary) -> RefCounted:
 	e.ai = str(d.get("ai", "rush"))
 	e.move_override = int(d.get("move", -1))
 	e.weakness_slots = int(d.get("weakness_slots", -1))
+	e.regen_pct = maxi(0, int(d.get("regen_pct", 0)))
 
 	var parsed_moves: Array = []
 	var raw_moves = d.get("moves", [])

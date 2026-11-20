@@ -36,6 +36,10 @@ const TEXTURE_FILES := {
 	"energy_neili": "energy_neili.png",
 	"energy_ziqi": "energy_ziqi.png",
 	"energy_xianqi": "energy_xianqi.png",
+	"form_thrust": "form_thrust.png",
+	"form_chop": "form_chop.png",
+	"form_sweep": "form_sweep.png",
+	"form_point": "form_point.png",
 	"weak_neili": "weak_neili.png",
 	"weak_ziqi": "weak_ziqi.png",
 	"weak_xianqi": "weak_xianqi.png",
@@ -380,13 +384,33 @@ static func unit_sprite_id(unit) -> String:
 	if unit == null:
 		return ""
 	if str(unit.side) == "player":
-		return "ren_xiaoyao"
+		return str(unit.sprite_id) if str(unit.sprite_id) != "" else "ren_xiaoyao"
 	if unit.unit != null and unit.unit.def != null:
 		var sprite := str(unit.unit.def.sprite)
 		if sprite != "":
 			return sprite
 	var fallback := str(unit.unit.id) if unit.unit != null else ""
 	return fallback if fallback != "" else "bandit"
+
+
+# 单位卡片用的立绘（assets/portraits/<id>.png 的上半身）；没有立绘时退回精灵正面。
+static func card_portrait_texture(unit, aspect: float = 1.2) -> Texture2D:
+	var id := unit_sprite_id(unit)
+	var key := "card_%s_%.2f" % [id, aspect]
+	if _portraits.has(key):
+		var cached: Texture2D = _portraits[key]
+		return cached
+	var art: Texture2D = ImageCache.texture(AssetPaths.PORTRAITS + id + ".png")
+	var out: Texture2D = null
+	if art != null and art.get_width() > 0:
+		var crop := AtlasTexture.new()
+		crop.atlas = art
+		crop.region = Rect2(0.0, 0.0, art.get_width(), minf(art.get_height(), art.get_width() * aspect))
+		out = crop
+	else:
+		out = portrait_texture(unit)
+	_portraits[key] = out
+	return out
 
 
 # 立绘图集为 5×4，正面站立是第 0 行第 0 帧，用 AtlasTexture 裁出。
@@ -427,6 +451,13 @@ static func martial_icon(martial_id: String) -> Texture2D:
 	var texture := _image_texture(ICON_DIR + "icon_martial_" + martial_id + ".png")
 	_icons[martial_id] = texture
 	return texture
+
+
+# 招式形态图标（thrust/chop/sweep/point）：缺素材返回 null，由调用方回退文字。
+static func form_icon(form: String) -> Texture2D:
+	if form == "":
+		return null
+	return _texture_for("form_" + form)
 
 
 # 韧性 / 剑意点：filled=false 取 _empty 版本。

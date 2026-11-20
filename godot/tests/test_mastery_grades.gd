@@ -278,8 +278,12 @@ func test_shipped_martials_have_valid_grades() -> void:
 		"duanshi": "rare",
 		"liuxing": "rare",
 		"jueshi": "legendary",
+		"yushen_thrust": "legendary",
+		"yushen_chop": "legendary",
+		"yushen_sweep": "legendary",
+		"yushen_point": "legendary",
 	}
-	assert_eq(defs.size(), expected.size(), "all ten shipped martials load")
+	assert_eq(defs.size(), expected.size(), "all shipped martials load (10 + 4 tutorial-only)")
 	for martial_id in expected.keys():
 		assert_true(defs.has(martial_id), "martial '%s' loads" % martial_id)
 		if defs.has(martial_id):

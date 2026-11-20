@@ -6,9 +6,14 @@ extends Node3D
 
 const UI = preload("res://features/tactics/tactics_ui_style.gd")
 
-const ICON_HEIGHT := 1.05
+const ICON_HEIGHT := 1.0
 const ICON_GAP := 0.18
-const ICON_Y := 4.9
+const ICON_Y := 1.1
+const ICON_RING := 1.15
+const WEDGE_RING := 1.0
+const WEDGE_SIZE := 2.5
+const WEDGE_TEX := 128
+const PULSE_SPEED := 5.0
 const POP_RISE := 0.16
 const POP_SETTLE := 0.14
 const GLOW_TIME := 0.25
@@ -24,11 +29,16 @@ const FALLBACK_TEXTURE_SIZE := 64
 const NONE := "none"
 
 static var _fallback_textures: Dictionary = {}
+static var _wedge_texture: Texture2D = null
+static var _core_texture: Texture2D = null
 
 var _icons: Dictionary = {}
 var _slot_colors: Array = []
+var _slot_dirs: Array = []
 var _pops: int = 0
 var _initialized: bool = false
+var _wedges: Dictionary = {}
+var _time: float = 0.0
 
 
 # 每次 set_state 调用：首次建立基线不播放弹出；颜色变化的槽弹出，清空的槽移除。
@@ -36,9 +46,11 @@ func sync(unit) -> void:
 	if unit == null:
 		return
 	var colors := _read_colors(unit)
+	var dirs := _read_dirs(unit)
 	if not _initialized:
 		_initialized = true
 		_slot_colors = colors
+		_slot_dirs = dirs
 		for i in range(colors.size()):
 			var color := str(colors[i])
 			if color != NONE and color != "":
@@ -50,7 +62,8 @@ func sync(unit) -> void:
 		if i < _slot_colors.size():
 			old = str(_slot_colors[i])
 		var next := str(colors[i])
-		if old == next:
+		var old_dir: Vector2i = _slot_dirs[i] if i < _slot_dirs.size() else Vector2i.ZERO
+		if old == next and old_dir == dirs[i]:
 			continue
 		if next == NONE or next == "":
 			_remove(i)
@@ -60,6 +73,7 @@ func sync(unit) -> void:
 	for i in range(colors.size(), _slot_colors.size()):
 		_remove(i)
 	_slot_colors = colors
+	_slot_dirs = dirs
 	_layout()
 
 
@@ -80,6 +94,13 @@ func _read_colors(unit) -> Array:
 	return out
 
 
+func _read_dirs(unit) -> Array:
+	var out: Array = []
+	for i in range(unit.weaknesses.size()):
+		out.append(unit.weak_dirs[i] if i < unit.weak_dirs.size() else Vector2i.ZERO)
+	return out
+
+
 func _ensure(slot: int, color: String) -> void:
 	if _icons.has(slot):
 		var entry = _icons[slot]
@@ -87,6 +108,7 @@ func _ensure(slot: int, color: String) -> void:
 		var existing: Sprite3D = entry["node"]
 		if is_instance_valid(existing):
 			existing.texture = _texture(color)
+		_ensure_wedge(slot, color)
 		return
 	var texture := _texture(color)
 	var sprite := Sprite3D.new()
@@ -103,6 +125,78 @@ func _ensure(slot: int, color: String) -> void:
 	sprite.pixel_size = ICON_HEIGHT / maxf(1.0, size.y)
 	add_child(sprite)
 	_icons[slot] = {"node": sprite, "color": color}
+	_ensure_wedge(slot, color)
+
+
+# 地面扇形标记：贴在该方向的格边，颜色 = 弱点能量色，随时间脉动，站到这一侧攻击才算命中。
+func _ensure_wedge(slot: int, color: String) -> void:
+	var base: Color = FALLBACK_COLORS.get(color, Color(0.85, 0.75, 0.45))
+	var tint := Color(base.r * 1.9, base.g * 1.9, base.b * 1.9, 1.0)
+	if _wedges.has(slot):
+		(_wedges[slot] as Sprite3D).modulate = tint
+		return
+	var wedge := Sprite3D.new()
+	wedge.name = "WeakWedge_%d" % slot
+	wedge.texture = _wedge()
+	wedge.axis = Vector3.AXIS_Y
+	wedge.pixel_size = WEDGE_SIZE / float(WEDGE_TEX)
+	wedge.shaded = false
+	wedge.transparent = true
+	wedge.double_sided = true
+	wedge.no_depth_test = true
+	wedge.render_priority = 20
+	wedge.modulate = tint
+	wedge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(wedge)
+	_wedges[slot] = wedge
+	# 白色细芯：在蓝色移动格上也一眼能看到。
+	var core := Sprite3D.new()
+	core.name = "Core"
+	core.texture = _wedge(true)
+	core.axis = Vector3.AXIS_Y
+	core.pixel_size = wedge.pixel_size
+	core.shaded = false
+	core.transparent = true
+	core.no_depth_test = true
+	core.render_priority = 21
+	core.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	wedge.add_child(core)
+
+
+static func _wedge(thin: bool = false) -> Texture2D:
+	if thin and _core_texture != null:
+		return _core_texture
+	if not thin and _wedge_texture != null:
+		return _wedge_texture
+	var image := Image.create_empty(WEDGE_TEX, WEDGE_TEX, false, Image.FORMAT_RGBA8)
+	var c := float(WEDGE_TEX) * 0.5
+	for y in range(WEDGE_TEX):
+		for x in range(WEDGE_TEX):
+			var dx := float(x) + 0.5 - c
+			var dy := float(y) + 0.5 - c
+			var r := sqrt(dx * dx + dy * dy)
+			# 向上（贴图 -y 方向）±60° 的弧带，半径 38..56，外加柔和光晕。
+			var angle := absf(atan2(dx, -dy))
+			var half := 5.0 if thin else 14.0
+			var band := 1.0 - clampf(absf(r - 47.0) / half, 0.0, 1.0)
+			var glow := 0.0 if thin else 1.0 - clampf(absf(r - 47.0) / 22.0, 0.0, 1.0)
+			var arc := 1.0 - clampf((angle - 1.1) / 0.35, 0.0, 1.0)
+			var alpha := clampf((band + glow * 0.5) * arc, 0.0, 1.0)
+			image.set_pixel(x, y, Color(1.0, 1.0, 1.0, alpha))
+	var made := ImageTexture.create_from_image(image)
+	if thin:
+		_core_texture = made
+	else:
+		_wedge_texture = made
+	return made
+
+
+func _process(delta: float) -> void:
+	_time += delta
+	for raw in _wedges.values():
+		var wedge: Sprite3D = raw
+		if is_instance_valid(wedge):
+			wedge.modulate.a = 0.88 + 0.12 * sin(_time * PULSE_SPEED)
 
 
 func _texture(color: String) -> Texture2D:
@@ -173,6 +267,14 @@ func _remove(slot: int) -> void:
 	if entry == null:
 		return
 	_icons.erase(slot)
+	if _wedges.has(slot):
+		var old: Variant = _wedges[slot]
+		_wedges.erase(slot)
+		if is_instance_valid(old):
+			if is_inside_tree():
+				(old as Node).queue_free()
+			else:
+				(old as Node).free()
 	var node: Sprite3D = entry.get("node", null)
 	if node == null or not is_instance_valid(node):
 		return
@@ -190,14 +292,25 @@ func _remove(slot: int) -> void:
 	tween.tween_callback(Callable(node, "queue_free"))
 
 
+# 图标摆在敌人对应方向的相邻格一侧；没有方向的槽（旧数据）仍排在头顶。
 func _layout() -> void:
 	var slots: Array = _icons.keys()
 	slots.sort()
 	var step := ICON_HEIGHT + ICON_GAP
 	var start := -float(slots.size() - 1) * step * 0.5
 	for i in range(slots.size()):
-		var entry = _icons[slots[i]]
+		var slot: int = slots[i]
+		var entry = _icons[slot]
 		var node: Sprite3D = entry.get("node", null)
 		if node == null or not is_instance_valid(node):
 			continue
-		node.position = Vector3(start + step * float(i), ICON_Y, 0.0)
+		var dir: Vector2i = _slot_dirs[slot] if slot < _slot_dirs.size() else Vector2i.ZERO
+		if dir == Vector2i.ZERO:
+			node.position = Vector3(start + step * float(i), 4.9, 0.0)
+		else:
+			node.position = Vector3(float(dir.x) * ICON_RING, ICON_Y, float(dir.y) * ICON_RING)
+			var wedge: Variant = _wedges.get(slot, null)
+			if wedge != null and is_instance_valid(wedge):
+				(wedge as Sprite3D).position = Vector3(
+					float(dir.x) * WEDGE_RING, 0.06, float(dir.y) * WEDGE_RING)
+				(wedge as Sprite3D).rotation.y = atan2(-float(dir.x), -float(dir.y))

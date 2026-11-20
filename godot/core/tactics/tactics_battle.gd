@@ -143,6 +143,12 @@ func begin_turn() -> String:
 	current_actor = ""
 	return ""
 
+var pending_events: Array = []
+func take_pending() -> Array:
+	var out := pending_events
+	pending_events = []
+	return out
+
 func end_turn(uid: String) -> void:
 	if get_unit(uid) == null:
 		return
@@ -211,7 +217,7 @@ func attack(uid: String, martial_id: String, target_cell: Vector2i,
 		if not attacker.loadout.has(martial_id) or not martials.has(martial_id):
 			return _fail("not_in_loadout")
 		cost = TacticsEnergy.cost_for(martials[martial_id])
-		if not attacker.can_pay(energy, cost):
+		if not attacker.can_pay(energy, cost) or not attacker.can_attack_with(energy):
 			return _fail("no_energy")
 	if not attack_cells(uid, martial_id).has(target_cell):
 		return _fail("out_of_range")
@@ -270,7 +276,7 @@ func jianyi(uid: String, martial_id: String, target_cell: Vector2i) -> Dictionar
 		return _fail("out_of_range")
 	var martial = martials[martial_id]
 	var damage := TacticsDamage.jianyi_damage(
-		attacker.unit.stats, attacker.unit.realm, int(martial.power), _mastery_mult(martial_id))
+		attacker.unit.stats, attacker.unit.realm, TacticsDamage.jianyi_power_of(martial), _mastery_mult(martial_id))
 	attacker.unit.jianyi_points -= 1
 	attacker.has_acted = true
 	var events: Array = []

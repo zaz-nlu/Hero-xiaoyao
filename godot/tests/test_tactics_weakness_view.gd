@@ -164,7 +164,7 @@ func test_weak_hit_number_is_gold_and_labeled() -> void:
 	stage.free()
 
 
-func test_unit_card_shows_weakness_row_for_boss_only() -> void:
+func test_unit_card_shows_weakness_row_for_enemies() -> void:
 	var battle: Variant = _make_battle()
 	assert_true(battle != null, "the tavern battle is assembled")
 	if battle == null:
@@ -178,8 +178,7 @@ func test_unit_card_shows_weakness_row_for_boss_only() -> void:
 	var minion: Variant = _first_minion(battle)
 	if minion != null:
 		card.show_unit(battle, str(minion.id))
-		assert_true(not card.weakness_row_visible(),
-			"minion cards hide the 弱点 row")
+		assert_true(not card.weakness_row_visible(), "minion cards hide the 弱点 row")
 		assert_eq(card.weakness_icon_count(), 0)
 	card.free()
 

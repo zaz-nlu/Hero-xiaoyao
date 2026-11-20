@@ -9,6 +9,7 @@ const TacticsEnergy = preload("res://core/tactics/tactics_energy.gd")
 
 const CARD_SIZE := Vector2(300.0, 185.0)
 const AVATAR_SIZE := Vector2(84.0, 108.0)
+const TOUGH_BLUE := Color(0.3, 0.62, 1.0)
 const MAX_PIPS := 12
 const PIP_SIZE := Vector2(14.0, 14.0)
 const ENERGY_ICON_SIZE := Vector2(16.0, 16.0)
@@ -19,7 +20,10 @@ var _avatar_for: String = ""
 var _name_label: Label = null
 var _hp_bar: ProgressBar = null
 var _hp_label: Label = null
-var _tough_pips: HBoxContainer = null
+var _tough_row: HBoxContainer = null
+var _tough_bar: ProgressBar = null
+var _tough_ticks: Control = null
+var _tough_label: Label = null
 var _weak_row: HBoxContainer = null
 var _weak_pips: HBoxContainer = null
 var _jianyi_row: HBoxContainer = null
@@ -96,20 +100,45 @@ func _init() -> void:
 	_hp_label.add_theme_constant_override("outline_size", 3)
 	hp_holder.add_child(_hp_label)
 
-	var tough_row := HBoxContainer.new()
-	tough_row.add_theme_constant_override("separation", 5)
-	tough_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	info.add_child(tough_row)
+	_tough_row = HBoxContainer.new()
+	_tough_row.add_theme_constant_override("separation", 5)
+	_tough_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	info.add_child(_tough_row)
 
 	var tough_caption := Label.new()
 	tough_caption.text = "韧性"
 	UI.configure_label(tough_caption, 11, UI.MUTED)
-	tough_row.add_child(tough_caption)
+	_tough_row.add_child(tough_caption)
 
-	_tough_pips = HBoxContainer.new()
-	_tough_pips.add_theme_constant_override("separation", 2)
-	_tough_pips.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	tough_row.add_child(_tough_pips)
+	# 韧性是一条蓝条，按点数分段；只有 Boss / 精英（有韧性的敌人）才显示。
+	var tough_holder := Control.new()
+	tough_holder.custom_minimum_size = Vector2(100.0, 12.0)
+	tough_holder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tough_holder.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	tough_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tough_row.add_child(tough_holder)
+	_tough_bar = ProgressBar.new()
+	_tough_bar.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_tough_bar.show_percentage = false
+	_tough_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tough_bar.add_theme_stylebox_override("background", UI.bar_bg_style())
+	var blue := StyleBoxFlat.new()
+	blue.bg_color = TOUGH_BLUE
+	blue.set_corner_radius_all(3)
+	_tough_bar.add_theme_stylebox_override("fill", blue)
+	tough_holder.add_child(_tough_bar)
+	_tough_ticks = Control.new()
+	_tough_ticks.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_tough_ticks.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tough_holder.add_child(_tough_ticks)
+	_tough_label = Label.new()
+	_tough_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_tough_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_tough_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	UI.configure_label(_tough_label, 9, UI.TEXT)
+	_tough_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.85))
+	_tough_label.add_theme_constant_override("outline_size", 3)
+	tough_holder.add_child(_tough_label)
 
 	_weak_row = HBoxContainer.new()
 	_weak_row.add_theme_constant_override("separation", 5)
@@ -209,14 +238,31 @@ func show_unit(battle, uid: String) -> void:
 
 
 func _update_toughness(unit) -> void:
-	_clear(_tough_pips)
 	var total := int(unit.unit.toughness_max)
-	if total <= 0:
-		_add_dash(_tough_pips)
+	var shown: bool = str(unit.side) == "enemy" and total > 0
+	_tough_row.visible = shown
+	for child in _tough_ticks.get_children():
+		_tough_ticks.remove_child(child)
+		child.free()
+	if not shown:
 		return
-	_add_pips(
-		_tough_pips, mini(total, MAX_PIPS),
-		int(ceil(float(unit.unit.toughness_left))), "toughness")
+	var left := int(ceil(float(unit.unit.toughness_left)))
+	_tough_bar.max_value = float(total)
+	_tough_bar.value = float(clampi(left, 0, total))
+	_tough_label.text = "%d/%d" % [maxi(0, left), total]
+	for i in range(1, total):
+		var tick := ColorRect.new()
+		tick.color = Color(0.0, 0.0, 0.0, 0.55)
+		tick.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tick.anchor_left = float(i) / float(total)
+		tick.anchor_right = tick.anchor_left
+		tick.anchor_bottom = 1.0
+		tick.offset_right = 1.0
+		_tough_ticks.add_child(tick)
+
+
+func toughness_visible() -> bool:
+	return _tough_row.visible
 
 
 func _update_jianyi(unit) -> void:
@@ -312,7 +358,7 @@ func _set_avatar(unit) -> void:
 		_avatar.remove_child(child)
 		child.free()
 
-	var texture := UI.portrait_texture(unit)
+	var texture := UI.card_portrait_texture(unit)
 	if texture != null:
 		var rect := TextureRect.new()
 		rect.texture = texture

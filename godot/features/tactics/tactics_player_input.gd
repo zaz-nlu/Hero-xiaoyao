@@ -8,6 +8,8 @@ const TacticsEnergy = preload("res://core/tactics/tactics_energy.gd")
 
 var view = null
 var mode: String = ""
+# 没选“移动”直接点蓝格时：第一下选中目标，再点同一格才移动。
+var pending_move: Variant = null
 var martial_id: String = ""
 var overlays: Dictionary = {}
 
@@ -17,12 +19,14 @@ func setup(p_view) -> void:
 
 
 func reset() -> void:
+	pending_move = null
 	mode = ""
 	martial_id = ""
 	clear_overlays()
 
 
 func clear_mode() -> void:
+	pending_move = null
 	mode = ""
 	martial_id = ""
 
@@ -69,7 +73,7 @@ func click_cell(cell: Vector2i) -> void:
 			view._append_events(result.get("events", []))
 			_after_action()
 		_:
-			view._panel_message("先选择一个动作")
+			_click_idle(cell)
 
 
 func choose_mode(p_mode: String, p_martial_id: String = "") -> void:
@@ -79,6 +83,7 @@ func choose_mode(p_mode: String, p_martial_id: String = "") -> void:
 	var unit = view.battle.get_unit(view._actor_id)
 	if unit == null:
 		return
+	pending_move = null
 	match p_mode:
 		"move":
 			if unit.has_moved:
@@ -303,8 +308,38 @@ func update_hover_info(cell: Vector2i) -> void:
 	view.panel.show_unit_info(text)
 
 
+# 默认就亮着蓝色可移动格：第一下点蓝格选中（白色角标），再点同一格移动；点别处则取消。
+func _click_idle(cell: Vector2i) -> void:
+	var unit = view.battle.get_unit(view._actor_id)
+	if unit == null:
+		return
+	var reachable: Array = []
+	if not unit.has_moved:
+		reachable = view.battle.reachable_cells(unit.id).keys()
+	if cell == unit.pos or not reachable.has(cell):
+		pending_move = null
+		idle_overlays(unit)
+		view._refresh_all()
+		view._panel_message("点蓝色格子移动（点两次），或先选择一个动作")
+		return
+	if pending_move != null and Vector2i(pending_move) == cell:
+		pending_move = null
+		var result: Dictionary = view.battle.move(view._actor_id, cell)
+		if not bool(result.get("ok", false)):
+			view._panel_message("不能移动：%s" % _reason_text(result))
+			return
+		view._append_events(result.get("events", []))
+		_after_action()
+		return
+	pending_move = cell
+	overlays["selected"] = cell
+	view._panel_message("再点一次，移动到这里")
+	view._refresh_all()
+
+
 func _after_action() -> void:
 	var unit = view.battle.get_unit(view._actor_id)
+	pending_move = null
 	mode = ""
 	martial_id = ""
 	view.panel.set_selected("", "")

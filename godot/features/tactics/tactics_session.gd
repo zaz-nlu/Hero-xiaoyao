@@ -29,7 +29,12 @@ static func build(enemy_id: String, count: int, first_strike: bool, origin: Stri
 	if map_id == "":
 		return _failed(["tactics_encounters: no map for origin '%s'" % origin])
 	var group := _enemy_group(enemy_id, count)
-	var player_data: Dictionary = DataLoader.load_player(DataLoader.PLAYER_PATH)
+	var tutorial := is_tutorial(origin)
+	var player_path := DataLoader.PLAYER_PATH
+	var origin_players: Variant = config.get("origin_player", {})
+	if origin_players is Dictionary and (origin_players as Dictionary).has(origin):
+		player_path = str((origin_players as Dictionary)[origin])
+	var player_data: Dictionary = DataLoader.load_player(player_path)
 	var built: Dictionary = TacticsSetup.build(
 		map_id, group, player_data if not player_data.is_empty() else null,
 		int(config.get("seed", 1)))
@@ -38,9 +43,10 @@ static func build(enemy_id: String, count: int, first_strike: bool, origin: Stri
 	var battle: Variant = built["battle"]
 	var player: Variant = battle.get_unit(PLAYER_ID)
 	TacticsEnergy.apply_defaults(player)
-	_restore_neili(player)
-	_import_mastery(battle, player_data)
-	_apply_boss_wound(battle, config)
+	if not tutorial:
+		_restore_neili(player)
+		_import_mastery(battle, player_data)
+		_apply_boss_wound(battle, config)
 	if first_strike:
 		battle.queue.add_ct(PLAYER_ID, TurnQueue.THRESHOLD)
 	built["map_id"] = map_id
@@ -48,6 +54,12 @@ static func build(enemy_id: String, count: int, first_strike: bool, origin: Stri
 	built["encounter_id"] = _encounter_id(group, enemy_id)
 	built["first_strike"] = first_strike
 	return built
+
+
+# 教学战斗（如序幕的东方阳 vs 东方云）：使用独立角色数据，不读取也不写回存档里的养成状态。
+static func is_tutorial(origin: String) -> bool:
+	var origins: Variant = _config().get("tutorial_origins", [])
+	return origins is Array and (origins as Array).has(origin)
 
 
 # 内力跨战斗携带：上限走 TacticsEnergy 的成长入口，剩余按 GameState.neili_left

@@ -4,6 +4,7 @@ extends RefCounted
 # data/tactics_rules.json 的 weakness 段，状态写在 TacticsUnit 上。
 
 const TacticsRuleData = preload("res://core/tactics/tactics_rule_data.gd")
+const TacticsRegen = preload("res://core/tactics/tactics_regen.gd")
 const TacticsWeakness = preload("res://core/tactics/tactics_weakness.gd")
 
 
@@ -40,6 +41,11 @@ static func resolve_hit(battle, attacker, defender, weak_color: String) -> Dicti
 # 蓄势：敌人自己的回合结束时累计未被弱点命中的回合数。
 static func end_turn(battle, uid: String) -> Array:
 	var unit = battle.get_unit(uid)
+	if unit != null and unit.side == "player":
+		# 玩家回合结束：带无限回复的敌人瞬间回血，事件交给视图补播。
+		var regen: Array = TacticsRegen.on_player_turn_end(battle)
+		battle.pending_events.append_array(regen)
+		return regen
 	if unit == null or unit.side != "enemy" or not unit.is_alive() \
 			or unit.weaknesses.is_empty():
 		return []

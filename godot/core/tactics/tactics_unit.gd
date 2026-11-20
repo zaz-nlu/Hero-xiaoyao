@@ -15,11 +15,17 @@ var loadout: Array[String] = []
 # 能量池：内力 / 紫气 / 仙气各自的剩余与上限（玩家方）。
 var energy_left: Dictionary = {}
 var energy_max: Dictionary = {}
+# 出招可用的能量；空 = 不限。紫气等不在列表里的池只能用于专属技能（如紫气释放）。
+var attack_energies: Array = []
 var reactions_left: int = 0
 var has_moved: bool = false
 var has_acted: bool = false
 # 弱点颜色槽（敌人）；"none" 表示中性槽，不可被命中。
 var weaknesses: Array = []
+# 与 weaknesses 同下标的世界方向（Vector2i；ZERO = 任意方向）。
+var weak_dirs: Array = []
+# 立绘/精灵图 id；空 = 玩家默认角色。
+var sprite_id: String = ""
 var last_weak_color: String = ""
 # 连续多少个自己的回合没有被弱点命中。
 var no_weak_turns: int = 0
@@ -86,6 +92,10 @@ func start_turn() -> void:
 	reactions_left = StatsRules.reaction_points(skill())
 	has_moved = false
 	has_acted = false
+
+
+func can_attack_with(energy: String) -> bool:
+	return attack_energies.is_empty() or attack_energies.has(energy)
 
 
 func has_energy(energy: String) -> bool:

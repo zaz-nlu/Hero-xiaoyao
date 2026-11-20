@@ -1,11 +1,19 @@
 [
 	{
 		"id": "basic_sword",
-		"range": {"shape": "melee", "min": 1, "max": 1, "width": 1, "pierce": false},
+		"range": {
+			"shape": "melee",
+			"min": 1,
+			"max": 1,
+			"width": 1,
+			"pierce": false
+		},
 		"name": "基础剑术",
 		"grade": "common",
 		"power": 10,
-		"counters": ["thrust"],
+		"counters": [
+			"thrust"
+		],
 		"initiative": 0,
 		"counter_level": 2,
 		"advantage_stat": "skill",
@@ -13,11 +21,20 @@
 	},
 	{
 		"id": "parry",
-		"range": {"shape": "melee", "min": 1, "max": 1, "width": 1, "pierce": false},
+		"range": {
+			"shape": "melee",
+			"min": 1,
+			"max": 1,
+			"width": 1,
+			"pierce": false
+		},
 		"name": "格挡",
 		"grade": "common",
 		"power": 4,
-		"counters": ["sweep", "combo"],
+		"counters": [
+			"sweep",
+			"combo"
+		],
 		"initiative": 0,
 		"counter_level": 3,
 		"advantage_stat": "defense",
@@ -25,11 +42,20 @@
 	},
 	{
 		"id": "sidestep",
-		"range": {"shape": "melee", "min": 1, "max": 1, "width": 1, "pierce": false},
+		"range": {
+			"shape": "melee",
+			"min": 1,
+			"max": 1,
+			"width": 1,
+			"pierce": false
+		},
 		"name": "闪身",
 		"grade": "common",
 		"power": 3,
-		"counters": ["charge", "ranged"],
+		"counters": [
+			"charge",
+			"ranged"
+		],
 		"initiative": 5,
 		"counter_level": 3,
 		"advantage_stat": "speed",
@@ -37,23 +63,44 @@
 	},
 	{
 		"id": "taiji",
-		"range": {"shape": "melee", "min": 1, "max": 1, "width": 1, "pierce": false},
+		"range": {
+			"shape": "melee",
+			"min": 1,
+			"max": 1,
+			"width": 1,
+			"pierce": false
+		},
 		"name": "太极缠劲",
 		"grade": "rare",
 		"power": 5,
-		"counters": ["heavy"],
+		"counters": [
+			"heavy"
+		],
 		"initiative": 0,
 		"counter_level": 4,
 		"advantage_stat": "recovery",
-		"effects": [{"kind": "reflect", "value": 0.3}]
+		"effects": [
+			{
+				"kind": "reflect",
+				"value": 0.3
+			}
+		]
 	},
 	{
 		"id": "qingyun",
-		"range": {"shape": "line", "min": 1, "max": 2, "width": 1, "pierce": false},
+		"range": {
+			"shape": "line",
+			"min": 1,
+			"max": 2,
+			"width": 1,
+			"pierce": false
+		},
 		"name": "青云剑法",
 		"grade": "fine",
 		"power": 12,
-		"counters": ["thrust"],
+		"counters": [
+			"thrust"
+		],
 		"initiative": 2,
 		"counter_level": 4,
 		"advantage_stat": "skill",
@@ -61,11 +108,19 @@
 	},
 	{
 		"id": "huifeng",
-		"range": {"shape": "cone", "min": 1, "max": 3, "width": 1, "pierce": false},
+		"range": {
+			"shape": "cone",
+			"min": 1,
+			"max": 3,
+			"width": 1,
+			"pierce": false
+		},
 		"name": "回风剑",
 		"grade": "fine",
 		"power": 9,
-		"counters": ["sweep"],
+		"counters": [
+			"sweep"
+		],
 		"initiative": 2,
 		"counter_level": 4,
 		"advantage_stat": "speed",
@@ -73,11 +128,19 @@
 	},
 	{
 		"id": "lianhuan",
-		"range": {"shape": "melee", "min": 1, "max": 1, "width": 1, "pierce": false},
+		"range": {
+			"shape": "melee",
+			"min": 1,
+			"max": 1,
+			"width": 1,
+			"pierce": false
+		},
 		"name": "连环快剑",
 		"grade": "fine",
 		"power": 8,
-		"counters": ["combo"],
+		"counters": [
+			"combo"
+		],
 		"initiative": 6,
 		"counter_level": 3,
 		"advantage_stat": "speed",
@@ -85,11 +148,19 @@
 	},
 	{
 		"id": "duanshi",
-		"range": {"shape": "melee", "min": 1, "max": 1, "width": 1, "pierce": false},
+		"range": {
+			"shape": "melee",
+			"min": 1,
+			"max": 1,
+			"width": 1,
+			"pierce": false
+		},
 		"name": "断势一击",
 		"grade": "rare",
 		"power": 14,
-		"counters": ["charge"],
+		"counters": [
+			"charge"
+		],
 		"initiative": 0,
 		"counter_level": 4,
 		"advantage_stat": "power",
@@ -97,11 +168,19 @@
 	},
 	{
 		"id": "liuxing",
-		"range": {"shape": "ranged", "min": 2, "max": 5, "width": 1, "pierce": false},
+		"range": {
+			"shape": "ranged",
+			"min": 2,
+			"max": 5,
+			"width": 1,
+			"pierce": false
+		},
 		"name": "流星诀",
 		"grade": "rare",
 		"power": 8,
-		"counters": ["ranged"],
+		"counters": [
+			"ranged"
+		],
 		"initiative": 4,
 		"counter_level": 4,
 		"advantage_stat": "skill",
@@ -109,14 +188,123 @@
 	},
 	{
 		"id": "jueshi",
-		"range": {"shape": "line", "min": 1, "max": 3, "width": 1, "pierce": true},
+		"range": {
+			"shape": "line",
+			"min": 1,
+			"max": 3,
+			"width": 1,
+			"pierce": true
+		},
 		"name": "绝世剑术",
 		"grade": "legendary",
 		"power": 18,
-		"counters": ["thrust", "combo"],
+		"counters": [
+			"thrust",
+			"combo"
+		],
 		"initiative": 3,
 		"counter_level": 7,
 		"advantage_stat": "skill",
 		"effects": []
+	},
+	{
+		"id": "yushen_thrust",
+		"range": {
+			"shape": "line",
+			"min": 1,
+			"max": 2,
+			"width": 1,
+			"pierce": true
+		},
+		"name": "御神·刺",
+		"grade": "legendary",
+		"power": 220,
+		"forms": [
+			"thrust"
+		],
+		"counters": [
+			"thrust"
+		],
+		"initiative": 4,
+		"counter_level": 8,
+		"advantage_stat": "skill",
+		"effects": [],
+		"jianyi_power": 10,
+		"mana_cost": 300
+	},
+	{
+		"id": "yushen_chop",
+		"range": {
+			"shape": "melee",
+			"min": 1,
+			"max": 1,
+			"width": 1,
+			"pierce": false
+		},
+		"name": "御神·劈",
+		"grade": "legendary",
+		"power": 250,
+		"forms": [
+			"chop"
+		],
+		"counters": [
+			"heavy"
+		],
+		"initiative": 0,
+		"counter_level": 8,
+		"advantage_stat": "power",
+		"effects": [],
+		"jianyi_power": 10,
+		"mana_cost": 400
+	},
+	{
+		"id": "yushen_sweep",
+		"range": {
+			"shape": "cone",
+			"min": 1,
+			"max": 2,
+			"width": 1,
+			"pierce": false
+		},
+		"name": "御神·砍",
+		"grade": "legendary",
+		"power": 200,
+		"forms": [
+			"sweep"
+		],
+		"counters": [
+			"sweep"
+		],
+		"initiative": 2,
+		"counter_level": 8,
+		"advantage_stat": "speed",
+		"effects": [],
+		"jianyi_power": 10,
+		"mana_cost": 350
+	},
+	{
+		"id": "yushen_point",
+		"range": {
+			"shape": "ranged",
+			"min": 2,
+			"max": 4,
+			"width": 1,
+			"pierce": false
+		},
+		"name": "御神·戳",
+		"grade": "legendary",
+		"power": 170,
+		"forms": [
+			"point"
+		],
+		"counters": [
+			"ranged"
+		],
+		"initiative": 6,
+		"counter_level": 8,
+		"advantage_stat": "skill",
+		"effects": [],
+		"jianyi_power": 10,
+		"mana_cost": 250
 	}
 ]

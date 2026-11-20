@@ -6,6 +6,10 @@ var id: String = ""
 var name: String = ""
 var grade: String = "common"
 var power: int = 0
+# 剑意伤害使用的威力；-1 表示沿用 power。
+var jianyi_power: int = -1
+# 内力（蓝条）模式下一次出招的耗蓝；-1 表示按次数制（grade_cost）。
+var mana_cost: int = -1
 var counters: Array[String] = []
 var initiative: int = 0
 var counter_level: int = 0
@@ -21,6 +25,8 @@ static func from_dict(d: Dictionary) -> RefCounted:
 	m.name = str(d.get("name", ""))
 	m.grade = str(d.get("grade", "common"))
 	m.power = int(d.get("power", 0))
+	m.jianyi_power = int(d.get("jianyi_power", -1))
+	m.mana_cost = int(d.get("mana_cost", -1))
 	m.counters = _string_array(d.get("counters", []))
 	m.initiative = int(d.get("initiative", 0))
 	m.counter_level = int(d.get("counter_level", 0))

@@ -24,6 +24,7 @@ const LogFeed = preload("res://features/tactics/tactics_log_feed.gd")
 const EnemyDirector = preload("res://features/tactics/tactics_enemy_director.gd")
 const PlayerInput = preload("res://features/tactics/tactics_player_input.gd")
 const ResultLayer = preload("res://features/tactics/tactics_result_overlay.gd")
+const LogText = preload("res://features/tactics/tactics_log_text.gd")
 
 const STATE_IDLE := "idle"
 const STATE_PLAYER := "player"
@@ -247,6 +248,7 @@ func _reset_runtime() -> void:
 func _next_phase() -> void:
 	if battle == null:
 		return
+	_append_events(battle.take_pending())
 	if battle.result() != "":
 		_enter_result()
 		return
@@ -466,20 +468,18 @@ func _martial_name(martial_id: String) -> String:
 	return str(battle.martials[martial_id].name)
 
 
-# 招式名优先用玩家武学名，其次用敌人 def.moves 里的 name，最后退回 id。
+# 招式名优先用玩家武学名，其次用敌人 def.moves 里的 name，最后退回 id；带形态后缀。
 func _action_name(uid: Variant, martial_id: String) -> String:
 	if battle != null and battle.martials.has(martial_id):
-		return str(battle.martials[martial_id].name)
+		return LogText.with_form(str(battle.martials[martial_id].name), battle.martials[martial_id])
 	var unit = battle.get_unit(str(uid)) if battle != null else null
 	if unit != null and unit.unit != null and unit.unit.def != null:
 		for move in unit.unit.def.moves:
-			if not (move is Dictionary):
-				continue
-			if str(move.get("id", "")) != martial_id:
+			if not (move is Dictionary) or str(move.get("id", "")) != martial_id:
 				continue
 			var move_name := str(move.get("name", ""))
 			if move_name != "":
-				return move_name
+				return LogText.with_form(move_name, move)
 	return martial_id
 
 

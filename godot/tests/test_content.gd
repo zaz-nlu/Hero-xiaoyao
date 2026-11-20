@@ -21,7 +21,7 @@ func test_content_loads_without_errors() -> void:
 func test_martial_count_between_8_and_10() -> void:
 	var defs: Dictionary = DataLoader.load_martials(MARTIALS_PATH)["defs"]
 	var count := defs.size()
-	assert_true(count >= 8 and count <= 10, "8 to 10 martials, got %d" % count)
+	assert_true(count >= 8 and count <= 14, "8 to 14 martials (4 are the tutorial-only 御神剑术), got %d" % count)
 
 
 func test_every_move_type_has_a_counter_martial() -> void:
@@ -61,7 +61,7 @@ func test_bandit_has_1_or_2_types_and_toughness_2() -> void:
 		types[move["type"]] = true
 	var type_count := types.size()
 	assert_true(type_count >= 1 and type_count <= 2, "bandit has 1 to 2 move types, got %d" % type_count)
-	assert_eq(bandit.toughness, 2, "bandit toughness")
+	assert_eq(bandit.toughness, 0, "minions have no toughness")
 	assert_eq(bandit.stun_turns, 1, "bandit stun_turns")
 
 

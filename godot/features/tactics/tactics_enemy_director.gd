@@ -138,11 +138,13 @@ func _show_next_reaction() -> void:
 		_show_next_reaction()
 		return
 	var relation := Facing.relation(defender.pos, defender.facing, attacker.pos)
-	var move_name := _move_name(attacker, str(pending_attack.get("martial_id", "")))
+	var move_id := str(pending_attack.get("martial_id", ""))
+	var move_def := _move_def(attacker, move_id)
+	var move_name := str(move_def.get("name", move_id))
 	var options = entry.get("options", [])
 	view.reaction_menu.open_for(
 		str(attacker.unit.name), move_name, view._relation_text(relation), defender_id,
-		options if options is Array else [], view.battle.martials, defender.energy_left)
+		options if options is Array else [], view.battle.martials, defender.energy_left, move_def)
 
 
 func _execute_attack() -> void:
@@ -179,9 +181,10 @@ func _finish() -> void:
 	view._next_phase()
 
 
-func _move_name(attacker, move_id: String) -> String:
+# 敌方招式定义（含 form / unblockable），反制菜单据此显示形态与“不可破”。
+func _move_def(attacker, move_id: String) -> Dictionary:
 	if attacker.unit != null and attacker.unit.def != null:
 		for move in attacker.unit.def.moves:
-			if str(move.get("id", "")) == move_id:
-				return str(move.get("name", move_id))
-	return move_id
+			if move is Dictionary and str(move.get("id", "")) == move_id:
+				return move
+	return {}

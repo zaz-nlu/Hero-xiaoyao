@@ -133,7 +133,7 @@ func _make_avatar(unit, side: String, view_size: Vector2) -> Control:
 	block.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	holder.add_child(block)
 
-	var texture := UI.portrait_texture(unit)
+	var texture := UI.card_portrait_texture(unit, view_size.y / maxf(1.0, view_size.x))
 	if texture != null:
 		var rect := TextureRect.new()
 		rect.texture = texture

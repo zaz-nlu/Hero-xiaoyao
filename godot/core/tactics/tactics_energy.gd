@@ -84,6 +84,10 @@ static func cost_for(martial) -> int:
 	var free: Array = _block().get("free_martials", [])
 	if free.has(str(martial_id)):
 		return 0
+	# 蓝条模式（东方阳等）：武学自带耗蓝，池子是体质决定的大数值；任逍遥仍是次数制。
+	var mana = _field(martial, "mana_cost")
+	if (mana is int or mana is float) and int(mana) >= 0:
+		return int(mana)
 	var grade = _field(martial, "grade")
 	return grade_cost(str(grade) if grade != null else "")
 

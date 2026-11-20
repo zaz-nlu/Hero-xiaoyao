@@ -39,7 +39,7 @@
 	},
 	"ziqi_release": {"cost": 1, "heal_pct": 20},
 	"weakness": {
-		"colors": ["neili", "ziqi", "xianqi"],
+		"colors": ["neili"],
 		"weak_damage_pct": 125,
 		"toughness_hit": 1,
 		"toughness_weak": 2,

@@ -230,7 +230,7 @@ func _set_avatar(unit) -> void:
 		_avatar.remove_child(child)
 		child.free()
 
-	var texture := UI.portrait_texture(unit)
+	var texture := UI.card_portrait_texture(unit)
 	if texture != null:
 		var rect := TextureRect.new()
 		rect.texture = texture

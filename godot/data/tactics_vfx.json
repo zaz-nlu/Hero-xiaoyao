@@ -56,6 +56,22 @@
 			"cast": {"sheet": "vfx_projectile", "row": 0, "at": "projectile", "scale": 1.4, "fps": 18, "tint": "#ffe08a", "flight": 0.3},
 			"hit": {"sheet": "vfx_hit", "row": 0, "scale": 1.8}
 		},
+		"yushen_thrust": {
+			"cast": {"sheet": "vfx_thrust_sweep", "row": 0, "at": "line", "scale": 2.6, "fps": 20, "tint": "#ffe9a8", "step_delay": 0.04},
+			"hit": {"sheet": "vfx_hit", "row": 0, "scale": 2.0}
+		},
+		"yushen_chop": {
+			"cast": {"sheet": "vfx_slash", "row": 1, "at": "target", "scale": 3.0, "fps": 18, "tint": "#ffe9a8"},
+			"hit": {"sheet": "vfx_hit", "row": 0, "scale": 2.2}
+		},
+		"yushen_sweep": {
+			"cast": {"sheet": "vfx_slash", "row": 2, "at": "target", "scale": 3.0, "fps": 18, "tint": "#ffe9a8"},
+			"hit": {"sheet": "vfx_hit", "row": 0, "scale": 2.0}
+		},
+		"yushen_point": {
+			"cast": {"sheet": "vfx_projectile", "row": 0, "at": "target", "scale": 2.2, "fps": 18, "tint": "#ffe9a8"},
+			"hit": {"sheet": "vfx_hit", "row": 0, "scale": 1.8}
+		},
 		"jueshi": {
 			"cast": [
 				{"sheet": "vfx_slash", "row": 2, "at": "line", "scale": 2.6, "fps": 18, "tint": "#ffffff", "step_delay": 0.04},

@@ -269,8 +269,8 @@ func test_bot_uses_ziqi_when_hurt() -> void:
 	# 45%：低于紫气回复偏好的 50%，但高于主动运功的 40% 阈值，仍走紫气出招。
 	player.unit.hp = 225
 	var boss = _enemy(1)
-	boss.weaknesses = ["none", "none"]
 	var b = _battle([player, boss])
+	boss.weaknesses = ["none", "none"]
 	assert_eq(b.begin_turn(), "player")
 	var events: Array = TacticsBot.take_turn(b, "player", _rng(1), "best")
 	var attack := _first_event(events, "attack")

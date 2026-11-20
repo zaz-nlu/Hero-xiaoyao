@@ -5,12 +5,15 @@ extends RefCounted
 
 const TacticsSession = preload("res://features/tactics/tactics_session.gd")
 const TacticsSfx = preload("res://features/tactics/tactics_sfx.gd")
+const TacticsTutorial = preload("res://features/tactics/tactics_tutorial.gd")
 const TacticsDialogueFlow = preload("res://features/tactics/tactics_dialogue_flow.gd")
 
 var from_game: bool = false
 
 var _sfx: Variant = TacticsSfx.new()
 var _dialogue: Variant = TacticsDialogueFlow.new()
+var _tutorial: Variant = TacticsTutorial.new()
+var _is_tutorial: bool = false
 var _reported: bool = false
 var _result_battle: Variant = null
 
@@ -22,11 +25,14 @@ func prepare(view, enemy_id: String, count: int, first_strike: bool, origin: Str
 		view.panel.show_message("组装失败：%s" % str(built.get("errors", [])))
 		return
 	from_game = true
+	_is_tutorial = TacticsSession.is_tutorial(origin)
 	var group: Array = built.get("group", [])
 	view.start(str(built.get("map_id", "")), group, int(built.get("seed", 1)), built)
 	view._player_input.announce_view_controls()
 	_dialogue.build(view)
 	_dialogue.reset(str(built.get("encounter_id", enemy_id)))
+	if _is_tutorial:
+		_tutorial.setup(view, origin)
 
 
 func button_text() -> String:
@@ -44,6 +50,7 @@ func play_events(view, events: Array) -> void:
 		return
 	_sfx.setup(view)
 	_sfx.play_events(view.audio, events)
+	_tutorial.on_events(events)
 
 
 func result_callback(view, restart: Callable) -> Callable:
@@ -79,7 +86,9 @@ func _on_result(view, restart: Callable) -> void:
 		return
 	_reported = true
 	var battle = view.battle
-	if battle != null and str(battle.result()) == "win":
+	if _is_tutorial:
+		_tutorial.hide_hint()
+	elif battle != null and str(battle.result()) == "win":
 		TacticsSession.settle(battle)
 	else:
 		TacticsSession.settle_defeat(battle)
