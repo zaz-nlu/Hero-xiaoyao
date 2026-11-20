@@ -102,12 +102,7 @@ static func texture_dir() -> String:
 
 
 static func _image_texture(path: String) -> Texture2D:
-	if not FileAccess.file_exists(path):
-		return null
-	var image: Image = Image.load_from_file(ProjectSettings.globalize_path(path))
-	if image == null or image.is_empty():
-		return null
-	return ImageTexture.create_from_image(image)
+	return ImageCache.texture(path)
 
 
 static func _load_layout() -> void:

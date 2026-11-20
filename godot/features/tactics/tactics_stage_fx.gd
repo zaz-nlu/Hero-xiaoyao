@@ -1,11 +1,12 @@
 extends Node3D
 
 # 战旗 3D 特效层：把 core 事件翻译成 data/tactics_vfx.json 配置的 vfx 帧动画与伤害飘字。
-# vfx 图集是运行时原始图片，用 Image.load_from_file 读取并按 8 列切帧。
+# VFX 图集按 8 列切帧。
 
 const TacticsTheme = preload("res://features/tactics/tactics_theme.gd")
 const VfxTable = preload("res://features/tactics/tactics_vfx_table.gd")
 const VfxTargeting = preload("res://features/tactics/tactics_vfx_targeting.gd")
+const ImageCache = preload("res://shared/resources/image_cache.gd")
 
 const VFX_DIR := "res://assets/vfx/"
 const SHEET_COLS := 8
@@ -485,8 +486,8 @@ static func _frames(name: String, row: int) -> Array:
 	var out: Array = []
 	var rows := VfxTable.sheet_rows(name)
 	var path := VFX_DIR + name + ".png"
-	if safe_row < rows and FileAccess.file_exists(path):
-		var image: Image = Image.load_from_file(ProjectSettings.globalize_path(path))
+	if safe_row < rows:
+		var image := ImageCache.image(path)
 		if image != null and not image.is_empty():
 			var cell_w := int(image.get_width() / SHEET_COLS)
 			var cell_h := int(image.get_height() / rows)

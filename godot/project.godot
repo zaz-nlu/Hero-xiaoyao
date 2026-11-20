@@ -17,3 +17,11 @@ config/features=PackedStringArray("4.7")
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/layout_editor/plugin.cfg")
+
+[gui]
+
+theme/custom_font.web="res://assets/fonts/MaShanZheng-Regular.ttf"
+
+[rendering]
+
+renderer/rendering_method.web="gl_compatibility"

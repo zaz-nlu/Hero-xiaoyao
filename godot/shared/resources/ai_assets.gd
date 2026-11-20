@@ -1,9 +1,10 @@
 extends RefCounted
 
 # Loads the AI-painted art pack from res://assets/scenery/, textures/ and icons/.
-# These PNGs are not imported by Godot, so they must be read from disk.
+# Exported projects read the imported texture data from the PCK.
 
 const AssetPaths = preload("res://shared/resources/asset_paths.gd")
+const ImageCache = preload("res://shared/resources/image_cache.gd")
 
 static var _textures: Dictionary = {}
 
@@ -83,10 +84,7 @@ static func make_wall_quad(
 
 
 static func _read_image(file: String) -> Image:
-	var path: String = AssetPaths.art_dir(file) + file
-	if not FileAccess.file_exists(path):
-		return null
-	var image: Image = Image.load_from_file(ProjectSettings.globalize_path(path))
+	var image := ImageCache.image(AssetPaths.art_dir(file) + file)
 	if image == null or image.is_empty():
 		return null
 	return image

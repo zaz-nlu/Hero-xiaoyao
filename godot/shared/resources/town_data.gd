@@ -117,7 +117,8 @@ static func validate(data: Dictionary) -> Array[String]:
 		var id := str(npc.get("id", "npc_%d" % i))
 		var sprite := str(npc.get("sprite", ""))
 		var sprite_path := AssetPaths.sprite_path(sprite)
-		if sprite == "" or not FileAccess.file_exists(sprite_path):
+		if sprite == "" or (not FileAccess.file_exists(sprite_path)
+				and not ResourceLoader.exists(sprite_path, "Texture2D")):
 			errors.append("npc %s has missing sprite '%s'" % [id, sprite])
 		if _has_numbers(npc, ["x", "z"]):
 			var npc_pos := Vector2(float(npc["x"]), float(npc["z"]))

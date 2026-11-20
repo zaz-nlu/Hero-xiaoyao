@@ -269,7 +269,7 @@ static func _validate_path(
 	if not path.begins_with("res://") or path.contains(".."):
 		errors.append("%s: %s must be a local res:// path" % [where, field])
 		return
-	if not FileAccess.file_exists(path):
+	if not FileAccess.file_exists(path) and not ResourceLoader.exists(path):
 		errors.append("%s: %s file not found: %s" % [where, field, path])
 
 

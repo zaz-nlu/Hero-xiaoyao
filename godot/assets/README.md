@@ -33,12 +33,10 @@
 
 - `fonts/MaShanZheng-Regular.ttf`：马善政毛笔字（Ma Shan Zheng），用于小镇门楣木匾等招牌文字。
   许可证为 SIL Open Font License 1.1（OFL-1.1），可随游戏分发；修改或再分发时保留许可证与保留字体名。
-  该 TTF 未经过 Godot 导入，`shared/scenery/town/town_fonts.gd` 用 `FontFile.load_dynamic_font` 直接读取原始文件，
-  不要改成 `load()`/`preload()`。
+  编辑器从 TTF 读取招牌字体。网页导出使用导入后的字体资源，并将其设为默认界面字体。
 - `ui/world/quest_available.png`（红底金边“!”）、`ui/world/quest_ready.png`（青底金边“?”）、
   `ui/world/quest_active.png`（灰底“…”）：128×128 透明底，作为 NPC 头顶任务标记徽章。
-  `shared/scenery/town/town_marker_icons.gd` 按标记文字 `"!"` / `"?"` / `"…"` 映射并用 `Image.load_from_file`
-  读取缓存；空串表示不显示标记。
+  `shared/scenery/town/town_marker_icons.gd` 按标记文字 `"!"` / `"?"` / `"…"` 通过共享贴图缓存读取；空串表示不显示标记。
 
 ## 战棋打击音效
 

@@ -303,8 +303,6 @@ func _build_portrait_frame() -> Control:
 
 
 func _portrait_texture() -> Texture2D:
-	if not FileAccess.file_exists(PLAYER_PORTRAIT_PATH):
-		return null
 	var texture: Texture2D = ImageCache.texture(PLAYER_PORTRAIT_PATH)
 	if texture == null:
 		return null

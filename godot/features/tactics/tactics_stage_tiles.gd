@@ -4,6 +4,7 @@ extends Node3D
 # 并维护每格顶面高亮。只读 grid 数据，不修改战斗规则。
 
 const AiAssets = preload("res://shared/resources/ai_assets.gd")
+const ImageCache = preload("res://shared/resources/image_cache.gd")
 const SceneKit = preload("res://shared/scene/scene_kit.gd")
 const TacticsTheme = preload("res://features/tactics/tactics_theme.gd")
 
@@ -363,11 +364,8 @@ static func _highlight_texture(region_cell: Vector2i) -> Texture2D:
 	var key := "%d_%d" % [region_cell.x, region_cell.y]
 	if _regions.has(key):
 		return _regions[key]
-	if _atlas == null and FileAccess.file_exists(HIGHLIGHT_PATH):
-		var image: Image = Image.load_from_file(
-			ProjectSettings.globalize_path(HIGHLIGHT_PATH))
-		if image != null and not image.is_empty():
-			_atlas = ImageTexture.create_from_image(image)
+	if _atlas == null:
+		_atlas = ImageCache.texture(HIGHLIGHT_PATH)
 	var atlas := AtlasTexture.new()
 	atlas.atlas = _atlas
 	if _atlas != null:
