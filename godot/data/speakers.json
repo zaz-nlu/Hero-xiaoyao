@@ -1,140 +1,164 @@
 [
-	{
-		"id": "ren_xiaoyao",
-		"name": "任逍遥",
-		"portrait": "res://assets/portraits/ren_xiaoyao.png",
-		"side": "left"
-	},
-	{
-		"id": "zixia",
-		"name": "紫霞",
-		"portrait": "res://assets/portraits/zixia.png",
-		"side": "right"
-	},
-	{
-		"id": "zixia_sister",
-		"name": "紫霞师姐",
-		"portrait": "res://assets/portraits/zixia.png",
-		"side": "right"
-	},
-	{
-		"id": "zixia_disciple",
-		"name": "紫霞弟子",
-		"portrait": "res://assets/portraits/zixia_disciple.png",
-		"side": "right"
-	},
-	{
-		"id": "vendor",
-		"name": "酒家小贩",
-		"portrait": "res://assets/portraits/vendor.png",
-		"side": "right"
-	},
-	{
-		"id": "ma_youwei",
-		"name": "马匪头子",
-		"portrait": "res://assets/portraits/ma_youwei.png",
-		"side": "right"
-	},
-	{
-		"id": "bandit",
-		"name": "马匪",
-		"portrait": "res://assets/portraits/bandit.png",
-		"side": "right"
-	},
-	{
-		"id": "smith",
-		"name": "铁匠",
-		"portrait": "res://assets/portraits/smith.png",
-		"side": "right"
-	},
-	{
-		"id": "hunter",
-		"name": "猎户",
-		"portrait": "res://assets/portraits/hunter.png",
-		"side": "right"
-	},
-	{
-		"id": "fisherman",
-		"name": "渔夫",
-		"portrait": "res://assets/portraits/fisherman.png",
-		"side": "right"
-	},
-	{
-		"id": "peddler",
-		"name": "货郎",
-		"portrait": "res://assets/portraits/peddler.png",
-		"side": "right"
-	},
-	{
-		"id": "waiter",
-		"name": "酒馆伙计",
-		"portrait": "res://assets/portraits/waiter.png",
-		"side": "right"
-	},
-	{
-		"id": "townswoman",
-		"name": "村妇",
-		"portrait": "res://assets/portraits/townswoman.png",
-		"side": "right"
-	},
-	{
-		"id": "herbalist",
-		"name": "药铺掌柜",
-		"portrait": "res://assets/portraits/herbalist.png",
-		"side": "right"
-	},
-	{
-		"id": "tailor",
-		"name": "裁缝",
-		"portrait": "res://assets/portraits/tailor.png",
-		"side": "right"
-	},
-	{
-		"id": "grandmother",
-		"name": "老婆婆",
-		"portrait": "res://assets/portraits/grandmother.png",
-		"side": "right"
-	},
-	{
-		"id": "scholar",
-		"name": "书生",
-		"portrait": "res://assets/portraits/scholar.png",
-		"side": "right"
-	},
-	{
-		"id": "shopkeeper_f",
-		"name": "杂货铺老板娘",
-		"portrait": "res://assets/portraits/shopkeeper_f.png",
-		"side": "right"
-	},
-	{
-		"id": "guard",
-		"name": "守山卫兵",
-		"portrait": "res://assets/portraits/guard.png",
-		"side": "right"
-	},
-	{
-		"id": "elder",
-		"name": "老者",
-		"portrait": "",
-		"side": "right"
-	},
-	{
-		"id": "girl",
-		"name": "小姑娘",
-		"portrait": "",
-		"side": "right"
-	},
-	{
-		"id": "shopkeeper_m",
-		"name": "货栈掌柜",
-		"portrait": "",
-		"side": "right"
-	},
-	{
-		"id": "villager",
-		"name": "路人",
-		"portrait": "",
-		"side": "right"
-	}
+ {
+  "id": "ren_xiaoyao",
+  "name": "任逍遥",
+  "portrait": "res://assets/portraits/ren_xiaoyao.png",
+  "side": "left"
+ },
+ {
+  "id": "zixia",
+  "name": "紫霞",
+  "portrait": "res://assets/portraits/zixia.png",
+  "side": "right"
+ },
+ {
+  "id": "zixia_sister",
+  "name": "紫霞师姐",
+  "portrait": "res://assets/portraits/zixia.png",
+  "side": "right"
+ },
+ {
+  "id": "zixia_disciple",
+  "name": "紫霞弟子",
+  "portrait": "res://assets/portraits/zixia_disciple.png",
+  "side": "right"
+ },
+ {
+  "id": "vendor",
+  "name": "酒家小贩",
+  "portrait": "res://assets/portraits/vendor.png",
+  "side": "right"
+ },
+ {
+  "id": "ma_youwei",
+  "name": "马匪头子",
+  "portrait": "res://assets/portraits/ma_youwei.png",
+  "side": "right"
+ },
+ {
+  "id": "bandit",
+  "name": "马匪",
+  "portrait": "res://assets/portraits/bandit.png",
+  "side": "right"
+ },
+ {
+  "id": "smith",
+  "name": "铁匠",
+  "portrait": "res://assets/portraits/smith.png",
+  "side": "right"
+ },
+ {
+  "id": "hunter",
+  "name": "猎户",
+  "portrait": "res://assets/portraits/hunter.png",
+  "side": "right"
+ },
+ {
+  "id": "fisherman",
+  "name": "渔夫",
+  "portrait": "res://assets/portraits/fisherman.png",
+  "side": "right"
+ },
+ {
+  "id": "peddler",
+  "name": "货郎",
+  "portrait": "res://assets/portraits/peddler.png",
+  "side": "right"
+ },
+ {
+  "id": "waiter",
+  "name": "酒馆伙计",
+  "portrait": "res://assets/portraits/waiter.png",
+  "side": "right"
+ },
+ {
+  "id": "townswoman",
+  "name": "村妇",
+  "portrait": "res://assets/portraits/townswoman.png",
+  "side": "right"
+ },
+ {
+  "id": "herbalist",
+  "name": "药铺掌柜",
+  "portrait": "res://assets/portraits/herbalist.png",
+  "side": "right"
+ },
+ {
+  "id": "tailor",
+  "name": "裁缝",
+  "portrait": "res://assets/portraits/tailor.png",
+  "side": "right"
+ },
+ {
+  "id": "grandmother",
+  "name": "老婆婆",
+  "portrait": "res://assets/portraits/grandmother.png",
+  "side": "right"
+ },
+ {
+  "id": "scholar",
+  "name": "书生",
+  "portrait": "res://assets/portraits/scholar.png",
+  "side": "right"
+ },
+ {
+  "id": "shopkeeper_f",
+  "name": "杂货铺老板娘",
+  "portrait": "res://assets/portraits/shopkeeper_f.png",
+  "side": "right"
+ },
+ {
+  "id": "guard",
+  "name": "守山卫兵",
+  "portrait": "res://assets/portraits/guard.png",
+  "side": "right"
+ },
+ {
+  "id": "elder",
+  "name": "老者",
+  "portrait": "",
+  "side": "right"
+ },
+ {
+  "id": "girl",
+  "name": "小姑娘",
+  "portrait": "",
+  "side": "right"
+ },
+ {
+  "id": "shopkeeper_m",
+  "name": "货栈掌柜",
+  "portrait": "",
+  "side": "right"
+ },
+ {
+  "id": "villager",
+  "name": "路人",
+  "portrait": "",
+  "side": "right"
+ },
+ {
+  "id": "dongfang_yang",
+  "name": "东方阳",
+  "portrait": "res://assets/portraits/dongfang_yang.png",
+  "side": "right"
+ },
+ {
+  "id": "dongfang_yun",
+  "name": "东方云",
+  "portrait": "res://assets/portraits/dongfang_yun.png",
+  "side": "right"
+ },
+ {
+  "id": "sol_demon_king",
+  "name": "魔王索尔",
+  "portrait": "res://assets/portraits/sol_demon_king.png",
+  "side": "right"
+ },
+ {
+  "id": "zishang",
+  "name": "紫殇",
+  "portrait": "res://assets/portraits/zishang.png",
+  "side": "right"
+ }
 ]

@@ -17,7 +17,7 @@ func test_load_speakers_ok() -> void:
 	var errors: Array = loaded.get("errors", [])
 	var defs: Dictionary = loaded.get("defs", {})
 	assert_true(errors.is_empty(), "speakers.json loads without errors")
-	assert_eq(defs.size(), 23, "speakers.json defines twenty-three speakers")
+	assert_eq(defs.size(), 27, "speakers.json defines twenty-seven speakers (incl. the three legends and 紫殇)")
 
 
 func test_parse_valid_lines() -> void:

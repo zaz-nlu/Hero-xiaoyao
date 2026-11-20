@@ -1,0 +1,181 @@
+{
+  "music": {
+    "intro": "opening_empire",
+    "town": "opening_town"
+  },
+  "slides": [
+    {
+      "id": "s1",
+      "seconds": 7.0,
+      "backdrop": {
+        "kind": "battlefield",
+        "seed": 101,
+        "palette": "ash",
+        "density": 16
+      },
+      "lines": [
+        "距今一百年。",
+        "天下大乱，群雄割据，百姓流离失所。"
+      ]
+    },
+    {
+      "id": "s2",
+      "seconds": 7.0,
+      "backdrop": {
+        "kind": "battlefield",
+        "seed": 202,
+        "palette": "dawn",
+        "density": 18
+      },
+      "lines": [
+        "东方未来门下，有一少年。",
+        "天生勇者之体，生而异于常人。"
+      ]
+    },
+    {
+      "id": "s3",
+      "seconds": 8.0,
+      "backdrop": {
+        "kind": "battlefield",
+        "seed": 303,
+        "palette": "dusk",
+        "density": 24
+      },
+      "lines": [
+        "少年名叫东方阳。",
+        "十五岁，孤身破万军。",
+        "二十岁，一统中原。"
+      ]
+    },
+    {
+      "id": "s4",
+      "seconds": 7.0,
+      "backdrop": {
+        "kind": "battlefield",
+        "seed": 404,
+        "palette": "gold",
+        "density": 20
+      },
+      "lines": [
+        "他登基称帝，建立东方帝国。",
+        "号令天下，四海来朝。"
+      ]
+    },
+    {
+      "id": "s5",
+      "seconds": 8.0,
+      "backdrop": {
+        "kind": "battlefield",
+        "seed": 505,
+        "palette": "gold",
+        "density": 22
+      },
+      "lines": [
+        "妖族称臣，精灵纳贡，魔族低头。",
+        "人族自此，再无外敌。"
+      ]
+    },
+    {
+      "id": "s6",
+      "seconds": 7.0,
+      "backdrop": {
+        "kind": "battlefield",
+        "seed": 606,
+        "palette": "dusk",
+        "density": 26
+      },
+      "lines": [
+        "他行军千里，所向披靡。",
+        "没有人见过他败。"
+      ]
+    },
+    {
+      "id": "s7",
+      "seconds": 8.0,
+      "backdrop": {
+        "kind": "art",
+        "image": "opening_duel_art.png",
+        "zoom": 1.12
+      },
+      "lines": [
+        "那一年，魔王索尔与东方云，联手围攻东方阳。",
+        "一人，对两位绝顶强者。"
+      ]
+    }
+  ],
+  "storyteller": {
+    "dialogue": "res://data/dialogues/opening_storyteller.json",
+    "scholar": "scholar",
+    "crowd": [
+      "elder",
+      "girl",
+      "grandmother",
+      "townswoman",
+      "fisherman"
+    ]
+  },
+  "slides_after": [
+    {
+      "id": "a1",
+      "seconds": 8.0,
+      "backdrop": {
+        "kind": "domain",
+        "stage": "recover"
+      },
+      "lines": [
+        "东方阳赢了。可那两人倒下的瞬间，又站了起来——",
+        "伤口转眼愈合，仿佛永远不会死去。"
+      ],
+      "text_pos": "top"
+    },
+    {
+      "id": "a2",
+      "seconds": 9.0,
+      "backdrop": {
+        "kind": "domain",
+        "stage": "domain"
+      },
+      "lines": [
+        "东方阳缓缓举起帝王之剑。",
+        "“帝王世纪——展开。”"
+      ],
+      "text_pos": "top"
+    },
+    {
+      "id": "a3",
+      "seconds": 8.0,
+      "backdrop": {
+        "kind": "art",
+        "image": "opening_duel_art.png",
+        "zoom": 1.12
+      },
+      "lines": [
+        "后世的人们说，",
+        "那是百年来，最接近神的人。"
+      ]
+    },
+    {
+      "id": "a4",
+      "seconds": 4.0,
+      "backdrop": {
+        "kind": "black"
+      },
+      "lines": [
+        "而今，百年已过。"
+      ]
+    }
+  ],
+  "duel": {
+    "enemies": [
+      {
+        "id": "dongfang_yun",
+        "count": 1
+      },
+      {
+        "id": "sol_demon_king",
+        "count": 1
+      }
+    ],
+    "origin": "opening_duel"
+  }
+}

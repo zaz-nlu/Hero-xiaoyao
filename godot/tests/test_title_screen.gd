@@ -40,6 +40,8 @@ func _make_save(dir: String, slot: String) -> bool:
 func _clear_skip_title() -> void:
 	if Engine.has_meta("skip_title"):
 		Engine.remove_meta("skip_title")
+	# 标题界面的测试关心“新游戏进入小镇”，开场序幕另有 test_opening 覆盖。
+	Engine.set_meta("skip_opening", true)
 
 
 func _new_game_in_tree(dir: String) -> Variant:
@@ -165,7 +167,7 @@ func test_start_new_game_resets_state_and_enters_town() -> void:
 	assert_true(GameState.stat_bonus.is_empty(), "stat bonuses are cleared")
 	assert_true(not GameState.has_flag("dirty"), "flags are cleared")
 	assert_eq(str(GameState.realm_id), "lianti", "the realm is reset")
-	assert_true(GameState.quests.is_empty(), "quests are cleared")
+	assert_eq(GameState.quests.keys(), ["zixia_recruit"], "only the opening main quest is active after a new game")
 	assert_eq(str(game.audio.current_music()), "music_town", "town music takes over")
 	game.free()
 	_cleanup(dir)
