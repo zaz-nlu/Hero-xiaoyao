@@ -3,9 +3,9 @@
   "legacyLineBudgets": {
     "godot/app/game.gd": 349,
     "godot/core/battle.gd": 533,
-    "godot/features/character/status_overlay.gd": 578,
+    "godot/features/character/status_overlay.gd": 555,
     "godot/features/pause/pause_menu.gd": 624,
-    "godot/features/tavern/tavern.gd": 597,
+    "godot/features/tavern/tavern.gd": 596,
     "godot/features/title/title_screen.gd": 876,
     "godot/features/town/town.gd": 574
   },

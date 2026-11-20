@@ -18,14 +18,15 @@
 
 | 路径 | 职责 |
 | --- | --- |
-| `godot/app/` | 组合根与跨 feature 编排：`game.gd`、`scene_router.gd`、`battle_flow.gd`、`save_coordinator.gd`；`game.tscn` 是默认主场景 |
+| `godot/app/` | 组合根与跨 feature 编排：`game.gd`、`scene_router.gd`、`battle_flow.gd`、`new_game_flow.gd`、`save_coordinator.gd`；`game.tscn` 是默认主场景 |
 | `godot/core/` | 规则、数值、状态、数据读取与存档；不得依赖场景/UI 类型 |
 | `godot/core/tactics/` | 战棋规则：网格、朝向、行动序、射程图形、地图读取、数值规则（基础层）；`tactics_battle`（行动与结算）、`tactics_reaction`（防守资格与结算）、`tactics_counter_rules`（招式形态 + 几何的破招判定）、`tactics_forms`（招式/武学形态映射）、`tactics_rule_data`（`data/tactics_rules.json` 读取与校验）、`tactics_damage`、`tactics_unit`、`tactics_rules`（次数档位、剑意倍率）、`tactics_setup`（从地图与数据组装战斗）、`tactics_ai`（敌方 AI，含 `plan`）、`tactics_bot`（模拟用玩家 bot） |
 | `godot/core/town_phase.gd` | 小镇昼夜（day/dusk/night）光照预设与插值，纯数据 |
 | `godot/core/calendar.gd` | 最小日历：第几天 + 四时段，时段名与打坐消耗读 `data/calendar.json`，状态在 `GameState.day` / `phase` |
+| `godot/core/opening_data.gd` | 开场序幕数据：读取并校验 `data/opening.json`（配乐、分页字幕、背景参数、书生配置），返回 `{ok, errors, music, slides, storyteller}`，纯数据 |
 | `godot/features/` | 按功能划分的场景、控制器与专属辅助 |
 | `godot/shared/` | 跨 feature 复用的资源、场景搭建、玩法、音频与 UI 组件 |
-| `godot/data/` | 内容 JSON：玩家、武学、敌人、遭遇、物品、任务、境界、熟练度、城镇/酒馆/森林、说话人、战棋人物简介、`calendar.json`（时段名与打坐消耗）、`tactics_rules.json`（战棋形态与破招结果表）、`tactics_encounters.json`（战斗来源到战棋地图的映射）、`tactics_sfx.json`（战棋事件到打击音效/顿帧的映射）、`tactics_balance.json`（战棋平衡场景、属性预设与验收区间）、`dialogues/`、`sprites/`、`maps/` |
+| `godot/data/` | 内容 JSON：玩家、武学、敌人、遭遇、物品、任务、境界、熟练度、城镇/酒馆/森林、说话人、战棋人物简介、`calendar.json`（时段名与打坐消耗）、`tactics_rules.json`（战棋形态与破招结果表）、`tactics_encounters.json`（战斗来源到战棋地图的映射）、`tactics_sfx.json`（战棋事件到打击音效/顿帧的映射）、`tactics_balance.json`（战棋平衡场景、属性预设与验收区间）、`music_cues.json`（剧情状态 → 曲名/回退）、`opening.json`（开场序幕分页字幕、配乐与书生配置）、`dialogues/`、`sprites/`、`maps/` |
 | `godot/assets/` | 运行时原始素材（`scenery/`、`textures/`、`icons/`、`sprites/`、`portraits/`、`audio/`、`fonts/`、`ui/world/`）；工具输入在 `art_source/inputs/`，说明见 [assets/README.md](../godot/assets/README.md) |
 | `godot/tools/` | 离线生成、调参、模拟与冒烟测试；战棋平衡模拟 `tactics_sim.gd`（场景与验收区间读 `data/tactics_balance.json`） |
 | `godot/tests/` | 自动测试，`run_tests.gd` 自动发现 `test_*.gd` |
@@ -38,6 +39,7 @@
 | `features/character/` | `character_panel`（外壳、页签切换、左栏与淡入）、`character_attributes_tab`、`character_skills_tab`、`character_equipment_tab`、`character_points_tab`（页签内容与常驻状态）、`character_panel_data`（属性/武学数据读取）、`character_panel_style`（页签共用控件样式）、`status_overlay`（角色/任务面板与 toast） |
 | `features/forest/` | `forest` 控制器、`forest_patrol`、`forest_alert`、`forest_pickups` |
 | `features/pause/` | `pause_menu`（存档、读档、设置、打坐、返回标题、退出）、`pause_menu_style`（菜单控件样式） |
+| `features/opening/` | `opening_sequence`（开场序幕播放器：逐页字幕淡入、黑场过渡、skip 与 `finished` 信号）、`opening_backdrop`（按 backdrop.kind 分发：battlefield 注入 3D 战场、art 插画 + 暗角、black 纯黑，palette 渐变只作回退）、`opening_battlefield`（按 seed/palette/density 程序生成 3D 战场：两军对子与列阵、战场道具、分时段光照、缓慢运镜与景深）、`opening_story_scene`（书生讲故事小场景：独立的 3D 茶棚与人群、对话、淡入淡出、skip 与 `finished` 信号；不搭建小镇） |
 | `features/tavern/` | `tavern` 控制器、`tavern_npc_roster`、`tavern_story_director`、`tavern_prefight_show`、`tavern_furniture_system`、`tavern_state_animation` |
 | `features/title/` | `title_screen`（标题/读档/设置）、`title_cinematic`（分镜背景） |
 | `features/town/` | `town` 控制器与 `town.tscn` |
@@ -50,7 +52,7 @@
 
 | 目录 | 主要内容 |
 | --- | --- |
-| `shared/audio/` | `audio_manager`、`audio_loader`（直接解析 WAV 字节） |
+| `shared/audio/` | `audio_manager`（播放、混音、jingle、`play_cue` 剧情切曲）、`audio_loader`（解析 WAV 字节、用字节加载 OGG 音乐并缓存） |
 | `shared/gameplay/` | `player_motion`、`interaction`、`stealth`、`pickups` |
 | `shared/resources/` | `asset_paths`、`ai_assets`、`image_cache`、`sprite_sheet`、`town_data`、`town_terraces`（台地高度与挡墙）、`forest_layout` |
 | `shared/scene/` | `scene_kit`、`texgen`、`character_sprite`、`world_camera` |
@@ -68,6 +70,7 @@
 | 小镇新的搭建能力（新种类的道具/地形/光照） | `shared/scenery/town/`，数据读取与几何数学放 `shared/resources/` |
 | 小镇控制器 `features/town/town.gd` | 行数预算内只做编排，**不要增行**；新逻辑放 shared 的新文件 |
 | 新素材 | 原始包放 `art_source/incoming/`，处理脚本放 `godot/tools/`，运行素材放 `godot/assets/` 对应目录并更新素材说明 |
+| 开场序幕（数据、播放、接线） | 数据读取与校验 → `core/opening_data.gd`；字幕播放器与背景、书生讲故事小场景 → `features/opening/`；新游戏分支与结束回调 → `app/new_game_flow.gd`（场景切换走 `scene_router.show_opening` / `show_opening_story`，字幕页结束后由 router 接书生场景） |
 | 新坐标/数值 | 进 JSON，不写死在 `.gd` 里；测试里的坐标从 JSON 推算 |
 | 调参/模拟 | `godot/tools/` |
 
@@ -101,9 +104,10 @@ flowchart LR
 | 入口 | 自己持有/负责 | 已拆出的模块 |
 | --- | --- | --- |
 | `app/game.gd` | 组合根：overlay、audio、pause menu 的引用，toast 音效去重；对测试和旧调用点保留 facade 字段 | 场景路由 → `scene_router`；存档/自动存档/游玩时长 → `save_coordinator`；战斗进出 → `battle_flow` |
-| `app/scene_router.gd` | `current`、`current_kind`；场景创建、卸载、路由和每类场景的音乐/环境音/自动存档表现；战斗默认进入 `features/tactics`，`legacy_battle` 元数据切回旧战斗 | 各 feature 场景 |
+| `app/scene_router.gd` | `current`、`current_kind`；场景创建、卸载、路由和每类场景的音乐/环境音/自动存档表现；新游戏序幕 `show_opening` 结束后自动接 `show_opening_story`（书生场景）再回调编排方；战斗默认进入 `features/tactics`，`legacy_battle` 元数据切回旧战斗 | 各 feature 场景 |
 | `app/save_coordinator.gd` | `save_dir`、`profile_path`、`loading_slot`、自动存档/档案轮询计时器；存档策略与位置格式 | 落盘 → `core/save_system.gd`；持久状态 → `core/game_state.gd` |
 | `app/battle_flow.gd` | 当前战斗的敌人/数量/来源、Boss 判定、战后返回场景与任务/flag 更新 | 战斗界面 → `scene_router`（默认 `features/tactics`，`legacy_battle` 切 `features/battle`） |
+| `app/new_game_flow.gd` | 新游戏开场编排：`skip_opening` / `skip_title` 跳过判断、序幕结束后的 `opening_done`、开场提示与自动存档接力 | 序幕播放器创建、字幕页 → 书生场景衔接与场景切换 → `scene_router.show_opening` / `show_opening_story`（`features/opening`） |
 | `features/town/town.gd` | 城镇控制器：玩家与位置、NPC 对话流程、交互、遭遇请求、拾取物 | 数据/名册 → `shared/resources/town_data.gd`；场景搭建 → `shared/scenery/town/*` |
 | `features/tavern/tavern.gd` | 酒馆控制器：玩家、房间、交互、当前 NPC、前戏/剧情状态入口 | 家具 → `tavern_furniture_system`；NPC → `tavern_npc_roster`；前戏 → `tavern_prefight_show`；剧情 → `tavern_story_director`；状态动画 → `tavern_state_animation` |
 | `features/forest/forest.gd` | 森林控制器：玩家与位置、对话、交互、遭遇请求 | 布局 → `shared/resources/forest_layout.gd`；视觉 → `shared/scenery/forest/*`；巡逻/警戒/拾取 → `features/forest/*` |
@@ -130,7 +134,7 @@ flowchart LR
 - 数据加载入口：`core/data_loader.gd` 集中常用 JSON 路径和解析；内容 JSON 只放内容，不放逻辑。
 - 运行素材路径入口：`shared/resources/asset_paths.gd`（`SCENERY`、`TEXTURES`、`ICONS`、`SPRITES`、`PORTRAITS`、`AUDIO` 与 `art_dir()`）。
   `shared/resources/ai_assets.gd` 按 `icon_` / `tex_` 前缀读 `icons/`、`textures/`，其余读 `scenery/`；`shared/resources/image_cache.gd` 读立绘/图集，
-  `shared/audio/audio_loader.gd` 读 WAV，`shared/ui/icon_lib.gd` 映射界面图标。
+  `shared/audio/audio_loader.gd` 读 WAV/OGG（OGG 经 `AudioStreamOggVorbis.load_from_buffer`），`shared/ui/icon_lib.gd` 映射界面图标。
 - 运行素材没有经过 Godot 导入，现有代码用 `Image.load_from_file` / `FileAccess` 直接读原始文件；
   不要擅自改成 `load()` / `preload()`。
 - 地图：`core/tactics/map_loader.gd` 从 `data/maps/<id>.json` 读取宽高、`tiles`、`heights`、`spawns` 等字段。
