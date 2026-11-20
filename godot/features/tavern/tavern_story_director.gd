@@ -11,12 +11,18 @@ signal encounter_requested(enemy_id: String, count: int, first_strike: bool)
 
 const DataLoader = preload("res://core/data_loader.gd")
 const GameState = preload("res://core/game_state.gd")
+const Calendar = preload("res://core/calendar.gd")
 const Prefight = preload("res://core/prefight.gd")
+const Quests = preload("res://core/quests.gd")
 
 const AMBUSH_OPEN_PATH := DataLoader.TAVERN_AMBUSH_OPEN_PATH
 const AMBUSH_MANY_PATH := DataLoader.TAVERN_AMBUSH_MANY_PATH
 const AMBUSH_FEW_PATH := DataLoader.TAVERN_AMBUSH_FEW_PATH
 const PREFIGHT_END_PATH := DataLoader.TAVERN_PREFIGHT_END_PATH
+const TAUNT_PATH := "res://data/dialogues/tavern_bandits_taunt.json"
+const CONFRONT_PATH := "res://data/dialogues/tavern_zixia_confront.json"
+const KEEPER_EARLY_PATH := "res://data/dialogues/npc_tavern_keeper_early.json"
+const KEEPER_RECRUIT_PATH := "res://data/dialogues/npc_tavern_keeper_recruit.json"
 const STATES: Array[String] = ["normal", "brawl", "aftermath"]
 
 var state := "normal"
@@ -85,6 +91,9 @@ func check_story(
 		return
 	if state != "normal" or cutscene_running:
 		return
+	# 主线“紫霞收徒”进行中：马匪只在约定时间后、与掌柜说话才出现，不再靠走进酒馆触发。
+	if recruit_mode():
+		return
 	if dialogue_active:
 		return
 	_ambush_elapsed += maxf(0.0, delta)
@@ -92,6 +101,22 @@ func check_story(
 		and _ambush_rect.has_point(player_pos)
 	if in_zone or _ambush_elapsed >= _ambush_timeout:
 		_trigger_ambush()
+
+
+# 主线“紫霞收徒”正在进行：酒馆事件由掌柜对话 + 日期触发。
+func recruit_mode() -> bool:
+	return state == "normal" and Quests.state("zixia_recruit") == "active"
+
+
+# 与掌柜交谈：到了约定时间 → 播放收徒前的对话，结束后马匪闯入；没到时间 → 提示等待。
+# 返回空串表示不是特殊情况（走普通对话）。
+func keeper_dialogue() -> String:
+	if not recruit_mode():
+		return ""
+	if Calendar.recruit_due():
+		_ambush_stage = "keeper"
+		return KEEPER_RECRUIT_PATH
+	return KEEPER_EARLY_PATH
 
 
 # 酒馆里还剩几个马匪：森林里打倒得越多，头子带的人越少（最少 2 个）。
@@ -119,15 +144,22 @@ func finish_prefight(_result: Dictionary = {}) -> void:
 
 
 func on_animation_finished() -> void:
-	if _ambush_stage != "animating":
-		return
-	_continue_after_entrance()
+	_after_walk_in()
 
 
 func on_state_applied(anim_active: bool) -> void:
-	if _ambush_stage != "animating" or anim_active:
-		return
-	_continue_after_entrance()
+	if not anim_active:
+		_after_walk_in()
+
+
+# 入场动画结束：马匪先到 → 对话后紫霞派进门 → 对质对话 → 混战演出。
+func _after_walk_in() -> void:
+	if _ambush_stage == "animating":
+		_continue_after_entrance()
+	elif _ambush_stage == "animating2":
+		_ambush_stage = "confront"
+		if not _request_dialogue(CONFRONT_PATH):
+			_start_fight()
 
 
 func dialogue_started() -> void:
@@ -135,6 +167,16 @@ func dialogue_started() -> void:
 
 
 func on_dialogue_finished() -> bool:
+	if _ambush_stage == "taunt":
+		_zixia_enter()
+		return true
+	if _ambush_stage == "confront":
+		_start_fight()
+		return true
+	if _ambush_stage == "keeper":
+		_ambush_stage = ""
+		_trigger_ambush()
+		return true
 	if _ambush_stage == "open":
 		_finish_ambush_open()
 		return true
@@ -184,6 +226,18 @@ func _continue_after_entrance() -> void:
 	if GameState.has_flag("prefight_done"):
 		_begin_ambush_dialogue()
 		return
+	_ambush_stage = "taunt"
+	if not _request_dialogue(TAUNT_PATH):
+		_zixia_enter()
+
+
+func _zixia_enter() -> void:
+	GameState.set_flag("zixia_entered")
+	_ambush_stage = "animating2"
+	_change_state("brawl", true, false)
+
+
+func _start_fight() -> void:
 	_ambush_stage = "prefight"
 	prefight_requested.emit()
 

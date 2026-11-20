@@ -64,22 +64,16 @@ func _process(_delta: float) -> bool:
 			cur.dialogue_view.advance()
 			guard += 1
 	elif frames == 25:
-		# brawl entrance (about 1.5 s) + the Zixia pre-fight show (about 6 s)
 		expected_units = int(cur.bandit_count()) + 2  # player + Ma Youwei + bandits
-		cur.advance(14.0)
-		if not cur.is_dialogue_active():
-			_fail("the pre-fight/ambush dialogue did not follow the brawl animation")
-			return false
-	elif frames == 30:
-		# the pre-fight end dialogue chains into the ambush dialogue: keep going until the fight starts
-		for round in range(6):
+		# 马匪入场 → 叫嚣 → 紫霞派入场 → 对质 → 混战演出 → 前戏结束 → 闯入对话 → 战斗。
+		for round in range(14):
 			var guard2: int = 0
 			while cur.is_dialogue_active() and guard2 < 60:
 				cur.dialogue_view.advance()
 				guard2 += 1
 			if game.current_kind != "tavern":
 				break
-			cur.advance(1.0)
+			cur.advance(4.0)
 	elif frames == 45:
 		if game.current_kind != "battle":
 			_fail("did not enter the battle after the ambush (kind=%s)" % game.current_kind)

@@ -52,15 +52,21 @@ func test_the_ambush_plays_the_prefight_then_the_story() -> void:
 	_finish_dialogue(tavern)
 	assert_eq(str(tavern.current_state()), "brawl", "the tavern switches to the brawl")
 
-	# 入场动画结束后，紫霞师姐和三名弟子已经就位，前戏演出开始。
+	# 马匪先入场并叫嚣；紫霞派之后才进门，对质对话结束后混战演出开始。
 	tavern.advance(3.0)
+	assert_true(tavern.is_dialogue_active(), "the bandits taunt first")
+	assert_true(not tavern.npc_nodes.has("zixia"), "the sister has not arrived yet")
+	_finish_dialogue(tavern)
+	tavern.advance(3.0)
+	assert_true(tavern.is_dialogue_active(), "the sister confronts the bandits")
+	_finish_dialogue(tavern)
 	assert_true(tavern._prefight_active, "the prefight performance is running")
 	assert_true(tavern.npc_nodes.has("zixia"), "the sister is on stage")
 	for id in DISCIPLE_IDS:
 		assert_true(tavern.npc_nodes.has(id), "%s is on stage" % id)
 
 	var expected_loss: int = int(Prefight.simulate(tavern.bandit_count())["boss_damage"])
-	tavern.advance(6.0)
+	tavern.advance(15.0)
 	assert_true(not tavern._prefight_active, "the performance ends")
 	assert_true(GameState.has_flag("prefight_done"), "the prefight_done flag is set")
 	assert_eq(int(GameState.boss_hp_loss), expected_loss, "the boss wound is set once")
@@ -127,7 +133,7 @@ func test_a_defeat_return_does_not_replay_the_prefight_and_reapplies_the_wound()
 	if tavern._boss_bar_fill != null:
 		assert_near(
 			tavern._boss_bar_fill.scale.x,
-			(300.0 - float(expected_loss)) / 300.0,
+			(200.0 - float(expected_loss)) / 200.0,
 			0.001,
 			"the boss bar keeps the prefight ratio"
 		)

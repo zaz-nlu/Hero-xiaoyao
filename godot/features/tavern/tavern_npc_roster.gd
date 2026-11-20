@@ -10,6 +10,7 @@ const TavernStateAnimation = preload("res://features/tavern/tavern_state_animati
 const STATES: Array[String] = ["normal", "brawl", "aftermath"]
 const ZIXIA_IDS: Array[String] = ["zixia", "disciple_1", "disciple_2", "disciple_3"]
 const DISCIPLE_IDS: Array[String] = ["disciple_1", "disciple_2", "disciple_3"]
+const GameState = preload("res://core/game_state.gd")
 const ENTRANCE_STAGGER := 0.25
 const PREFIGHT_START := Vector3(17.0, 0.0, -7.0)
 const FALLEN_COLOR := Color(0.45, 0.45, 0.5, 0.75)
@@ -190,10 +191,17 @@ func _present(id: String, npc_entry: Dictionary, new_state: String, bandit_count
 		var states: Array = states_value
 		if not states.has(new_state):
 			return false
+	# 紫霞派晚于马匪入场：马匪砸完桌子、对话之后才进门（zixia_entered 由酒馆导演设置）。
+	if new_state == "brawl" and ZIXIA_IDS.has(id) and not _zixia_arrived():
+		return false
 	if new_state == "brawl" and id.begins_with("bandit_"):
 		var index := int(id.trim_prefix("bandit_"))
 		return index >= 1 and index <= bandit_count
 	return true
+
+
+func _zixia_arrived() -> bool:
+	return GameState.has_flag("zixia_entered") or GameState.has_flag("prefight_done")
 
 
 func _position(npc_entry: Dictionary, new_state: String) -> Vector3:

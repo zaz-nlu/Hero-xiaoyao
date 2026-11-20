@@ -8,6 +8,7 @@ signal route_will_change(previous_kind: String)
 signal scene_entered(kind: String, scene: Node)
 
 const GameState = preload("res://core/game_state.gd")
+const OpeningData = preload("res://core/opening_data.gd")
 const Profile = preload("res://core/profile.gd")
 const Progression = preload("res://core/progression.gd")
 const LayoutTriggers = preload("res://core/layouts/layout_triggers.gd")
@@ -19,7 +20,11 @@ const FOREST_SCENE := "res://features/forest/forest.gd"
 const BATTLE_SCENE := "res://features/battle/battle_view.gd"
 const TACTICS_SCENE := "res://features/tactics/tactics_view.gd"
 const TITLE_SCREEN_SCENE := "res://features/title/title_screen.gd"
+const OPENING_SCENE := "res://features/opening/opening_sequence.gd"
+const OPENING_STORY_SCENE := "res://features/opening/opening_story_scene.gd"
 const LAYOUT_SCENE := "res://features/layouts/layout_walk.gd"
+const TOWN_ENDING := "res://features/ending/town_ending.gd"
+const ENDING_TAVERN_DIALOGUE := "res://data/dialogues/ending_tavern.json"
 
 var current: Node = null
 var current_kind: String = ""
@@ -71,6 +76,74 @@ func show_title(audio: Variant, save_dir: String) -> void:
 	_finish_route("title", title)
 
 
+# 新游戏序幕：router 创建播放器、注入音频；数据校验失败时仍继续，由编排方
+# 通过 on_finished 接回小镇（错误会以 toast 告知）。
+# 字幕页结束后自动进入书生讲故事小场景，两段都结束才调用 on_finished。
+# 序幕：字幕页 → 东方阳 vs 东方云 + 索尔（教学战斗）→ 战后字幕页 → 书生讲故事。
+# part = "slides" 为战前页，"slides_after" 为战后页；没有战斗配置时直接接战后页。
+func show_opening(audio: Variant, on_finished: Callable, part: String = "slides") -> void:
+	_audio = audio
+	_begin_route()
+	var opening: Variant = load(OPENING_SCENE).new()
+	opening.name = "OpeningSequence"
+	opening.set("audio", audio)
+	_parent.add_child(opening)
+	var data := OpeningData.load_opening()
+	if not bool(data.get("ok", false)):
+		for message in data.get("errors", []):
+			Progression.push_toast(str(message))
+	var next: Callable = Callable(self, "_continue_to_opening_story").bind(audio, on_finished)
+	if part == "slides":
+		next = Callable(self, "_start_opening_duel").bind(audio, on_finished, data)
+	else:
+		data = data.duplicate()
+		data["slides"] = data.get("slides_after", data.get("slides", []))
+	opening.connect("finished", next)
+	opening.build(data)
+	_finish_route("opening", opening)
+
+
+# 教学战斗：战败就重来，战胜后接战后字幕页。结果不写入存档里的养成状态。
+func _start_opening_duel(audio: Variant, on_finished: Callable, data: Dictionary) -> void:
+	var duel: Dictionary = data.get("duel", {})
+	var group: Array = duel.get("enemies", [])
+	if group.is_empty():
+		show_opening(audio, on_finished, "slides_after")
+		return
+	GameState.encounter_group = group.duplicate(true)
+	GameState.battle_backdrop = str(duel.get("origin", "opening_duel"))
+	show_battle(audio, str((group[0] as Dictionary).get("id", "")), 1, true, false, true,
+		Callable(self, "_on_opening_duel_finished").bind(audio, on_finished, data))
+
+
+func _on_opening_duel_finished(result: String, audio: Variant, on_finished: Callable, data: Dictionary) -> void:
+	if result == "won":
+		show_opening(audio, on_finished, "slides_after")
+	else:
+		_start_opening_duel(audio, on_finished, data)
+
+
+# 序幕第二段：书生讲故事。独立小场景，不经过 town 的搭建逻辑。
+func show_opening_story(audio: Variant, on_finished: Callable) -> void:
+	_audio = audio
+	_begin_route()
+	var story: Variant = load(OPENING_STORY_SCENE).new()
+	story.name = "OpeningStoryScene"
+	story.set("audio", audio)
+	_parent.add_child(story)
+	var data := OpeningData.load_opening()
+	if not bool(data.get("ok", false)):
+		for message in data.get("errors", []):
+			Progression.push_toast(str(message))
+	story.connect("finished", on_finished)
+	story.build(data)
+	_finish_route("opening_story", story)
+
+
+func _continue_to_opening_story(audio: Variant, on_finished: Callable) -> void:
+	show_opening_story(audio, on_finished)
+
+
 func show_town(audio: Variant) -> void:
 	_audio = audio
 	_begin_route()
@@ -96,6 +169,33 @@ func show_tavern(audio: Variant) -> void:
 	tavern.connect("encounter_requested", _on_encounter)
 	tavern.connect("state_changed", Callable(self, "_on_tavern_state_changed"))
 	_finish_route("tavern", tavern)
+
+
+# Demo 结尾：击败马匪后回到酒馆播一段收尾对话，播完到酒馆外的紫霞镇街上演出（紫殇登场）。
+func start_demo_ending(audio: Variant) -> void:
+	show_tavern(audio)
+	var tavern: Variant = current
+	var started: bool = bool(tavern.call("_play_story_dialogue", ENDING_TAVERN_DIALOGUE))
+	if started and tavern.dialogue_view != null:
+		tavern.dialogue_view.connect(
+			"finished", Callable(self, "show_town_ending").bind(audio), CONNECT_ONE_SHOT)
+	else:
+		show_town_ending(audio)
+
+
+func show_town_ending(audio: Variant) -> void:
+	show_town(audio)
+	_set_overlay_enabled.call(false)
+	var ending: Node = load(TOWN_ENDING).new()
+	ending.name = "TownEnding"
+	current.add_child(ending)
+	ending.connect("finished", Callable(self, "_on_demo_ending_finished"))
+	ending.call("begin", current, audio)
+
+
+func _on_demo_ending_finished() -> void:
+	GameState.set_flag("demo_ending_done")
+	_parent.call("go_to_title")
 
 
 func show_forest(audio: Variant) -> void:
@@ -194,6 +294,12 @@ func _present(kind: String, scene: Node) -> void:
 					tree.paused = false
 			_audio.play_music("music_title")
 			_audio.play_ambience("")
+		"opening":
+			_set_overlay_enabled.call(false)
+			_audio.play_ambience("")
+		"opening_story":
+			_set_overlay_enabled.call(false)
+			_audio.play_ambience("")
 		"town":
 			GameState.town_return_pos = null
 			_set_overlay_enabled.call(true)
@@ -218,7 +324,10 @@ func _present(kind: String, scene: Node) -> void:
 			_audio.play_music("music_town")
 			_audio.play_ambience("")
 		"battle":
-			if _battle_boss:
+			if str(GameState.battle_backdrop) == "opening_duel":
+				# 序章教学战斗：整段沿用帝王威仪，字幕页到战斗再到战后字幕不换歌。
+				_audio.play_cue("opening_empire")
+			elif _battle_boss:
 				_audio.play_music("music_battle_boss")
 			else:
 				_audio.play_music("music_battle")
@@ -291,7 +400,7 @@ func _on_quit_requested() -> void:
 
 func _play_tavern_music(tavern_state: String) -> void:
 	if tavern_state == "brawl":
-		_audio.play_music("music_tavern_brawl")
+		_audio.play_music("music_battle")
 	else:
 		_audio.play_music("music_tavern")
 

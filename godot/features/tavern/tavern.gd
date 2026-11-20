@@ -262,9 +262,7 @@ func bandit_count() -> int:
 
 
 func check_story(delta: float) -> void:
-	_story.check_story(
-		delta, player_pos, skip_actors, cutscene_running, is_dialogue_active()
-	)
+	_story.check_story(delta, player_pos, skip_actors, cutscene_running, is_dialogue_active())
 
 
 func _on_state_requested(new_state: String, animate: bool, stagger: bool) -> void:
@@ -516,6 +514,7 @@ func try_interact() -> bool:
 		if _story.state == "brawl" and npc_id == "ma_youwei":
 			return _start_boss_challenge()
 		var path := _npcs.dialogue_path(npc_id, _story.state)
+		path = _story.keeper_dialogue() if npc_id == "keeper" and _story.recruit_mode() else path
 		if path != "":
 			return _start_npc_dialogue(npc_id, path)
 	if is_in_exit():

@@ -69,9 +69,14 @@ func _run_ambush(killed: int) -> Variant:
 	assert_true(GameState.has_flag("bandits_entered"), "the ambush sets bandits_entered")
 	_finish_dialogue(tavern)
 	assert_eq(str(tavern.current_state()), "brawl", "the tavern switches to the brawl")
-	# 入场动画 → 紫霞前戏演出 → 前戏结束对话 → 闯入对话 → encounter。
+	# 马匪入场 → 叫嚣对话 → 紫霞派入场 → 对质对话 → 混战演出 → 前戏结束对话 → 闯入对话 → encounter。
 	tavern.advance(3.0)
-	tavern.advance(6.0)
+	assert_true(tavern.is_dialogue_active(), "the bandits taunt first")
+	_finish_dialogue(tavern)
+	tavern.advance(3.0)
+	assert_true(tavern.is_dialogue_active(), "the sister confronts the bandits")
+	_finish_dialogue(tavern)
+	tavern.advance(15.0)
 	assert_true(tavern.is_dialogue_active(), "the prefight-end dialogue follows the performance")
 	_finish_dialogue(tavern)
 	return tavern

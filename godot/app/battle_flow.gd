@@ -105,6 +105,8 @@ func _on_battle_finished(result: String) -> void:
 			# A loss drops the player back at the forest spawn; the patrol resets.
 			GameState.forest_return_pos = null
 		_router.show_forest(_audio)
+	elif origin == "tavern" and result == "won" and GameState.has_flag("boss_defeated"):
+		_router.start_demo_ending(_audio)
 	elif origin == "tavern":
 		if result != "won" and not GameState.has_flag("defeat_hint_shown"):
 			# First loss in the tavern: nudge the player towards preparing (forest, side quests).

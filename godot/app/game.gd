@@ -8,6 +8,7 @@ const AudioManager = preload("res://shared/audio/audio_manager.gd")
 const SceneRouter = preload("res://app/scene_router.gd")
 const SaveCoordinator = preload("res://app/save_coordinator.gd")
 const BattleFlow = preload("res://app/battle_flow.gd")
+const NewGameFlow = preload("res://app/new_game_flow.gd")
 
 const STATUS_OVERLAY_SCENE := "res://features/character/status_overlay.gd"
 const PAUSE_MENU_SCENE := "res://features/pause/pause_menu.gd"
@@ -113,7 +114,7 @@ func _process_toast_sfx() -> void:
 		return
 	# The overlay consumes GameState.toasts in its own _process (after this node), so
 	# read the toast panels it actually popped and react to the ones we have not seen.
-	var box: Variant = overlay.toast_box
+	var box: Variant = overlay.toasts.box
 	if not (box is Node):
 		return
 	var seen: Array = []
@@ -245,17 +246,16 @@ func start_new_game() -> void:
 	Progression.reload_items()
 	Quests.reload()
 	Realms.reload()
-	show_town()
-	_show_intro_hints()
-	_schedule_autosave()
+	NewGameFlow.start(self)
+
+
+func show_opening(on_finished: Callable) -> void:
+	_prepare_scene()
+	_router.show_opening(audio, on_finished)
 
 
 func _show_intro_hints() -> void:
-	if GameState.has_flag("intro_hint_shown"):
-		return
-	GameState.set_flag("intro_hint_shown")
-	Progression.push_toast("按 C 打开角色面板，可以分配 3 点属性点")
-	Progression.push_toast("按 J 查看任务，Shift 可以蹲伏")
+	NewGameFlow.show_intro_hints()
 
 
 func _on_title_continue(slot: String) -> void:
