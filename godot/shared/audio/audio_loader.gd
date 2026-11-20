@@ -57,6 +57,39 @@ static func load_wav(name: String, loop: bool) -> AudioStreamWAV:
 	return stream
 
 
+# Imported AI music (tools/process_music.py) ships as OGG/Vorbis and is read the
+# same way: raw bytes, then AudioStreamOggVorbis.load_from_buffer. Older hand
+# rendered WAV tracks stay supported through the load_wav fallback.
+static func load_music(name: String, loop: bool) -> AudioStream:
+	if name == "":
+		return null
+	var key := name + ("|loop" if loop else "|once") + "|music"
+	if _cache.has(key):
+		var cached: Variant = _cache[key]
+		return cached
+	var path := WAV_DIR + name + ".ogg"
+	if FileAccess.file_exists(path):
+		var bytes: PackedByteArray = FileAccess.get_file_as_bytes(path)
+		if bytes.size() > 0:
+			var stream: AudioStreamOggVorbis = AudioStreamOggVorbis.load_from_buffer(bytes)
+			if stream != null:
+				stream.loop = loop
+				stream.loop_offset = 0.0
+				_cache[key] = stream
+				return stream
+	var fallback := load_wav(name, loop)
+	if fallback != null:
+		_cache[key] = fallback
+	return fallback
+
+
+static func has_music(name: String) -> bool:
+	if name == "":
+		return false
+	return FileAccess.file_exists(WAV_DIR + name + ".ogg") \
+		or FileAccess.file_exists(WAV_DIR + name + ".wav")
+
+
 static func clear_cache() -> void:
 	_cache.clear()
 

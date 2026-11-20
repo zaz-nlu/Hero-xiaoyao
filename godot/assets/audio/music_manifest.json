@@ -1,0 +1,68 @@
+{
+  "jingle_defeat": {
+    "loop": false,
+    "lufs": -18.0,
+    "seconds": 9.312,
+    "source": "败退长歌.mp3"
+  },
+  "jingle_victory": {
+    "loop": false,
+    "lufs": -18.0,
+    "seconds": 7.106,
+    "source": "胜战曲.mp3"
+  },
+  "music_battle": {
+    "loop": true,
+    "lufs": -18.0,
+    "seconds": 117.014,
+    "source": "战斗bgm.mp3"
+  },
+  "music_battle_boss": {
+    "loop": true,
+    "lufs": -18.0,
+    "seconds": 117.014,
+    "source": "战斗bgm.mp3"
+  },
+  "music_forest": {
+    "loop": true,
+    "lufs": -18.0,
+    "seconds": 116.654,
+    "source": "竹林探幽.mp3"
+  },
+  "music_tavern": {
+    "loop": true,
+    "lufs": -18.0,
+    "seconds": 116.774,
+    "source": "酒肆夜曲.mp3"
+  },
+  "music_title": {
+    "loop": true,
+    "lufs": -18.0,
+    "seconds": 116.44,
+    "source": "剑影琴音.mp3"
+  },
+  "music_town": {
+    "loop": true,
+    "lufs": -18.2,
+    "seconds": 116.974,
+    "source": "山村晨曲.mp3"
+  },
+  "opening_empire": {
+    "loop": true,
+    "lufs": -18.0,
+    "seconds": 115.915,
+    "source": "帝王威仪.mp3"
+  },
+  "opening_town": {
+    "loop": true,
+    "lufs": -18.0,
+    "seconds": 169.201,
+    "source": "少年剑影.mp3"
+  },
+  "zishang_entrance": {
+    "loop": true,
+    "lufs": -18.0,
+    "seconds": 116.2,
+    "source": "紫殇登场bgm.mp3"
+  }
+}

@@ -11,6 +11,7 @@ const SFX_BUS := "SFX"
 const DEFAULT_MUSIC_VOLUME := 0.7
 const DEFAULT_SFX_VOLUME := 0.8
 const DEFAULT_SETTINGS_PATH := "user://settings.cfg"
+const MUSIC_CUES_PATH := "res://data/music_cues.json"
 const SETTINGS_SECTION := "audio"
 const JINGLE_DUCK_VOLUME := 0.2
 const JINGLE_DUCK_TIME := 0.3
@@ -28,6 +29,9 @@ var _music_volume: float = DEFAULT_MUSIC_VOLUME
 var _sfx_volume: float = DEFAULT_SFX_VOLUME
 var _muted: bool = false
 var _music_track: String = ""
+var _music_cue: String = ""
+var _cues: Dictionary = {}
+var _cues_loaded: bool = false
 var _ambience_track: String = ""
 var _music_active: AudioStreamPlayer = null
 var _player_volumes: Dictionary = {}
@@ -82,11 +86,12 @@ func play_music(track: String, fade: float = 1.0) -> void:
 		return
 	if track == "":
 		_music_track = ""
+		_music_cue = ""
 		if _music_active != null:
 			_fade_to(_music_active, 0.0, fade)
 		_music_active = null
 		return
-	var stream := AudioLoader.load_wav(track, true)
+	var stream := AudioLoader.load_music(track, true)
 	if stream == null:
 		return
 	var old := _music_active
@@ -122,12 +127,25 @@ func play_ambience(track: String, fade: float = 1.5) -> void:
 
 
 func play_jingle(track: String) -> void:
-	var stream := AudioLoader.load_wav(track, false)
+	var stream := AudioLoader.load_music(track, false)
 	if stream == null:
 		return
 	jingle.stream = stream
 	_start(jingle)
 	_duck_target = JINGLE_DUCK_VOLUME
+
+
+# Story-state music: data/music_cues.json maps cue id -> track (plus an optional
+# fallback used while the intended track does not exist yet). Unknown cue ids are
+# played as track names, which simply stays silent until that file is added.
+func play_cue(cue_id: String) -> void:
+	if cue_id == "":
+		return
+	var track := _cue_track(cue_id)
+	if cue_id == _music_cue and track == _music_track:
+		return
+	_music_cue = cue_id
+	play_music(track)
 
 
 func play_sfx(track: String, volume: float = 1.0) -> void:
@@ -178,6 +196,10 @@ func current_music() -> String:
 	return _music_track
 
 
+func current_cue() -> String:
+	return _music_cue
+
+
 func current_ambience() -> String:
 	return _ambience_track
 
@@ -216,6 +238,36 @@ func save_settings(path: String = "") -> void:
 
 
 # ---------------------------------------------------------------- internals
+
+func _ensure_cues() -> void:
+	if _cues_loaded:
+		return
+	_cues_loaded = true
+	if not FileAccess.file_exists(MUSIC_CUES_PATH):
+		return
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(MUSIC_CUES_PATH))
+	if not (parsed is Dictionary):
+		return
+	var data: Dictionary = parsed
+	var cues: Variant = data.get("cues", {})
+	if cues is Dictionary:
+		_cues = cues
+
+
+func _cue_track(cue_id: String) -> String:
+	_ensure_cues()
+	var entry: Variant = _cues.get(cue_id)
+	if not (entry is Dictionary):
+		return cue_id
+	var record: Dictionary = entry
+	var track := str(record.get("track", ""))
+	var fallback := str(record.get("fallback", ""))
+	if track != "" and AudioLoader.has_music(track):
+		return track
+	if fallback != "" and AudioLoader.has_music(fallback):
+		return fallback
+	return track if track != "" else cue_id
+
 
 func _ensure_buses() -> void:
 	for bus_name in [MUSIC_BUS, SFX_BUS]:

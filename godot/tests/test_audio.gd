@@ -152,7 +152,7 @@ func test_game_selects_music_for_each_scene() -> void:
 	assert_eq(str(game.audio.current_music()), "music_tavern", "the normal tavern plays tavern music")
 	game.current.set_state("brawl")
 	assert_eq(
-		str(game.audio.current_music()), "music_tavern_brawl",
+		str(game.audio.current_music()), "music_battle",
 		"the tavern state change switches to the brawl music"
 	)
 	game.show_forest()
@@ -178,7 +178,7 @@ func test_game_tavern_opens_in_brawl_music() -> void:
 	var game: Variant = _new_game()
 	game.show_tavern()
 	assert_eq(
-		str(game.audio.current_music()), "music_tavern_brawl",
+		str(game.audio.current_music()), "music_battle",
 		"a tavern that starts in the brawl state uses the brawl music"
 	)
 	game.free()
@@ -195,7 +195,7 @@ func test_battle_victory_plays_jingle_and_resumes_town_music() -> void:
 	_finish_dialogue(view)
 	view.press_return()
 	assert_eq(str(game.current_kind), "town", "a win returns to the town")
-	var expected: Variant = AudioLoader.load_wav("jingle_victory", false)
+	var expected: Variant = AudioLoader.load_music("jingle_victory", false)
 	assert_true(expected != null, "the victory jingle file loads")
 	assert_eq(
 		str(game.audio.current_music()), "music_town",

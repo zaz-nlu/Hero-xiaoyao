@@ -1,0 +1,121 @@
+{
+  "cues": {
+    "title": {
+      "track": "music_title",
+      "loop": true,
+      "note": "标题画面主题"
+    },
+    "town": {
+      "track": "music_town",
+      "loop": true,
+      "note": "小镇日常"
+    },
+    "forest": {
+      "track": "music_forest",
+      "loop": true,
+      "note": "森林探索"
+    },
+    "tavern": {
+      "track": "music_tavern",
+      "loop": true,
+      "note": "酒馆日常"
+    },
+    "tavern_brawl": {
+      "track": "music_battle",
+      "loop": true,
+      "note": "酒馆斗殴"
+    },
+    "battle_normal": {
+      "track": "music_battle",
+      "loop": true,
+      "note": "普通战斗"
+    },
+    "battle_boss": {
+      "track": "music_battle_boss",
+      "loop": true,
+      "note": "Boss 战"
+    },
+    "zixia_daily": {
+      "track": "music_zixia_daily",
+      "fallback": "music_town",
+      "loop": true,
+      "note": "紫霞派日常（曲目未做，暂用小镇曲）"
+    },
+    "zixia_theme_sting": {
+      "track": "music_zixia_theme_sting",
+      "fallback": "music_title",
+      "loop": false,
+      "note": "紫霞派主题短句（曲目未做，暂用标题曲）"
+    },
+    "sanhuo_arrival": {
+      "track": "music_sanhuo_arrival",
+      "fallback": "music_battle_boss",
+      "loop": false,
+      "note": "三火登场（曲目未做，暂用 Boss 战曲）"
+    },
+    "tragedy": {
+      "track": "music_tragedy",
+      "fallback": "music_tavern",
+      "loop": true,
+      "note": "悲剧/诀别段落（曲目未做，暂用酒馆曲）"
+    },
+    "cliff_fall": {
+      "track": "music_cliff_fall",
+      "fallback": "music_forest",
+      "loop": true,
+      "note": "坠崖（曲目未做，暂用森林曲）"
+    },
+    "yujian_oppressive": {
+      "track": "music_yujian_oppressive",
+      "fallback": "music_battle_boss",
+      "loop": true,
+      "note": "御剑压迫感段落（曲目未做，暂用 Boss 战曲）"
+    },
+    "ziyang_corrupt": {
+      "track": "music_ziyang_corrupt",
+      "fallback": "music_battle_boss",
+      "loop": true,
+      "note": "紫阳入魔（曲目未做，暂用 Boss 战曲）"
+    },
+    "ziyang_boss_phase1": {
+      "track": "music_ziyang_boss_phase1",
+      "fallback": "music_battle_boss",
+      "loop": true,
+      "note": "紫阳 Boss 一阶段（曲目未做，暂用 Boss 战曲）"
+    },
+    "ziyang_boss_phase2": {
+      "track": "music_ziyang_boss_phase2",
+      "fallback": "music_battle_boss",
+      "loop": true,
+      "note": "紫阳 Boss 二阶段（曲目未做，暂用 Boss 战曲）"
+    },
+    "victory_jingle": {
+      "track": "jingle_victory",
+      "loop": false,
+      "note": "战斗胜利音效"
+    },
+    "defeat_jingle": {
+      "track": "jingle_defeat",
+      "loop": false,
+      "note": "战斗失败音效"
+    },
+    "opening_empire": {
+      "track": "opening_empire",
+      "fallback": "music_battle_boss",
+      "loop": true,
+      "note": "开场序幕：一百年前东方帝国、东方阳的丰功伟绩（《帝王威仪》）"
+    },
+    "opening_town": {
+      "track": "opening_town",
+      "fallback": "music_town",
+      "loop": true,
+      "note": "开场切到紫霞镇、书生讲故事（《少年剑影》）"
+    },
+    "zishang_entrance": {
+      "track": "zishang_entrance",
+      "loop": true,
+      "fallback": "music_town",
+      "note": "紫殇登场（Demo 结尾）"
+    }
+  }
+}
